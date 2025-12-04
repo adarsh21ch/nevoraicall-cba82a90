@@ -281,23 +281,28 @@ export function ProspectTable({
 
   const isCalling = filterMode === 'calling';
 
-  // Sheet tabs component to render at bottom
+  // Sheet tabs component to render at bottom (sticky)
   const renderSheetTabs = () => {
     if (filterMode !== 'calling' || subFilter !== 'all') return null;
     return (
-      <SheetTabs
-        sheets={sheets}
-        selectedSheetId={selectedSheetId}
-        onSelectSheet={onSelectSheet}
-        onAddSheet={onAddSheet}
-        onUpdateSheet={onUpdateSheet}
-        onDeleteSheet={onDeleteSheet}
-      />
+      <div className="fixed bottom-16 left-0 right-0 z-40 bg-background border-t border-border shadow-lg">
+        <SheetTabs
+          sheets={sheets}
+          selectedSheetId={selectedSheetId}
+          onSelectSheet={onSelectSheet}
+          onAddSheet={onAddSheet}
+          onUpdateSheet={onUpdateSheet}
+          onDeleteSheet={onDeleteSheet}
+        />
+      </div>
     );
   };
 
   return (
-    <div className="space-y-4">
+    <div className={cn("space-y-4", filterMode === 'calling' && subFilter === 'all' && "pb-12")}>
+      {/* Fixed Sheet Tabs at bottom */}
+      {renderSheetTabs()}
+      
       {/* Toolbar: Filters + Actions */}
       <div className="bg-card/50 rounded-xl border border-border/50 p-2 sm:p-3 space-y-2 sm:space-y-3">
         <div className="flex flex-col gap-2 sm:gap-3">
@@ -376,10 +381,7 @@ export function ProspectTable({
         </div>
       ) : (
         // Table Layout (Desktop or Mobile Table View)
-        <div className={cn(
-          "bg-card border border-border overflow-hidden shadow-sm",
-          filterMode === 'calling' && subFilter === 'all' ? "rounded-t-xl rounded-b-none border-b-0" : "rounded-xl"
-        )}>
+        <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
           {/* Mobile scroll hint */}
           {isMobile && (
             <div className="px-3 py-1.5 bg-muted/30 text-[10px] text-muted-foreground text-center border-b border-border">
@@ -466,8 +468,6 @@ export function ProspectTable({
             <span>{filteredProspects.length} of {baseProspects.length}</span>
             {!isMobile && <span className="text-muted-foreground/60">Drag columns to reorder • Drag edges to resize</span>}
           </div>
-          {/* Sheet Tabs at bottom like Excel */}
-          {renderSheetTabs()}
         </div>
       )}
     </div>
