@@ -14,6 +14,77 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          activity_type: string
+          created_at: string
+          description: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          prospect_id: string | null
+          user_id: string
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string
+          description: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          prospect_id?: string | null
+          user_id: string
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string
+          description?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          prospect_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_logs_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "prospects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_options: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          option_type: string
+          option_value: string
+          sort_order: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          option_type: string
+          option_value: string
+          sort_order?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          option_type?: string
+          option_value?: string
+          sort_order?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       daily_leads: {
         Row: {
           calls: number | null
@@ -95,8 +166,13 @@ export type Database = {
       prospects: {
         Row: {
           action_taken: Database["public"]["Enums"]["action_taken"] | null
+          age: number | null
+          batch_date: string | null
+          city: string | null
           date_added: string
+          date_of_birth: string | null
           email: string | null
+          enrollment_status: string | null
           funnel_stage: Database["public"]["Enums"]["funnel_stage"] | null
           id: string
           last_contact_date: string | null
@@ -105,13 +181,20 @@ export type Database = {
           phone: string
           priority: Database["public"]["Enums"]["priority_level"] | null
           prospect_status: Database["public"]["Enums"]["prospect_status"] | null
+          sheet_id: string | null
           updated_at: string
           user_id: string
+          why_need: string | null
         }
         Insert: {
           action_taken?: Database["public"]["Enums"]["action_taken"] | null
+          age?: number | null
+          batch_date?: string | null
+          city?: string | null
           date_added?: string
+          date_of_birth?: string | null
           email?: string | null
+          enrollment_status?: string | null
           funnel_stage?: Database["public"]["Enums"]["funnel_stage"] | null
           id?: string
           last_contact_date?: string | null
@@ -122,13 +205,20 @@ export type Database = {
           prospect_status?:
             | Database["public"]["Enums"]["prospect_status"]
             | null
+          sheet_id?: string | null
           updated_at?: string
           user_id: string
+          why_need?: string | null
         }
         Update: {
           action_taken?: Database["public"]["Enums"]["action_taken"] | null
+          age?: number | null
+          batch_date?: string | null
+          city?: string | null
           date_added?: string
+          date_of_birth?: string | null
           email?: string | null
+          enrollment_status?: string | null
           funnel_stage?: Database["public"]["Enums"]["funnel_stage"] | null
           id?: string
           last_contact_date?: string | null
@@ -139,6 +229,67 @@ export type Database = {
           prospect_status?:
             | Database["public"]["Enums"]["prospect_status"]
             | null
+          sheet_id?: string | null
+          updated_at?: string
+          user_id?: string
+          why_need?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospects_sheet_id_fkey"
+            columns: ["sheet_id"]
+            isOneToOne: false
+            referencedRelation: "sheets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sheets: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      todos: {
+        Row: {
+          completed: boolean
+          created_at: string
+          due_date: string | null
+          id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          title?: string
           updated_at?: string
           user_id?: string
         }
