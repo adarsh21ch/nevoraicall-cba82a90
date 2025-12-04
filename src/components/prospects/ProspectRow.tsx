@@ -162,10 +162,16 @@ export function ProspectRow({
     const width = columnWidths[columnId];
     const style = { width: width ? `${width}px` : undefined, minWidth: width ? `${width}px` : undefined };
     
+    // Determine background for sticky columns
+    const bgColor = isEven ? "bg-muted/20" : "bg-card";
+    const isNameColumn = columnId === 'name';
+    
     const cellClass = cn(
       "px-2 py-2 whitespace-nowrap",
       !isMobileTable && "px-3 py-3",
-      isMobileTable && "text-xs"
+      isMobileTable && "text-xs",
+      // Make name column sticky on mobile
+      isMobileTable && isNameColumn && `sticky left-0 z-10 ${bgColor} shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)]`
     );
     
     switch (columnId) {

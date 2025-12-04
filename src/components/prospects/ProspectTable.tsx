@@ -403,6 +403,7 @@ export function ProspectTable({
                     const width = isMobile ? col?.mobileWidth : columnWidths[columnId];
                     const isDragging = draggedColumn === columnId;
                     const isResizing = resizingColumn === columnId;
+                    const isNameColumn = columnId === 'name';
                     
                     return (
                       <th
@@ -416,7 +417,9 @@ export function ProspectTable({
                           isDragging && "opacity-50 bg-primary/10",
                           columnId === 'index' && "text-center",
                           !isMobile && "hover:bg-muted/50 cursor-grab active:cursor-grabbing px-3 py-3 relative select-none",
-                          isMobile && "text-[11px]"
+                          isMobile && "text-[11px]",
+                          // Make name column header sticky on mobile
+                          isMobile && isNameColumn && "sticky left-0 z-20 bg-muted/50 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)]"
                         )}
                         style={{ width: `${width}px`, minWidth: `${width}px` }}
                       >
