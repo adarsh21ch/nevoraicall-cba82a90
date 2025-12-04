@@ -40,14 +40,14 @@ interface ProspectTableProps {
 
 // Column configuration - desktop widths
 const COLUMNS = [
-  { id: 'index', label: '#', defaultWidth: 50, minWidth: 40, mobileWidth: 32, showOnMobile: false },
-  { id: 'name', label: 'Name', defaultWidth: 180, minWidth: 120, mobileWidth: 110, showOnMobile: true },
+  { id: 'index', label: '#', defaultWidth: 50, minWidth: 40, mobileWidth: 36, showOnMobile: false },
+  { id: 'name', label: 'Name', defaultWidth: 180, minWidth: 120, mobileWidth: 130, showOnMobile: true },
   { id: 'phone', label: 'Phone', defaultWidth: 160, minWidth: 120, mobileWidth: 100, showOnMobile: false },
-  { id: 'stage', label: 'Stage', defaultWidth: 120, minWidth: 100, mobileWidth: 80, showOnMobile: true },
-  { id: 'action', label: 'Action', defaultWidth: 140, minWidth: 100, mobileWidth: 80, showOnMobile: false },
-  { id: 'status', label: 'Status', defaultWidth: 100, minWidth: 80, mobileWidth: 70, showOnMobile: false },
-  { id: 'priority', label: 'Priority', defaultWidth: 100, minWidth: 80, mobileWidth: 70, showOnMobile: true },
-  { id: 'lastContact', label: 'Contact', defaultWidth: 110, minWidth: 90, mobileWidth: 70, showOnMobile: true },
+  { id: 'stage', label: 'Stage', defaultWidth: 120, minWidth: 100, mobileWidth: 90, showOnMobile: true },
+  { id: 'action', label: 'Action', defaultWidth: 140, minWidth: 100, mobileWidth: 90, showOnMobile: false },
+  { id: 'status', label: 'Status', defaultWidth: 100, minWidth: 80, mobileWidth: 80, showOnMobile: false },
+  { id: 'priority', label: 'Priority', defaultWidth: 100, minWidth: 80, mobileWidth: 80, showOnMobile: true },
+  { id: 'lastContact', label: 'Contact', defaultWidth: 110, minWidth: 90, mobileWidth: 80, showOnMobile: true },
   { id: 'actions', label: '', defaultWidth: 90, minWidth: 80, mobileWidth: 70, showOnMobile: true },
 ];
 
@@ -373,8 +373,20 @@ export function ProspectTable({
       ) : (
         // Table Layout (Desktop or Mobile Table View)
         <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
-          <div className="overflow-x-auto -webkit-overflow-scrolling-touch">
-            <table className={cn("text-sm border-collapse", isMobile ? "w-full min-w-[360px]" : "w-full")}>
+          {/* Mobile scroll hint */}
+          {isMobile && (
+            <div className="px-3 py-1.5 bg-muted/30 text-[10px] text-muted-foreground text-center border-b border-border">
+              ← Swipe to see more columns →
+            </div>
+          )}
+          <div 
+            className="overflow-x-auto"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
+            <table 
+              className="text-sm border-collapse"
+              style={{ width: '100%', minWidth: isMobile ? '520px' : '800px' }}
+            >
               <thead className="bg-muted/50 text-xs font-semibold text-muted-foreground border-b border-border">
                 <tr>
                   {(isMobile ? MOBILE_COLUMN_ORDER : columnOrder).map((columnId) => {
@@ -382,9 +394,6 @@ export function ProspectTable({
                     const width = isMobile ? col?.mobileWidth : columnWidths[columnId];
                     const isDragging = draggedColumn === columnId;
                     const isResizing = resizingColumn === columnId;
-                    
-                    // On mobile, Name column is sticky
-                    const isNameSticky = isMobile && columnId === 'name';
                     
                     return (
                       <th
@@ -394,20 +403,17 @@ export function ProspectTable({
                         onDragOver={(e) => !isMobile && handleDragOver(e, columnId)}
                         onDragEnd={() => !isMobile && handleDragEnd()}
                         className={cn(
-                          "px-2 py-2.5 text-left relative select-none whitespace-nowrap",
+                          "px-2 py-2.5 text-left whitespace-nowrap",
                           isDragging && "opacity-50 bg-primary/10",
                           columnId === 'index' && "text-center",
-                          !isMobile && "hover:bg-muted/50 cursor-grab active:cursor-grabbing px-3 py-3",
-                          isNameSticky && "sticky left-0 z-20 bg-muted/50"
+                          !isMobile && "hover:bg-muted/50 cursor-grab active:cursor-grabbing px-3 py-3 relative select-none",
+                          isMobile && "text-[11px]"
                         )}
-                        style={{ 
-                          width: `${width}px`, 
-                          minWidth: `${width}px`
-                        }}
+                        style={{ width: `${width}px`, minWidth: `${width}px` }}
                       >
                         <div className="flex items-center gap-1">
                           {!isMobile && <GripVertical className="h-3 w-3 text-muted-foreground/50" />}
-                          <span className={cn(isMobile && "text-[11px] font-semibold")}>{col?.label || columnId}</span>
+                          <span>{col?.label || columnId}</span>
                         </div>
                         {!isMobile && (
                           <div
@@ -447,8 +453,8 @@ export function ProspectTable({
             </table>
           </div>
           <div className={cn(
-            "px-4 py-3 border-t border-border/50 bg-muted/20 text-xs text-muted-foreground flex items-center justify-between",
-            isMobile && "px-2 py-2"
+            "px-4 py-2 border-t border-border/50 bg-muted/20 text-xs text-muted-foreground flex items-center justify-between",
+            isMobile && "px-2 py-1.5"
           )}>
             <span>{filteredProspects.length} of {baseProspects.length}</span>
             {!isMobile && <span className="text-muted-foreground/60">Drag columns to reorder • Drag edges to resize</span>}
