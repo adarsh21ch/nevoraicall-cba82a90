@@ -11,7 +11,6 @@ export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const { prospects, loading, addProspect, updateProspect, deleteProspect, importProspects } = useProspects();
 
-  // Calculate Total CC (Level Up count from prospects)
   const totalCC = prospects.filter(p => p.funnel_stage === 'Level Up').length;
 
   useEffect(() => {
@@ -31,33 +30,37 @@ export default function Dashboard() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-card border-b border-border">
+    <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20 pb-24">
+      {/* Premium Header */}
+      <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-xl border-b border-border/50">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <button className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+            <button className="p-2 rounded-xl hover:bg-muted/80 transition-colors">
               <Menu className="h-5 w-5" />
             </button>
             <div>
-              <h1 className="text-lg font-bold">NEVORUP</h1>
-              <p className="text-xs text-muted-foreground">Never miss a follow-up</p>
+              <h1 className="text-lg font-bold tracking-tight">NEVORUP</h1>
+              <p className="text-[10px] text-muted-foreground font-medium">Never miss a follow-up</p>
             </div>
           </div>
-          <div className="bg-muted rounded-lg px-3 py-1.5 text-right">
-            <p className="text-xs text-muted-foreground">Total CC:</p>
-            <p className="text-lg font-bold text-primary">{totalCC}</p>
+          <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl px-4 py-2 text-right border border-primary/10">
+            <p className="text-[10px] text-muted-foreground font-medium">Total CC</p>
+            <p className="text-2xl font-bold text-primary tracking-tight">{totalCC}</p>
           </div>
         </div>
       </header>
 
       <main className="container py-4 px-4">
-        <div className="mb-4">
-          <h2 className="text-2xl font-bold">Follow-Up List</h2>
+        <div className="mb-5">
+          <h2 className="text-2xl font-bold tracking-tight">Follow-Up List</h2>
           <p className="text-sm text-muted-foreground">
             Manage and track your sales prospects
           </p>
-          <div className="w-10 h-1 bg-primary rounded-full mt-2" />
+          <div className="flex items-center gap-1 mt-2">
+            <div className="w-8 h-1 bg-primary rounded-full" />
+            <div className="w-2 h-1 bg-primary/50 rounded-full" />
+            <div className="w-1 h-1 bg-primary/30 rounded-full" />
+          </div>
         </div>
         <ProspectTable
           prospects={prospects}

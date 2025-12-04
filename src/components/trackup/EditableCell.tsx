@@ -54,7 +54,10 @@ export function EditableCell({ value, onChange, className }: EditableCellProps) 
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         className={cn(
-          "w-full h-8 px-2 text-center text-sm bg-background border border-primary rounded focus:outline-none focus:ring-2 focus:ring-primary/30",
+          "w-full h-9 px-2 text-center text-sm font-medium",
+          "bg-primary/5 border-2 border-primary rounded-lg",
+          "focus:outline-none focus:ring-2 focus:ring-primary/30",
+          "transition-all duration-200",
           className
         )}
         min={0}
@@ -66,8 +69,11 @@ export function EditableCell({ value, onChange, className }: EditableCellProps) 
     <div
       onClick={handleClick}
       className={cn(
-        "w-full h-8 flex items-center justify-center text-sm cursor-pointer rounded hover:bg-muted/50 transition-colors",
-        value === 0 ? "text-muted-foreground" : "text-foreground font-medium",
+        "w-full h-9 flex items-center justify-center text-sm cursor-pointer",
+        "rounded-lg transition-all duration-200",
+        "hover:bg-primary/5 hover:shadow-inner",
+        "active:scale-95",
+        value === 0 ? "text-muted-foreground/50" : "text-foreground font-semibold",
         className
       )}
     >
