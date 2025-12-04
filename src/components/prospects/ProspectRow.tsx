@@ -122,14 +122,10 @@ export function ProspectRow({
     const width = columnWidths[columnId];
     const style = { width: width ? `${width}px` : undefined, minWidth: width ? `${width}px` : undefined };
     
-    // Only Name is sticky on mobile
-    const isNameSticky = isMobileTable && columnId === 'name';
-    const bgColor = isEven ? "bg-muted/20" : "bg-card";
-    
     const cellClass = cn(
-      "px-2 py-2",
-      !isMobileTable && "px-3 py-3 whitespace-nowrap",
-      isNameSticky && `sticky left-0 z-10 ${bgColor}`
+      "px-2 py-2 whitespace-nowrap",
+      !isMobileTable && "px-3 py-3",
+      isMobileTable && "text-xs"
     );
     
     switch (columnId) {
@@ -144,22 +140,19 @@ export function ProspectRow({
       case 'name':
         return (
           <td key={columnId} className={cellClass} style={style}>
-            {isMobileTable ? (
-              // Mobile: Name + Phone + Call buttons stacked
-              <div className="space-y-0.5">
-                <button
-                  onClick={onToggleExpand}
-                  className="text-left font-semibold text-foreground hover:text-primary text-xs truncate block w-full"
-                >
-                  {localName}
-                </button>
+            <div className="space-y-0.5">
+              <button
+                onClick={onToggleExpand}
+                className={cn(
+                  "text-left font-semibold text-foreground hover:text-primary transition-colors cursor-pointer bg-transparent border-0 p-0 truncate block max-w-full",
+                  isMobileTable && "text-xs"
+                )}
+              >
+                {localName}
+              </button>
+              {isMobileTable && (
                 <div className="flex items-center gap-1">
-                  <a 
-                    href={`tel:${cleanPhoneNumber(prospect.phone)}`}
-                    className="text-[10px] text-muted-foreground hover:text-primary truncate"
-                  >
-                    {localPhone}
-                  </a>
+                  <span className="text-[10px] text-muted-foreground truncate">{localPhone}</span>
                   <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" onClick={openCall}>
                     <Phone className="h-2.5 w-2.5 text-accent" />
                   </Button>
@@ -167,16 +160,8 @@ export function ProspectRow({
                     <MessageCircle className="h-2.5 w-2.5" />
                   </Button>
                 </div>
-              </div>
-            ) : (
-              // Desktop: Just name
-              <button
-                onClick={onToggleExpand}
-                className="text-left font-semibold text-foreground hover:text-primary transition-colors cursor-pointer bg-transparent border-0 p-0 truncate block max-w-full"
-              >
-                {localName}
-              </button>
-            )}
+              )}
+            </div>
           </td>
         );
       case 'phone':
