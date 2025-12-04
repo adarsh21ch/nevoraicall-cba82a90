@@ -122,33 +122,32 @@ export function ProspectRow({
     const width = columnWidths[columnId];
     const style = { width: width ? `${width}px` : undefined, minWidth: width ? `${width}px` : undefined };
     
-    // Sticky columns for mobile table
-    const isSticky = isMobileTable && (columnId === 'name' || columnId === 'phone' || columnId === 'index');
-    const stickyLeft = isMobileTable && columnId === 'index' ? 0 : 
-                       isMobileTable && columnId === 'name' ? columnWidths['index'] :
-                       isMobileTable && columnId === 'phone' ? columnWidths['index'] + columnWidths['name'] : undefined;
+    // Only Name is sticky on mobile
+    const isNameSticky = isMobileTable && columnId === 'name';
+    const bgColor = isEven ? "bg-muted/20" : "bg-card";
     
-    const stickyClass = isSticky ? cn(
-      "sticky z-10",
-      isEven ? "bg-muted/20" : "bg-card"
-    ) : "";
+    const cellClass = cn(
+      "px-2 py-2 whitespace-nowrap",
+      !isMobileTable && "px-3 py-3",
+      isNameSticky && `sticky left-0 z-10 ${bgColor} shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]`
+    );
     
     switch (columnId) {
       case 'index':
         return (
-          <td key={columnId} className={cn("px-2 py-2 text-center", stickyClass)} style={{ ...style, left: stickyLeft !== undefined ? `${stickyLeft}px` : undefined }}>
-            <span className={cn("text-xs font-semibold text-muted-foreground bg-muted/60 rounded-md px-1.5 py-0.5", isMobileTable && "text-[10px] px-1")}>
+          <td key={columnId} className={cn(cellClass, "text-center")} style={style}>
+            <span className={cn("text-xs font-semibold text-muted-foreground bg-muted/60 rounded px-1.5 py-0.5", isMobileTable && "text-[10px] px-1")}>
               {index}
             </span>
           </td>
         );
       case 'name':
         return (
-          <td key={columnId} className={cn("px-2 py-2", stickyClass)} style={{ ...style, left: stickyLeft !== undefined ? `${stickyLeft}px` : undefined }}>
+          <td key={columnId} className={cellClass} style={style}>
             <button
               onClick={onToggleExpand}
               className={cn(
-                "text-left font-semibold text-foreground hover:text-primary transition-colors cursor-pointer bg-transparent border-0 p-0 truncate max-w-full",
+                "text-left font-semibold text-foreground hover:text-primary transition-colors cursor-pointer bg-transparent border-0 p-0 truncate block max-w-full",
                 isMobileTable && "text-xs"
               )}
             >
@@ -158,31 +157,40 @@ export function ProspectRow({
         );
       case 'phone':
         return (
-          <td key={columnId} className={cn("px-2 py-2", stickyClass)} style={{ ...style, left: stickyLeft !== undefined ? `${stickyLeft}px` : undefined }}>
-            <div className="flex items-center gap-1">
-              <span className={cn("text-sm text-muted-foreground font-medium truncate", isMobileTable && "text-xs")}>{localPhone}</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn("h-6 w-6 shrink-0", !isMobileTable && "opacity-0 group-hover:opacity-100 transition-opacity")}
-                onClick={openCall}
+          <td key={columnId} className={cellClass} style={style}>
+            <div className="flex items-center gap-0.5">
+              <a 
+                href={`tel:${cleanPhoneNumber(prospect.phone)}`}
+                className={cn("text-sm text-muted-foreground font-medium hover:text-primary", isMobileTable && "text-[11px]")}
               >
-                <Phone className="h-3 w-3 text-accent" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn("h-6 w-6 shrink-0 text-green-500 hover:text-green-600", !isMobileTable && "opacity-0 group-hover:opacity-100 transition-opacity")}
-                onClick={openWhatsApp}
-              >
-                <MessageCircle className="h-3 w-3" />
-              </Button>
+                {localPhone}
+              </a>
+              {isMobileTable && (
+                <>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={openCall}>
+                    <Phone className="h-3 w-3 text-accent" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 text-green-500" onClick={openWhatsApp}>
+                    <MessageCircle className="h-3 w-3" />
+                  </Button>
+                </>
+              )}
+              {!isMobileTable && (
+                <>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" onClick={openCall}>
+                    <Phone className="h-3.5 w-3.5 text-accent" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-green-500 hover:text-green-600" onClick={openWhatsApp}>
+                    <MessageCircle className="h-3.5 w-3.5" />
+                  </Button>
+                </>
+              )}
             </div>
           </td>
         );
       case 'stage':
         return (
-          <td key={columnId} className="px-3 py-3" style={style}>
+          <td key={columnId} className={cellClass} style={style}>
             <InlineSelect
               value={prospect.funnel_stage}
               options={stageOptions}
@@ -199,7 +207,7 @@ export function ProspectRow({
         );
       case 'action':
         return (
-          <td key={columnId} className="px-3 py-3" style={style}>
+          <td key={columnId} className={cellClass} style={style}>
             <InlineSelect
               value={getActionDisplayValue()}
               options={isCalling ? actionOptions : actionOptions.filter(a => a !== 'Enrolled')}
@@ -216,7 +224,7 @@ export function ProspectRow({
         );
       case 'status':
         return (
-          <td key={columnId} className="px-3 py-3" style={style}>
+          <td key={columnId} className={cellClass} style={style}>
             <InlineSelect
               value={prospect.prospect_status}
               options={statusOptions}
@@ -233,7 +241,7 @@ export function ProspectRow({
         );
       case 'priority':
         return (
-          <td key={columnId} className="px-3 py-3" style={style}>
+          <td key={columnId} className={cellClass} style={style}>
             <InlineSelect
               value={prospect.priority}
               options={priorityOptions}
@@ -250,14 +258,14 @@ export function ProspectRow({
         );
       case 'lastContact':
         return (
-          <td key={columnId} className="px-3 py-3" style={style}>
+          <td key={columnId} className={cellClass} style={style}>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 text-xs font-normal justify-start px-2 hover:bg-muted/50">
-                  <CalendarIcon className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                <Button variant="ghost" size="sm" className={cn("h-7 text-xs font-normal justify-start px-1.5 hover:bg-muted/50", isMobileTable && "h-6 text-[10px] px-1")}>
+                  <CalendarIcon className={cn("h-3 w-3 mr-1 text-muted-foreground", isMobileTable && "h-2.5 w-2.5")} />
                   {prospect.last_contact_date
-                    ? format(parseISO(prospect.last_contact_date), 'MMM d')
-                    : 'Set date'}
+                    ? format(parseISO(prospect.last_contact_date), 'M/d')
+                    : 'Date'}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 bg-popover border border-border z-50" align="start">
@@ -274,24 +282,24 @@ export function ProspectRow({
         );
       case 'actions':
         return (
-          <td key={columnId} className="px-3 py-3" style={style}>
-            <div className="flex items-center gap-1">
+          <td key={columnId} className={cellClass} style={style}>
+            <div className="flex items-center gap-0.5">
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 hover:bg-muted/50"
+                className={cn("h-7 w-7 hover:bg-muted/50", isMobileTable && "h-6 w-6")}
                 onClick={onToggleExpand}
               >
-                {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                {isExpanded ? <ChevronUp className={cn("h-4 w-4", isMobileTable && "h-3 w-3")} /> : <ChevronDown className={cn("h-4 w-4", isMobileTable && "h-3 w-3")} />}
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    className={cn("h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10", isMobileTable && "h-6 w-6")}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className={cn("h-4 w-4", isMobileTable && "h-3 w-3")} />
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent className="bg-card border-border">

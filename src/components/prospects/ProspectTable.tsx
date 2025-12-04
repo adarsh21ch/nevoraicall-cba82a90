@@ -369,19 +369,16 @@ export function ProspectTable({
         // Table Layout (Desktop or Mobile Table View)
         <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-            <table className={cn("w-full text-sm", isMobile && "min-w-[600px]")}>
-              <thead className="bg-muted/30 text-xs font-semibold text-muted-foreground border-b border-border/50">
+            <table className={cn("text-sm border-collapse", isMobile ? "w-max" : "w-full")}>
+              <thead className="bg-muted/50 text-xs font-semibold text-muted-foreground border-b border-border">
                 <tr>
                   {columnOrder.map((columnId) => {
                     const width = columnWidths[columnId];
                     const isDragging = draggedColumn === columnId;
                     const isResizing = resizingColumn === columnId;
                     
-                    // On mobile table view, make Name and Phone sticky
-                    const isSticky = isMobile && (columnId === 'name' || columnId === 'phone' || columnId === 'index');
-                    const stickyLeft = isMobile && columnId === 'index' ? 0 : 
-                                       isMobile && columnId === 'name' ? columnWidths['index'] :
-                                       isMobile && columnId === 'phone' ? columnWidths['index'] + columnWidths['name'] : undefined;
+                    // On mobile, only Name is sticky
+                    const isNameSticky = isMobile && columnId === 'name';
                     
                     return (
                       <th
@@ -391,23 +388,25 @@ export function ProspectTable({
                         onDragOver={(e) => !isMobile && handleDragOver(e, columnId)}
                         onDragEnd={() => !isMobile && handleDragEnd()}
                         className={cn(
-                          "px-3 py-3 text-left relative select-none transition-colors",
+                          "px-2 py-2.5 text-left relative select-none whitespace-nowrap",
                           isDragging && "opacity-50 bg-primary/10",
                           columnId === 'index' && "text-center",
-                          !isMobile && "hover:bg-muted/50 cursor-grab active:cursor-grabbing",
-                          isSticky && "sticky bg-muted/30 z-10"
+                          !isMobile && "hover:bg-muted/50 cursor-grab active:cursor-grabbing px-3 py-3",
+                          isNameSticky && "sticky left-0 z-20 bg-muted/50 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]"
                         )}
                         style={{ 
-                          width: isMobile ? (columnId === 'index' ? '40px' : columnId === 'name' ? '120px' : columnId === 'phone' ? '110px' : `${width}px`) : `${width}px`, 
-                          minWidth: isMobile ? (columnId === 'index' ? '40px' : columnId === 'name' ? '120px' : columnId === 'phone' ? '110px' : `${width}px`) : `${width}px`,
-                          left: stickyLeft !== undefined ? `${stickyLeft}px` : undefined 
+                          width: isMobile 
+                            ? (columnId === 'index' ? '36px' : columnId === 'name' ? '100px' : columnId === 'phone' ? '100px' : '80px') 
+                            : `${width}px`, 
+                          minWidth: isMobile 
+                            ? (columnId === 'index' ? '36px' : columnId === 'name' ? '100px' : columnId === 'phone' ? '100px' : '80px') 
+                            : `${width}px`
                         }}
                       >
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1">
                           {!isMobile && <GripVertical className="h-3 w-3 text-muted-foreground/50" />}
-                          <span className={cn(isMobile && "text-[10px]")}>{getColumnLabel(columnId)}</span>
+                          <span className={cn(isMobile && "text-[10px] font-bold")}>{getColumnLabel(columnId)}</span>
                         </div>
-                        {/* Resize handle - desktop only */}
                         {!isMobile && (
                           <div
                             className={cn(
@@ -435,7 +434,7 @@ export function ProspectTable({
                     onDelete={onDelete}
                     isEven={index % 2 === 0}
                     columnOrder={columnOrder}
-                    columnWidths={isMobile ? { ...columnWidths, index: 40, name: 120, phone: 110 } : columnWidths}
+                    columnWidths={isMobile ? { index: 36, name: 100, phone: 100, stage: 80, action: 80, status: 70, priority: 70, lastContact: 80, actions: 70 } : columnWidths}
                     isMobileTable={isMobile}
                   />
                 ))}
@@ -448,7 +447,7 @@ export function ProspectTable({
           )}>
             <span>Showing {filteredProspects.length} of {baseProspects.length}</span>
             {!isMobile && <span className="text-muted-foreground/60">Drag columns to reorder • Drag edges to resize</span>}
-            {isMobile && <span className="text-muted-foreground/60">← Scroll →</span>}
+            {isMobile && <span className="text-muted-foreground/60">Swipe → for more</span>}
           </div>
         </div>
       )}
