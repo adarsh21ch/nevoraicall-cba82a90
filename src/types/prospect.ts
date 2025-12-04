@@ -1,5 +1,6 @@
 export type FunnelStage = 'Enrollment' | 'Day 1' | 'Day 2' | 'Day 3' | 'Minimum Bill' | 'Level Up' | '2CC';
 export type ActionTaken = 'Video Sent' | 'Called' | 'Not Picked' | 'Busy' | 'Follow Up Scheduled';
+export type ExtendedActionTaken = ActionTaken | 'Enrolled';
 export type ProspectStatus = '+VE' | '-VE' | '50-50' | '30-70';
 export type PriorityLevel = 'High' | 'Medium' | 'Low';
 export type EnrollmentStatus = 'Enrolled' | 'Not Enrolled';
@@ -60,6 +61,7 @@ export const FUNNEL_STAGES: FunnelStage[] = ['Enrollment', 'Day 1', 'Day 2', 'Da
 export const CALLING_STAGES: FunnelStage[] = ['Enrollment'];
 export const FUNNEL_TAB_STAGES: FunnelStage[] = ['Day 1', 'Day 2', 'Day 3', 'Minimum Bill', 'Level Up', '2CC'];
 export const ACTIONS: ActionTaken[] = ['Video Sent', 'Called', 'Not Picked', 'Busy', 'Follow Up Scheduled'];
+export const EXTENDED_ACTIONS: ExtendedActionTaken[] = ['Video Sent', 'Called', 'Not Picked', 'Busy', 'Follow Up Scheduled', 'Enrolled'];
 export const STATUSES: ProspectStatus[] = ['+VE', '-VE', '50-50', '30-70'];
 export const PRIORITIES: PriorityLevel[] = ['High', 'Medium', 'Low'];
 export const ENROLLMENT_STATUSES: EnrollmentStatus[] = ['Enrolled', 'Not Enrolled'];

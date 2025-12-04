@@ -1,16 +1,17 @@
-import { useState } from 'react';
-import { Prospect, FUNNEL_STAGES, ACTIONS, STATUSES, PRIORITIES, ENROLLMENT_STATUSES } from '@/types/prospect';
+import { useState, useEffect } from 'react';
+import { Prospect, FUNNEL_STAGES, EXTENDED_ACTIONS, STATUSES, PRIORITIES, ExtendedActionTaken, ActionTaken } from '@/types/prospect';
 import { InlineSelect } from './InlineSelect';
-import { StatusBadge, PriorityBadge, StageBadge, EnrollBadge } from './StatusBadge';
+import { StatusBadge, PriorityBadge, StageBadge, ActionBadge } from './StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { MessageCircle, Phone, Trash2, Calendar as CalendarIcon, ChevronDown, ChevronUp } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { MessageCircle, Phone, Trash2, Calendar as CalendarIcon, ChevronDown, ChevronUp, MapPin, Mail, Target } from 'lucide-react';
+import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useActivityLogs } from '@/hooks/useActivityLogs';
 
 interface MobileProspectCardProps {
   prospect: Prospect;
@@ -18,15 +19,35 @@ interface MobileProspectCardProps {
   isCalling: boolean;
   onUpdate: (id: string, updates: Partial<Prospect>) => Promise<Prospect | null>;
   onDelete: (id: string) => Promise<boolean>;
-  onOpenReportCard?: (prospect: Prospect) => void;
 }
 
-export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDelete, onOpenReportCard }: MobileProspectCardProps) {
+export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDelete }: MobileProspectCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [localName, setLocalName] = useState(prospect.name);
-  const [localPhone, setLocalPhone] = useState(prospect.phone);
-  const [localNotes, setLocalNotes] = useState(prospect.notes || '');
+  const [localData, setLocalData] = useState({
+    name: prospect.name,
+    phone: prospect.phone,
+    email: prospect.email || '',
+    city: prospect.city || '',
+    why_need: prospect.why_need || '',
+    notes: prospect.notes || '',
+  });
   const [isDeleting, setIsDeleting] = useState(false);
+  const { activities } = useActivityLogs();
+
+  useEffect(() => {
+    setLocalData({
+      name: prospect.name,
+      phone: prospect.phone,
+      email: prospect.email || '',
+      city: prospect.city || '',
+      why_need: prospect.why_need || '',
+      notes: prospect.notes || '',
+    });
+  }, [prospect]);
+
+  const prospectActivities = activities
+    .filter(log => log.prospect_id === prospect.id)
+    .slice(0, 3);
 
   const cleanPhoneNumber = (phone: string) => phone.replace(/[^0-9+]/g, '');
 
@@ -44,70 +65,74 @@ export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDel
     setIsDeleting(false);
   };
 
-  const handleNameClick = () => {
-    if (onOpenReportCard) {
-      onOpenReportCard(prospect);
+  // Handle action change - if "Enrolled" is selected, also update enrollment_status
+  const handleActionChange = (value: ExtendedActionTaken) => {
+    const updates: Partial<Prospect> = {};
+    
+    if (value === 'Enrolled') {
+      updates.enrollment_status = 'Enrolled';
+      if (!prospect.funnel_stage || prospect.funnel_stage === 'Enrollment') {
+        updates.funnel_stage = 'Day 1';
+      }
+      updates.action_taken = prospect.action_taken;
+    } else {
+      updates.action_taken = value as ActionTaken;
+    }
+    
+    onUpdate(prospect.id, updates);
+  };
+
+  const getActionDisplayValue = (): ExtendedActionTaken | null => {
+    if (prospect.enrollment_status === 'Enrolled') {
+      return 'Enrolled';
+    }
+    return prospect.action_taken || null;
+  };
+
+  const handleFieldUpdate = (field: keyof Prospect, value: any) => {
+    if (value !== (prospect as any)[field]) {
+      onUpdate(prospect.id, { [field]: value || null });
     }
   };
 
   return (
-    <div className="bg-card rounded-xl border border-border/50 p-3 space-y-2.5 shadow-sm">
-      {/* Header: # + Name + Phone + Quick Actions */}
-      <div className="flex items-start gap-2">
-        <span className="text-xs font-medium text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5 mt-0.5">
-          #{index}
-        </span>
-        <div className="flex-1 min-w-0">
-          {onOpenReportCard ? (
-            <button
-              onClick={handleNameClick}
-              className="text-sm font-semibold text-primary hover:underline cursor-pointer bg-transparent border-0 p-0 text-left"
+    <div className="bg-card rounded-xl border border-border/50 shadow-sm overflow-hidden">
+      {/* Header: Name + Phone + Quick Actions */}
+      <div className="p-4 border-b border-border/30">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-semibold text-muted-foreground bg-muted/60 rounded-md px-2 py-0.5">
+                #{index}
+              </span>
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="text-base font-bold text-foreground hover:text-primary transition-colors text-left truncate"
+              >
+                {localData.name}
+              </button>
+            </div>
+            <a 
+              href={`tel:${cleanPhoneNumber(prospect.phone)}`}
+              className="text-sm text-muted-foreground font-medium hover:text-accent transition-colors"
             >
-              {localName}
-            </button>
-          ) : (
-            <Input
-              value={localName}
-              onChange={(e) => setLocalName(e.target.value)}
-              onBlur={() => localName !== prospect.name && localName.trim() && onUpdate(prospect.id, { name: localName.trim() })}
-              className="h-7 text-sm font-semibold border-0 p-0 focus-visible:ring-0 bg-transparent"
-            />
-          )}
-          <div className="flex items-center gap-1 mt-0.5">
-            <Input
-              value={localPhone}
-              onChange={(e) => setLocalPhone(e.target.value)}
-              onBlur={() => localPhone !== prospect.phone && localPhone.trim() && onUpdate(prospect.id, { phone: localPhone.trim() })}
-              className="h-6 text-xs text-muted-foreground border-0 p-0 focus-visible:ring-0 bg-transparent flex-1"
-            />
+              {localData.phone}
+            </a>
           </div>
-        </div>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={openCall}>
-            <Phone className="h-4 w-4 text-accent" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-green-500" onClick={openWhatsApp}>
-            <MessageCircle className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="icon" className="h-10 w-10" onClick={openCall}>
+              <Phone className="h-4 w-4 text-accent" />
+            </Button>
+            <Button variant="outline" size="icon" className="h-10 w-10 text-green-500 border-green-200 hover:bg-green-50 hover:text-green-600" onClick={openWhatsApp}>
+              <MessageCircle className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Status Row */}
-      <div className="flex flex-wrap items-center gap-1.5">
-        {isCalling ? (
-          <InlineSelect
-            value={prospect.enrollment_status || 'Not Enrolled'}
-            options={ENROLLMENT_STATUSES}
-            onChange={(value) => {
-              const updates: Partial<Prospect> = { enrollment_status: value };
-              if (value === 'Enrolled' && (!prospect.funnel_stage || prospect.funnel_stage === 'Enrollment')) {
-                updates.funnel_stage = 'Day 1';
-              }
-              onUpdate(prospect.id, updates);
-            }}
-            renderValue={(value) => <EnrollBadge status={value} />}
-          />
-        ) : (
+      {/* Status Chips Row */}
+      <div className="px-4 py-3 flex flex-wrap items-center gap-2 bg-muted/10">
+        {!isCalling && (
           <InlineSelect
             value={prospect.funnel_stage}
             options={FUNNEL_STAGES}
@@ -116,10 +141,11 @@ export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDel
           />
         )}
         <InlineSelect
-          value={prospect.action_taken}
-          options={ACTIONS}
-          onChange={(value) => onUpdate(prospect.id, { action_taken: value })}
+          value={getActionDisplayValue()}
+          options={isCalling ? EXTENDED_ACTIONS : EXTENDED_ACTIONS.filter(a => a !== 'Enrolled')}
+          onChange={handleActionChange}
           placeholder="Action"
+          renderValue={(value) => <ActionBadge action={value} />}
         />
         <InlineSelect
           value={prospect.prospect_status}
@@ -136,31 +162,38 @@ export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDel
         />
       </div>
 
-      {/* Date + Expand */}
-      <div className="flex items-center justify-between">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-7 text-xs px-2">
-              <CalendarIcon className="h-3 w-3 mr-1" />
-              {prospect.last_contact_date ? format(parseISO(prospect.last_contact_date), 'MMM d') : 'Set date'}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 bg-popover border-border z-50" align="start">
-            <Calendar
-              mode="single"
-              selected={prospect.last_contact_date ? parseISO(prospect.last_contact_date) : undefined}
-              onSelect={(date) => onUpdate(prospect.id, { last_contact_date: date ? format(date, 'yyyy-MM-dd') : null })}
-            />
-          </PopoverContent>
-        </Popover>
+      {/* Date + Notes Preview + Expand */}
+      <div className="px-4 py-3 flex items-center justify-between border-t border-border/30">
+        <div className="flex items-center gap-3">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 text-xs px-2 hover:bg-muted/50">
+                <CalendarIcon className="h-3.5 w-3.5 mr-1.5" />
+                {prospect.last_contact_date ? format(parseISO(prospect.last_contact_date), 'MMM d') : 'Set date'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 bg-popover border-border z-50" align="start">
+              <Calendar
+                mode="single"
+                selected={prospect.last_contact_date ? parseISO(prospect.last_contact_date) : undefined}
+                onSelect={(date) => onUpdate(prospect.id, { last_contact_date: date ? format(date, 'yyyy-MM-dd') : null })}
+              />
+            </PopoverContent>
+          </Popover>
+          {prospect.notes && !isExpanded && (
+            <p className="text-xs text-muted-foreground truncate max-w-[120px]">
+              {prospect.notes}
+            </p>
+          )}
+        </div>
 
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsExpanded(!isExpanded)}>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsExpanded(!isExpanded)}>
             {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive">
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
                 <Trash2 className="h-4 w-4" />
               </Button>
             </AlertDialogTrigger>
@@ -182,19 +215,85 @@ export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDel
         </div>
       </div>
 
-      {/* Expanded Notes */}
+      {/* Expanded Report Card */}
       {isExpanded && (
-        <div className="pt-2 border-t border-border/50 space-y-2 animate-fade-in">
-          <Textarea
-            value={localNotes}
-            onChange={(e) => setLocalNotes(e.target.value)}
-            onBlur={() => localNotes !== (prospect.notes || '') && onUpdate(prospect.id, { notes: localNotes || null })}
-            placeholder="Add notes..."
-            className="min-h-[60px] text-xs resize-none"
-          />
-          {prospect.email && (
-            <p className="text-xs text-muted-foreground">Email: {prospect.email}</p>
+        <div className="border-t border-border/50 p-4 space-y-4 bg-muted/10 animate-fade-in">
+          {/* Contact Info */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Contact Info</h4>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-2">
+                <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <Input
+                  type="email"
+                  value={localData.email}
+                  onChange={(e) => setLocalData(prev => ({ ...prev, email: e.target.value }))}
+                  onBlur={() => handleFieldUpdate('email', localData.email)}
+                  placeholder="Email"
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <Input
+                  value={localData.city}
+                  onChange={(e) => setLocalData(prev => ({ ...prev, city: e.target.value }))}
+                  onBlur={() => handleFieldUpdate('city', localData.city)}
+                  placeholder="City"
+                  className="h-8 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Why/Need */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <Target className="h-3.5 w-3.5" />
+              Why / Need
+            </h4>
+            <Textarea
+              value={localData.why_need}
+              onChange={(e) => setLocalData(prev => ({ ...prev, why_need: e.target.value }))}
+              onBlur={() => handleFieldUpdate('why_need', localData.why_need)}
+              placeholder="Why do they want to earn?"
+              className="min-h-[60px] text-sm resize-none"
+            />
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Notes</h4>
+            <Textarea
+              value={localData.notes}
+              onChange={(e) => setLocalData(prev => ({ ...prev, notes: e.target.value }))}
+              onBlur={() => handleFieldUpdate('notes', localData.notes)}
+              placeholder="Call notes, action items..."
+              className="min-h-[80px] text-sm resize-none"
+            />
+          </div>
+
+          {/* Recent Activity */}
+          {prospectActivities.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recent Activity</h4>
+              <div className="space-y-1.5">
+                {prospectActivities.map((activity) => (
+                  <div key={activity.id} className="text-xs bg-background rounded-lg p-2 border border-border/30">
+                    <p className="text-foreground">{activity.description}</p>
+                    <p className="text-muted-foreground mt-0.5">
+                      {formatDistanceToNow(parseISO(activity.created_at), { addSuffix: true })}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
+
+          {/* Meta */}
+          <div className="pt-2 border-t border-border/30 text-xs text-muted-foreground">
+            <p>Added {formatDistanceToNow(parseISO(prospect.date_added), { addSuffix: true })}</p>
+          </div>
         </div>
       )}
     </div>

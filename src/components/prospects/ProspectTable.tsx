@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Prospect, FunnelStage, ProspectStatus, PriorityLevel, Sheet } from '@/types/prospect';
 import { ProspectRow } from './ProspectRow';
 import { MobileProspectCard } from './MobileProspectCard';
@@ -7,10 +7,10 @@ import { AddProspectDialog } from './AddProspectDialog';
 import { ImportExcelDialog } from './ImportExcelDialog';
 import { CallingFunnelTabs, TabType } from './CallingFunnelTabs';
 import { SheetTabs } from './SheetTabs';
-import { ProspectReportCard } from './ProspectReportCard';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users } from 'lucide-react';
+import { Users, GripVertical } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 interface Filters {
   search: string;
@@ -35,6 +35,19 @@ interface ProspectTableProps {
   onDeleteSheet: (id: string) => Promise<boolean>;
 }
 
+// Column configuration
+const COLUMNS = [
+  { id: 'index', label: '#', defaultWidth: 50, minWidth: 40 },
+  { id: 'name', label: 'Name', defaultWidth: 180, minWidth: 120 },
+  { id: 'phone', label: 'Phone', defaultWidth: 160, minWidth: 120 },
+  { id: 'stage', label: 'Stage', defaultWidth: 120, minWidth: 100 },
+  { id: 'action', label: 'Action', defaultWidth: 140, minWidth: 100 },
+  { id: 'status', label: 'Status', defaultWidth: 100, minWidth: 80 },
+  { id: 'priority', label: 'Priority', defaultWidth: 100, minWidth: 80 },
+  { id: 'lastContact', label: 'Last Contact', defaultWidth: 110, minWidth: 90 },
+  { id: 'actions', label: 'Actions', defaultWidth: 90, minWidth: 80 },
+];
+
 export function ProspectTable({
   prospects,
   loading,
@@ -56,9 +69,16 @@ export function ProspectTable({
     status: 'all',
     priority: 'all',
   });
-  const [reportCardProspect, setReportCardProspect] = useState<Prospect | null>(null);
-  const [reportCardOpen, setReportCardOpen] = useState(false);
+  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   const isMobile = useIsMobile();
+
+  // Column state for reordering and resizing
+  const [columnOrder, setColumnOrder] = useState<string[]>(COLUMNS.map(c => c.id));
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(
+    Object.fromEntries(COLUMNS.map(c => [c.id, c.defaultWidth]))
+  );
+  const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
+  const [resizingColumn, setResizingColumn] = useState<string | null>(null);
 
   // Separate prospects into Calling vs Funnel
   const callingProspects = useMemo(() => {
@@ -144,9 +164,60 @@ export function ProspectTable({
     return onImport(prospectsData);
   };
 
-  const handleOpenReportCard = (prospect: Prospect) => {
-    setReportCardProspect(prospect);
-    setReportCardOpen(true);
+  const handleToggleExpand = useCallback((prospectId: string) => {
+    setExpandedRowId(prev => prev === prospectId ? null : prospectId);
+  }, []);
+
+  // Column drag handlers
+  const handleDragStart = (columnId: string) => {
+    setDraggedColumn(columnId);
+  };
+
+  const handleDragOver = (e: React.DragEvent, targetColumnId: string) => {
+    e.preventDefault();
+    if (!draggedColumn || draggedColumn === targetColumnId) return;
+    
+    const newOrder = [...columnOrder];
+    const draggedIdx = newOrder.indexOf(draggedColumn);
+    const targetIdx = newOrder.indexOf(targetColumnId);
+    
+    newOrder.splice(draggedIdx, 1);
+    newOrder.splice(targetIdx, 0, draggedColumn);
+    setColumnOrder(newOrder);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedColumn(null);
+  };
+
+  // Column resize handlers
+  const handleResizeStart = (e: React.MouseEvent, columnId: string) => {
+    e.preventDefault();
+    setResizingColumn(columnId);
+    
+    const startX = e.clientX;
+    const startWidth = columnWidths[columnId];
+    const column = COLUMNS.find(c => c.id === columnId);
+    const minWidth = column?.minWidth || 60;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const delta = moveEvent.clientX - startX;
+      const newWidth = Math.max(minWidth, startWidth + delta);
+      setColumnWidths(prev => ({ ...prev, [columnId]: newWidth }));
+    };
+
+    const handleMouseUp = () => {
+      setResizingColumn(null);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const getColumnLabel = (columnId: string) => {
+    return COLUMNS.find(c => c.id === columnId)?.label || columnId;
   };
 
   if (loading) {
@@ -198,18 +269,20 @@ export function ProspectTable({
         />
       )}
 
-      {/* Filters and Actions */}
-      <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-        <ProspectFilters filters={filters} onFiltersChange={setFilters} onExport={exportToCSV} />
-        <div className="flex gap-2">
-          <ImportExcelDialog onImport={handleImportProspects} />
-          <AddProspectDialog onAdd={handleAddProspect} />
+      {/* Toolbar: Filters + Actions */}
+      <div className="bg-card/50 rounded-xl border border-border/50 p-3 space-y-3">
+        <div className="flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
+          <ProspectFilters filters={filters} onFiltersChange={setFilters} onExport={exportToCSV} />
+          <div className="flex gap-2">
+            <ImportExcelDialog onImport={handleImportProspects} />
+            <AddProspectDialog onAdd={handleAddProspect} />
+          </div>
         </div>
       </div>
 
       {/* Content */}
       {prospects.length === 0 ? (
-        <div className="bg-card rounded-lg border border-border p-12 text-center">
+        <div className="bg-card rounded-xl border border-border p-12 text-center">
           <Users className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
           <h3 className="text-lg font-medium mb-2">No prospects yet</h3>
           <p className="text-sm text-muted-foreground mb-4">
@@ -221,7 +294,7 @@ export function ProspectTable({
           </div>
         </div>
       ) : filteredProspects.length === 0 ? (
-        <div className="bg-card rounded-lg border border-border p-8 text-center">
+        <div className="bg-card rounded-xl border border-border p-8 text-center">
           <p className="text-sm text-muted-foreground">
             No prospects match your filters.{' '}
             <button
@@ -243,7 +316,6 @@ export function ProspectTable({
               isCalling={isCalling}
               onUpdate={onUpdate}
               onDelete={onDelete}
-              onOpenReportCard={handleOpenReportCard}
             />
           ))}
           <div className="text-center text-xs text-muted-foreground py-2">
@@ -251,21 +323,47 @@ export function ProspectTable({
           </div>
         </div>
       ) : (
-        // Desktop Table Layout
-        <div className="bg-card rounded-lg border border-border overflow-hidden">
+        // Desktop Table Layout with drag/resize
+        <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-xs font-medium text-muted-foreground">
+              <thead className="bg-muted/30 text-xs font-semibold text-muted-foreground border-b border-border/50">
                 <tr>
-                  <th className="px-2 py-2.5 text-center w-[50px]">#</th>
-                  <th className="px-3 py-2.5 text-left w-[180px]">Name</th>
-                  <th className="px-3 py-2.5 text-left w-[150px]">Phone</th>
-                  <th className="px-3 py-2.5 text-left w-[120px]">{isCalling ? 'Enroll' : 'Stage'}</th>
-                  <th className="px-3 py-2.5 text-left w-[140px]">Action</th>
-                  <th className="px-3 py-2.5 text-left w-[100px]">Status</th>
-                  <th className="px-3 py-2.5 text-left w-[100px]">Priority</th>
-                  <th className="px-3 py-2.5 text-left w-[110px]">Last Contact</th>
-                  <th className="px-3 py-2.5 text-left w-[100px]">Actions</th>
+                  {columnOrder.map((columnId) => {
+                    const width = columnWidths[columnId];
+                    const isDragging = draggedColumn === columnId;
+                    const isResizing = resizingColumn === columnId;
+                    
+                    return (
+                      <th
+                        key={columnId}
+                        draggable
+                        onDragStart={() => handleDragStart(columnId)}
+                        onDragOver={(e) => handleDragOver(e, columnId)}
+                        onDragEnd={handleDragEnd}
+                        className={cn(
+                          "px-3 py-3 text-left relative select-none transition-colors",
+                          isDragging && "opacity-50 bg-primary/10",
+                          columnId === 'index' && "text-center",
+                          "hover:bg-muted/50 cursor-grab active:cursor-grabbing"
+                        )}
+                        style={{ width: `${width}px`, minWidth: `${width}px` }}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <GripVertical className="h-3 w-3 text-muted-foreground/50" />
+                          <span>{getColumnLabel(columnId)}</span>
+                        </div>
+                        {/* Resize handle */}
+                        <div
+                          className={cn(
+                            "absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 transition-colors",
+                            isResizing && "bg-primary"
+                          )}
+                          onMouseDown={(e) => handleResizeStart(e, columnId)}
+                        />
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
@@ -275,27 +373,24 @@ export function ProspectTable({
                     prospect={prospect}
                     index={index + 1}
                     isCalling={isCalling}
+                    isExpanded={expandedRowId === prospect.id}
+                    onToggleExpand={() => handleToggleExpand(prospect.id)}
                     onUpdate={onUpdate}
                     onDelete={onDelete}
-                    onOpenReportCard={handleOpenReportCard}
+                    isEven={index % 2 === 0}
+                    columnOrder={columnOrder}
+                    columnWidths={columnWidths}
                   />
                 ))}
               </tbody>
             </table>
           </div>
-          <div className="px-3 py-2 border-t border-border bg-muted/30 text-xs text-muted-foreground">
-            Showing {filteredProspects.length} of {baseProspects.length} prospects
+          <div className="px-4 py-3 border-t border-border/50 bg-muted/20 text-xs text-muted-foreground flex items-center justify-between">
+            <span>Showing {filteredProspects.length} of {baseProspects.length} prospects</span>
+            <span className="text-muted-foreground/60">Drag columns to reorder • Drag edges to resize</span>
           </div>
         </div>
       )}
-
-      {/* Prospect Report Card Drawer */}
-      <ProspectReportCard
-        prospect={reportCardProspect}
-        open={reportCardOpen}
-        onOpenChange={setReportCardOpen}
-        onUpdate={onUpdate}
-      />
     </div>
   );
 }
