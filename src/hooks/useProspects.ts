@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Prospect, FunnelStage, ActionTaken, ProspectStatus, PriorityLevel } from '@/types/prospect';
+import { Prospect } from '@/types/prospect';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
@@ -43,9 +43,12 @@ export function useProspects() {
         email: prospect.email || null,
         notes: prospect.notes || null,
         user_id: user.id,
-        funnel_stage: prospect.funnel_stage || 'Enrollment',
-        priority: prospect.priority || 'Medium',
-      } as any)
+        funnel_stage: (prospect.funnel_stage || 'Enrollment') as any,
+        priority: (prospect.priority || 'Medium') as any,
+        sheet_id: prospect.sheet_id || null,
+        batch_date: prospect.batch_date || new Date().toISOString().split('T')[0],
+        enrollment_status: (prospect.enrollment_status || 'Not Enrolled') as any,
+      })
       .select()
       .single();
 
@@ -63,7 +66,7 @@ export function useProspects() {
   const updateProspect = async (id: string, updates: Partial<Prospect>) => {
     const { data, error } = await supabase
       .from('prospects')
-      .update(updates)
+      .update(updates as any)
       .eq('id', id)
       .select()
       .single();
@@ -111,11 +114,14 @@ export function useProspects() {
       phone: p.phone!,
       email: p.email || null,
       notes: p.notes || null,
-      funnel_stage: p.funnel_stage || 'Enrollment',
+      funnel_stage: (p.funnel_stage || 'Enrollment') as any,
       action_taken: p.action_taken || null,
       prospect_status: p.prospect_status || null,
-      priority: p.priority || 'Medium',
+      priority: (p.priority || 'Medium') as any,
       last_contact_date: p.last_contact_date || null,
+      sheet_id: p.sheet_id || null,
+      batch_date: p.batch_date || new Date().toISOString().split('T')[0],
+      enrollment_status: (p.enrollment_status || 'Not Enrolled') as any,
     }));
 
     const { data, error } = await supabase

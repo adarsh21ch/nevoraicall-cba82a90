@@ -316,6 +316,7 @@ export type Database = {
         | "Day 3"
         | "Minimum Bill"
         | "Level Up"
+        | "2CC"
       priority_level: "High" | "Medium" | "Low"
       prospect_status: "+VE" | "-VE" | "50-50" | "30-70"
     }
@@ -459,6 +460,7 @@ export const Constants = {
         "Day 3",
         "Minimum Bill",
         "Level Up",
+        "2CC",
       ],
       priority_level: ["High", "Medium", "Low"],
       prospect_status: ["+VE", "-VE", "50-50", "30-70"],

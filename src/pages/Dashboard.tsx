@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProspects } from '@/hooks/useProspects';
+import { useSheets } from '@/hooks/useSheets';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { ProspectTable } from '@/components/prospects/ProspectTable';
 import { Loader2 } from 'lucide-react';
@@ -11,8 +12,9 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { prospects, loading, addProspect, updateProspect, deleteProspect, importProspects } = useProspects();
+  const { sheets, selectedSheetId, setSelectedSheetId, addSheet, updateSheet, deleteSheet } = useSheets();
 
-  const totalCC = prospects.filter(p => p.funnel_stage === 'Level Up').length;
+  const totalCC = prospects.filter(p => p.funnel_stage === 'Level Up' || p.funnel_stage === '2CC').length;
 
   useEffect(() => {
     if (!user && !authLoading) {
@@ -72,6 +74,12 @@ export default function Dashboard() {
           onUpdate={updateProspect}
           onDelete={deleteProspect}
           onImport={importProspects}
+          sheets={sheets}
+          selectedSheetId={selectedSheetId}
+          onSelectSheet={setSelectedSheetId}
+          onAddSheet={addSheet}
+          onUpdateSheet={updateSheet}
+          onDeleteSheet={deleteSheet}
         />
       </main>
 

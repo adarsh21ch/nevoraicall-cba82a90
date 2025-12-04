@@ -16,6 +16,7 @@ export function StageDistribution({ prospects }: StageDistributionProps) {
       'Day 3': 0,
       'Minimum Bill': 0,
       'Level Up': 0,
+      '2CC': 0,
     };
     prospects.forEach((p) => {
       counts[p.funnel_stage]++;
@@ -49,6 +50,7 @@ export function StageDistribution({ prospects }: StageDistributionProps) {
                     stage === 'Day 3' && 'bg-stage-day3',
                     stage === 'Minimum Bill' && 'bg-stage-minimum',
                     stage === 'Level Up' && 'bg-stage-levelup',
+                    stage === '2CC' && 'bg-yellow-500',
                   )}
                   style={{ width: `${percentage}%` }}
                 />

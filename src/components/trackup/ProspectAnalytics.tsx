@@ -20,7 +20,7 @@ export function ProspectAnalytics({ prospects }: ProspectAnalyticsProps) {
 
   const stageCounts = useMemo(() => {
     const counts: Record<FunnelStage, number> = {
-      'Enrollment': 0, 'Day 1': 0, 'Day 2': 0, 'Day 3': 0, 'Minimum Bill': 0, 'Level Up': 0,
+      'Enrollment': 0, 'Day 1': 0, 'Day 2': 0, 'Day 3': 0, 'Minimum Bill': 0, 'Level Up': 0, '2CC': 0,
     };
     prospects.forEach((p) => { counts[p.funnel_stage]++; });
     return counts;
@@ -111,6 +111,7 @@ export function ProspectAnalytics({ prospects }: ProspectAnalyticsProps) {
                       stage === 'Day 3' && 'bg-gradient-to-r from-amber-400 to-amber-500',
                       stage === 'Minimum Bill' && 'bg-gradient-to-r from-emerald-400 to-emerald-500',
                       stage === 'Level Up' && 'bg-gradient-to-r from-teal-400 to-teal-500',
+                      stage === '2CC' && 'bg-gradient-to-r from-yellow-400 to-yellow-500',
                     )}
                     style={{ width: `${percentage}%` }}
                   />

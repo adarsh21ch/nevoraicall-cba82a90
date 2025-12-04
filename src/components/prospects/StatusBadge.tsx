@@ -1,28 +1,23 @@
 import { cn } from '@/lib/utils';
-import { ProspectStatus, PriorityLevel, FunnelStage } from '@/types/prospect';
+import { ProspectStatus, PriorityLevel, FunnelStage, EnrollmentStatus } from '@/types/prospect';
 
 interface StatusBadgeProps {
   status: ProspectStatus;
 }
 
 export function StatusBadge({ status }: StatusBadgeProps) {
-  const getStatusClass = () => {
-    switch (status) {
-      case '+VE':
-        return 'status-positive';
-      case '-VE':
-        return 'status-negative';
-      case '50-50':
-        return 'status-neutral';
-      case '30-70':
-        return 'status-uncertain';
-      default:
-        return 'status-uncertain';
-    }
+  const colorClasses: Record<ProspectStatus, string> = {
+    '+VE': 'bg-status-positive/15 text-status-positive border-status-positive/30',
+    '-VE': 'bg-status-negative/15 text-status-negative border-status-negative/30',
+    '50-50': 'bg-status-neutral/15 text-status-neutral border-status-neutral/30',
+    '30-70': 'bg-muted text-muted-foreground border-border',
   };
 
   return (
-    <span className={cn('status-badge', getStatusClass())}>
+    <span className={cn(
+      'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border',
+      colorClasses[status]
+    )}>
       {status}
     </span>
   );
@@ -33,21 +28,17 @@ interface PriorityBadgeProps {
 }
 
 export function PriorityBadge({ priority }: PriorityBadgeProps) {
-  const getPriorityClass = () => {
-    switch (priority) {
-      case 'High':
-        return 'priority-high';
-      case 'Medium':
-        return 'priority-medium';
-      case 'Low':
-        return 'priority-low';
-      default:
-        return 'priority-medium';
-    }
+  const colorClasses: Record<PriorityLevel, string> = {
+    'High': 'bg-status-negative/15 text-status-negative border-status-negative/30',
+    'Medium': 'bg-status-neutral/15 text-status-neutral border-status-neutral/30',
+    'Low': 'bg-muted text-muted-foreground border-border',
   };
 
   return (
-    <span className={cn('status-badge', getPriorityClass())}>
+    <span className={cn(
+      'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border',
+      colorClasses[priority]
+    )}>
       {priority}
     </span>
   );
@@ -58,28 +49,42 @@ interface StageBadgeProps {
 }
 
 export function StageBadge({ stage }: StageBadgeProps) {
-  const getStageColor = () => {
-    switch (stage) {
-      case 'Enrollment':
-        return 'bg-stage-enrollment/10 text-stage-enrollment';
-      case 'Day 1':
-        return 'bg-stage-day1/10 text-stage-day1';
-      case 'Day 2':
-        return 'bg-stage-day2/10 text-stage-day2';
-      case 'Day 3':
-        return 'bg-stage-day3/10 text-stage-day3';
-      case 'Minimum Bill':
-        return 'bg-stage-minimum/10 text-stage-minimum';
-      case 'Level Up':
-        return 'bg-stage-levelup/10 text-stage-levelup';
-      default:
-        return 'bg-muted text-muted-foreground';
-    }
+  const colorClasses: Record<FunnelStage, string> = {
+    'Enrollment': 'bg-purple-500/15 text-purple-600 border-purple-500/30',
+    'Day 1': 'bg-blue-500/15 text-blue-600 border-blue-500/30',
+    'Day 2': 'bg-cyan-500/15 text-cyan-600 border-cyan-500/30',
+    'Day 3': 'bg-teal-500/15 text-teal-600 border-teal-500/30',
+    'Minimum Bill': 'bg-orange-500/15 text-orange-600 border-orange-500/30',
+    'Level Up': 'bg-status-positive/15 text-status-positive border-status-positive/30',
+    '2CC': 'bg-yellow-500/15 text-yellow-600 border-yellow-500/30',
   };
 
   return (
-    <span className={cn('status-badge', getStageColor())}>
+    <span className={cn(
+      'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border',
+      colorClasses[stage]
+    )}>
       {stage}
+    </span>
+  );
+}
+
+interface EnrollBadgeProps {
+  status: EnrollmentStatus;
+}
+
+export function EnrollBadge({ status }: EnrollBadgeProps) {
+  const colorClasses: Record<EnrollmentStatus, string> = {
+    'Enrolled': 'bg-status-positive/15 text-status-positive border-status-positive/30',
+    'Not Enrolled': 'bg-muted text-muted-foreground border-border',
+  };
+
+  return (
+    <span className={cn(
+      'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border',
+      colorClasses[status]
+    )}>
+      {status}
     </span>
   );
 }

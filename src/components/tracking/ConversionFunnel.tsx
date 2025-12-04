@@ -31,6 +31,7 @@ export function ConversionFunnel({ prospects }: ConversionFunnelProps) {
       'Day 3': 0,
       'Minimum Bill': 0,
       'Level Up': 0,
+      '2CC': 0,
     };
     prospects.forEach((p) => {
       counts[p.funnel_stage]++;
