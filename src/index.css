@@ -180,8 +180,41 @@
     @apply hover:bg-muted/50 transition-colors duration-150;
   }
 
+  .table-row-striped-even {
+    @apply bg-muted/15;
+  }
+
+  .table-row-striped-odd {
+    @apply bg-transparent;
+  }
+
   .inline-edit-input {
     @apply bg-transparent border-0 focus:ring-2 focus:ring-accent/20 rounded px-1 py-0.5 w-full transition-all;
+  }
+
+  /* Action badge colors */
+  .action-enrolled {
+    @apply bg-[hsl(var(--status-positive-bg))] text-[hsl(var(--status-positive))];
+  }
+
+  .action-video-sent {
+    @apply bg-blue-500/15 text-blue-600;
+  }
+
+  .action-called {
+    @apply bg-purple-500/15 text-purple-600;
+  }
+
+  .action-not-picked {
+    @apply bg-orange-500/15 text-orange-600;
+  }
+
+  .action-busy {
+    @apply bg-[hsl(var(--status-neutral-bg))] text-[hsl(var(--status-neutral))];
+  }
+
+  .action-follow-up {
+    @apply bg-cyan-500/15 text-cyan-600;
   }
 
   .card-shadow {
