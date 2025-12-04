@@ -1,7 +1,8 @@
-export type FunnelStage = 'Enrollment' | 'Day 1' | 'Day 2' | 'Day 3' | 'Minimum Bill' | 'Level Up';
+export type FunnelStage = 'Enrollment' | 'Day 1' | 'Day 2' | 'Day 3' | 'Minimum Bill' | 'Level Up' | '2CC';
 export type ActionTaken = 'Video Sent' | 'Called' | 'Not Picked' | 'Busy' | 'Follow Up Scheduled';
 export type ProspectStatus = '+VE' | '-VE' | '50-50' | '30-70';
 export type PriorityLevel = 'High' | 'Medium' | 'Low';
+export type EnrollmentStatus = 'Enrolled' | 'Not Enrolled';
 
 export interface Prospect {
   id: string;
@@ -17,12 +18,51 @@ export interface Prospect {
   date_added: string;
   last_contact_date?: string | null;
   updated_at: string;
+  // New fields from Phase 1
+  sheet_id?: string | null;
+  batch_date?: string | null;
+  city?: string | null;
+  age?: number | null;
+  date_of_birth?: string | null;
+  why_need?: string | null;
+  enrollment_status?: EnrollmentStatus | null;
 }
 
-export const FUNNEL_STAGES: FunnelStage[] = ['Enrollment', 'Day 1', 'Day 2', 'Day 3', 'Minimum Bill', 'Level Up'];
+export interface Sheet {
+  id: string;
+  user_id: string;
+  name: string;
+  created_at: string;
+}
+
+export interface Todo {
+  id: string;
+  user_id: string;
+  title: string;
+  due_date?: string | null;
+  completed: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ActivityLog {
+  id: string;
+  user_id: string;
+  prospect_id?: string | null;
+  activity_type: string;
+  description: string;
+  old_value?: string | null;
+  new_value?: string | null;
+  created_at: string;
+}
+
+export const FUNNEL_STAGES: FunnelStage[] = ['Enrollment', 'Day 1', 'Day 2', 'Day 3', 'Minimum Bill', 'Level Up', '2CC'];
+export const CALLING_STAGES: FunnelStage[] = ['Enrollment'];
+export const FUNNEL_TAB_STAGES: FunnelStage[] = ['Day 1', 'Day 2', 'Day 3', 'Minimum Bill', 'Level Up', '2CC'];
 export const ACTIONS: ActionTaken[] = ['Video Sent', 'Called', 'Not Picked', 'Busy', 'Follow Up Scheduled'];
 export const STATUSES: ProspectStatus[] = ['+VE', '-VE', '50-50', '30-70'];
 export const PRIORITIES: PriorityLevel[] = ['High', 'Medium', 'Low'];
+export const ENROLLMENT_STATUSES: EnrollmentStatus[] = ['Enrolled', 'Not Enrolled'];
 
 export const FUNNEL_STAGE_ORDER: Record<FunnelStage, number> = {
   'Enrollment': 0,
@@ -31,4 +71,5 @@ export const FUNNEL_STAGE_ORDER: Record<FunnelStage, number> = {
   'Day 3': 3,
   'Minimum Bill': 4,
   'Level Up': 5,
+  '2CC': 6,
 };
