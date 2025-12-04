@@ -1,24 +1,20 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
 import { BottomNav } from '@/components/layout/BottomNav';
+import { EditProfileDialog } from '@/components/profile/EditProfileDialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { User, LogOut, Settings, Bell, HelpCircle, ChevronRight, Crown } from 'lucide-react';
-import { useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { User, LogOut, Settings, Bell, HelpCircle, ChevronRight, Crown, Phone, Building2, MapPin, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
-
-const menuItems = [
-  { icon: User, label: 'Edit Profile', color: 'from-blue-500/20 to-blue-500/5' },
-  { icon: Bell, label: 'Notifications', color: 'from-violet-500/20 to-violet-500/5' },
-  { icon: Settings, label: 'Settings', color: 'from-slate-500/20 to-slate-500/5' },
-  { icon: HelpCircle, label: 'Help & Support', color: 'from-emerald-500/20 to-emerald-500/5' },
-];
 
 export default function Profile() {
   const navigate = useNavigate();
   const { user, loading: authLoading, signOut } = useAuth();
+  const { profile, loading: profileLoading, updating, updateProfile } = useProfile();
+  const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
     if (!user && !authLoading) {
@@ -31,7 +27,7 @@ export default function Profile() {
     navigate('/auth');
   };
 
-  if (authLoading) {
+  if (authLoading || profileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -41,7 +37,8 @@ export default function Profile() {
 
   if (!user) return null;
 
-  const userInitials = user.email?.slice(0, 2).toUpperCase() || 'U';
+  const displayName = profile?.display_name || user.email?.split('@')[0] || 'User';
+  const userInitials = displayName.slice(0, 2).toUpperCase();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20 pb-24">
@@ -71,6 +68,7 @@ export default function Profile() {
             <div className="w-1 h-1 bg-primary/30 rounded-full" />
           </div>
         </div>
+
         {/* User Card */}
         <div className="relative overflow-hidden rounded-2xl p-5 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/10 shadow-lg">
           <div className="flex items-center gap-4">
@@ -80,7 +78,8 @@ export default function Profile() {
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <p className="font-semibold truncate">{user.email}</p>
+              <p className="font-semibold text-lg truncate">{displayName}</p>
+              <p className="text-sm text-muted-foreground truncate">{user.email}</p>
               <div className="flex items-center gap-1 mt-1">
                 <div className="flex items-center gap-1 text-xs bg-amber-500/20 text-amber-600 px-2 py-0.5 rounded-full">
                   <Crown className="h-3 w-3" />
@@ -94,33 +93,129 @@ export default function Profile() {
           <div className="absolute -right-4 -top-4 w-16 h-16 rounded-full bg-primary/5" />
         </div>
 
+        {/* Profile Details */}
+        {(profile?.phone || profile?.company_name || profile?.city || profile?.bio) && (
+          <div className="rounded-2xl p-4 bg-card border border-border/50 space-y-3">
+            {profile?.phone && (
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Phone className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Phone</p>
+                  <p className="text-sm font-medium">{profile.phone}</p>
+                </div>
+              </div>
+            )}
+            {profile?.company_name && (
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-violet-500/10">
+                  <Building2 className="h-4 w-4 text-violet-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Company</p>
+                  <p className="text-sm font-medium">{profile.company_name}</p>
+                </div>
+              </div>
+            )}
+            {profile?.city && (
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-emerald-500/10">
+                  <MapPin className="h-4 w-4 text-emerald-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Location</p>
+                  <p className="text-sm font-medium">{profile.city}</p>
+                </div>
+              </div>
+            )}
+            {profile?.bio && (
+              <div className="pt-2 border-t border-border/50">
+                <p className="text-xs text-muted-foreground mb-1">Bio</p>
+                <p className="text-sm">{profile.bio}</p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Menu Items */}
         <div className="space-y-2">
-          {menuItems.map((item, index) => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.label}
-                className={cn(
-                  "w-full relative overflow-hidden rounded-xl p-4",
-                  "bg-gradient-to-r backdrop-blur-sm",
-                  "border border-border/50 shadow-sm",
-                  "flex items-center justify-between",
-                  "transition-all duration-300 hover:shadow-md hover:scale-[1.01]",
-                  item.color
-                )}
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-card/50">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <span className="font-medium">{item.label}</span>
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </button>
-            );
-          })}
+          <button
+            onClick={() => setEditOpen(true)}
+            className={cn(
+              "w-full relative overflow-hidden rounded-xl p-4",
+              "bg-gradient-to-r backdrop-blur-sm",
+              "border border-border/50 shadow-sm",
+              "flex items-center justify-between",
+              "transition-all duration-300 hover:shadow-md hover:scale-[1.01]",
+              "from-blue-500/20 to-blue-500/5"
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-card/50">
+                <User className="h-5 w-5" />
+              </div>
+              <span className="font-medium">Edit Profile</span>
+            </div>
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+          </button>
+
+          <button
+            className={cn(
+              "w-full relative overflow-hidden rounded-xl p-4",
+              "bg-gradient-to-r backdrop-blur-sm",
+              "border border-border/50 shadow-sm",
+              "flex items-center justify-between",
+              "transition-all duration-300 hover:shadow-md hover:scale-[1.01]",
+              "from-violet-500/20 to-violet-500/5"
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-card/50">
+                <Bell className="h-5 w-5" />
+              </div>
+              <span className="font-medium">Notifications</span>
+            </div>
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+          </button>
+
+          <button
+            className={cn(
+              "w-full relative overflow-hidden rounded-xl p-4",
+              "bg-gradient-to-r backdrop-blur-sm",
+              "border border-border/50 shadow-sm",
+              "flex items-center justify-between",
+              "transition-all duration-300 hover:shadow-md hover:scale-[1.01]",
+              "from-slate-500/20 to-slate-500/5"
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-card/50">
+                <Settings className="h-5 w-5" />
+              </div>
+              <span className="font-medium">Settings</span>
+            </div>
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+          </button>
+
+          <button
+            className={cn(
+              "w-full relative overflow-hidden rounded-xl p-4",
+              "bg-gradient-to-r backdrop-blur-sm",
+              "border border-border/50 shadow-sm",
+              "flex items-center justify-between",
+              "transition-all duration-300 hover:shadow-md hover:scale-[1.01]",
+              "from-emerald-500/20 to-emerald-500/5"
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-card/50">
+                <HelpCircle className="h-5 w-5" />
+              </div>
+              <span className="font-medium">Help & Support</span>
+            </div>
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+          </button>
         </div>
 
         {/* Sign Out */}
@@ -133,6 +228,14 @@ export default function Profile() {
           Sign Out
         </Button>
       </main>
+
+      <EditProfileDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        profile={profile}
+        onSave={updateProfile}
+        updating={updating}
+      />
 
       <BottomNav />
     </div>
