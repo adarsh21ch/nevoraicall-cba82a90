@@ -63,7 +63,7 @@ export function ProspectRow({ prospect, onUpdate, onDelete }: ProspectRowProps) 
 
   const openWhatsApp = () => {
     const cleanPhone = cleanPhoneNumber(prospect.phone);
-    window.open(`https://wa.me/${cleanPhone}`, '_blank');
+    window.location.href = `whatsapp://send?phone=${cleanPhone}`;
   };
 
   const openCall = () => {
