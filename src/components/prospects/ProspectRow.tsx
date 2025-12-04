@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { Prospect, FunnelStage, ActionTaken, ProspectStatus, PriorityLevel, FUNNEL_STAGES, ACTIONS, STATUSES, PRIORITIES } from '@/types/prospect';
+import { Prospect, FunnelStage, ActionTaken, ProspectStatus, PriorityLevel, FUNNEL_STAGES, ACTIONS, STATUSES, PRIORITIES, ENROLLMENT_STATUSES, EnrollmentStatus } from '@/types/prospect';
 import { InlineSelect } from './InlineSelect';
-import { StatusBadge, PriorityBadge, StageBadge } from './StatusBadge';
+import { StatusBadge, PriorityBadge, StageBadge, EnrollBadge } from './StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,11 +14,13 @@ import { cn } from '@/lib/utils';
 
 interface ProspectRowProps {
   prospect: Prospect;
+  index: number;
+  isCalling: boolean;
   onUpdate: (id: string, updates: Partial<Prospect>) => Promise<Prospect | null>;
   onDelete: (id: string) => Promise<boolean>;
 }
 
-export function ProspectRow({ prospect, onUpdate, onDelete }: ProspectRowProps) {
+export function ProspectRow({ prospect, index, isCalling, onUpdate, onDelete }: ProspectRowProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [localName, setLocalName] = useState(prospect.name);
   const [localPhone, setLocalPhone] = useState(prospect.phone);
@@ -57,6 +59,15 @@ export function ProspectRow({ prospect, onUpdate, onDelete }: ProspectRowProps) 
     setIsDeleting(false);
   };
 
+  const handleEnrollmentChange = (value: EnrollmentStatus) => {
+    const updates: Partial<Prospect> = { enrollment_status: value };
+    // When enrolling, auto-set to Day 1 if still at Enrollment stage
+    if (value === 'Enrolled' && (!prospect.funnel_stage || prospect.funnel_stage === 'Enrollment')) {
+      updates.funnel_stage = 'Day 1';
+    }
+    onUpdate(prospect.id, updates);
+  };
+
   const cleanPhoneNumber = (phone: string) => {
     return phone.replace(/[^0-9+]/g, '');
   };
@@ -74,6 +85,11 @@ export function ProspectRow({ prospect, onUpdate, onDelete }: ProspectRowProps) 
   return (
     <>
       <tr className="table-row-hover group border-b border-border/50">
+        <td className="px-2 py-2 text-center">
+          <span className="text-xs font-medium text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5">
+            {index}
+          </span>
+        </td>
         <td className="px-3 py-2">
           <Input
             ref={nameRef}
@@ -111,12 +127,21 @@ export function ProspectRow({ prospect, onUpdate, onDelete }: ProspectRowProps) 
           </div>
         </td>
         <td className="px-3 py-2">
-          <InlineSelect
-            value={prospect.funnel_stage}
-            options={FUNNEL_STAGES}
-            onChange={(value) => onUpdate(prospect.id, { funnel_stage: value })}
-            renderValue={(value) => <StageBadge stage={value} />}
-          />
+          {isCalling ? (
+            <InlineSelect
+              value={prospect.enrollment_status || 'Not Enrolled'}
+              options={ENROLLMENT_STATUSES}
+              onChange={handleEnrollmentChange}
+              renderValue={(value) => <EnrollBadge status={value as EnrollmentStatus} />}
+            />
+          ) : (
+            <InlineSelect
+              value={prospect.funnel_stage}
+              options={FUNNEL_STAGES}
+              onChange={(value) => onUpdate(prospect.id, { funnel_stage: value })}
+              renderValue={(value) => <StageBadge stage={value} />}
+            />
+          )}
         </td>
         <td className="px-3 py-2">
           <InlineSelect
@@ -208,7 +233,7 @@ export function ProspectRow({ prospect, onUpdate, onDelete }: ProspectRowProps) 
       </tr>
       {isExpanded && (
         <tr className="bg-muted/30 animate-fade-in">
-          <td colSpan={8} className="px-3 py-3">
+          <td colSpan={9} className="px-3 py-3">
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground">Notes</label>
               <Textarea

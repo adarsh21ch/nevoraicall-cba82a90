@@ -10,6 +10,7 @@ export interface FunnelStats {
   day_3: number;
   minimum_bill: number;
   level_up: number;
+  two_cc: number;
 }
 
 const STAGE_MAPPING: Record<FunnelStage, keyof FunnelStats> = {
@@ -19,6 +20,7 @@ const STAGE_MAPPING: Record<FunnelStage, keyof FunnelStats> = {
   'Day 3': 'day_3',
   'Minimum Bill': 'minimum_bill',
   'Level Up': 'level_up',
+  '2CC': 'two_cc',
 };
 
 export function useProspectFunnelStats() {
@@ -53,6 +55,7 @@ export function useProspectFunnelStats() {
       day_3: 0,
       minimum_bill: 0,
       level_up: 0,
+      two_cc: 0,
     };
 
     prospects.forEach((p) => {
