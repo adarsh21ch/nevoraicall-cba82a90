@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { useFunnelTracking, FunnelRow } from '@/hooks/useFunnelTracking';
 import { EditableCell } from './EditableCell';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, ChevronDown, ChevronUp, Flame, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Plus, ChevronDown, ChevronUp, Flame, TrendingUp, TrendingDown, Minus, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
@@ -14,28 +12,36 @@ const STAGES = ['day_1', 'day_2', 'minimum_billing', 'level_up', 'two_cc'] as co
 const STAGE_LABELS: Record<string, string> = {
   day_1: 'Day 1',
   day_2: 'Day 2',
-  minimum_billing: 'Minimum Billing',
+  minimum_billing: 'Min Billing',
   level_up: 'Level Up',
   two_cc: '2CC',
+};
+
+const STAGE_COLORS: Record<string, string> = {
+  day_1: 'from-violet-500/20 to-violet-500/5',
+  day_2: 'from-pink-500/20 to-pink-500/5',
+  minimum_billing: 'from-amber-500/20 to-amber-500/5',
+  level_up: 'from-emerald-500/20 to-emerald-500/5',
+  two_cc: 'from-cyan-500/20 to-cyan-500/5',
 };
 
 const STEP_CONVERSIONS = [
   { from: 'start', to: 'day_1', label: 'Start → Day 1' },
   { from: 'day_1', to: 'day_2', label: 'Day 1 → Day 2' },
-  { from: 'day_2', to: 'minimum_billing', label: 'Day 2 → Minimum Billing' },
-  { from: 'minimum_billing', to: 'level_up', label: 'Minimum Billing → Level Up' },
+  { from: 'day_2', to: 'minimum_billing', label: 'Day 2 → Min Billing' },
+  { from: 'minimum_billing', to: 'level_up', label: 'Min Billing → Level Up' },
   { from: 'level_up', to: 'two_cc', label: 'Level Up → 2CC' },
 ];
 
 function getConversionColor(percentage: number) {
-  if (percentage >= 70) return 'bg-green-500';
-  if (percentage >= 40) return 'bg-yellow-500';
-  return 'bg-red-500';
+  if (percentage >= 70) return 'bg-gradient-to-r from-green-400 to-green-500';
+  if (percentage >= 40) return 'bg-gradient-to-r from-amber-400 to-amber-500';
+  return 'bg-gradient-to-r from-red-400 to-red-500';
 }
 
 function getConversionTextColor(percentage: number) {
-  if (percentage >= 70) return 'text-green-600';
-  if (percentage >= 40) return 'text-yellow-600';
+  if (percentage >= 70) return 'text-green-500';
+  if (percentage >= 40) return 'text-amber-500';
   return 'text-red-500';
 }
 
@@ -49,19 +55,15 @@ export function FunnelTracker() {
     updateCell(funnelNumber, field, value);
   };
 
-  // Calculate custom conversion
   const fromValue = fromStage === 'start' ? rows.length * 10 : totals[fromStage as keyof typeof totals] || 0;
   const toValue = totals[toStage as keyof typeof totals] || 0;
   const conversionPercentage = fromValue > 0 ? Math.round((toValue / fromValue) * 100) : 0;
 
-  // Calculate step-by-step conversions
   const getStepConversion = (from: string, to: string) => {
-    const fromVal = from === 'start' ? totals.day_1 + 1 : totals[from as keyof typeof totals] || 0;
+    const fromVal = from === 'start' ? totals.day_1 : totals[from as keyof typeof totals] || 0;
     const toVal = totals[to as keyof typeof totals] || 0;
-    // Special case: Start → Day 1 is always 100% if there's any data
     if (from === 'start') {
-      const total = totals.day_1;
-      return { from: total, to: total, percentage: total > 0 ? 100 : 0 };
+      return { from: fromVal || 1, to: fromVal, percentage: fromVal > 0 ? 100 : 0 };
     }
     const percentage = fromVal > 0 ? Math.round((toVal / fromVal) * 100) : 0;
     return { from: fromVal, to: toVal, percentage };
@@ -70,170 +72,165 @@ export function FunnelTracker() {
   if (loading) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-64 w-full rounded-xl" />
-        <Skeleton className="h-48 w-full rounded-xl" />
+        <Skeleton className="h-64 w-full rounded-2xl" />
+        <Skeleton className="h-48 w-full rounded-2xl" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Funnel Table */}
-      <Card className="border-0 shadow-sm bg-card">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-semibold">Funnel Tracker</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="py-3 px-2 text-left text-xs font-medium text-muted-foreground">Funnel</th>
-                  {STAGES.map(stage => (
-                    <th key={stage} className="py-3 px-2 text-center text-xs font-medium text-muted-foreground">
-                      {STAGE_LABELS[stage]}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map(row => (
-                  <tr key={row.funnel_number} className="border-b border-border/50">
-                    <td className="py-2 px-2 text-sm font-medium">{row.funnel_number}</td>
-                    {STAGES.map(stage => (
-                      <td key={stage} className="py-2 px-2">
-                        <EditableCell
-                          value={row[stage]}
-                          onChange={(value) => handleCellChange(row.funnel_number, stage, value)}
-                        />
-                      </td>
-                    ))}
-                  </tr>
+      <div className="glass-card rounded-2xl overflow-hidden">
+        <div className="p-4 border-b border-border/50">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            <h3 className="font-semibold">Funnel Tracker</h3>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">Click any cell to edit. Changes save automatically.</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-muted/30">
+                <th className="py-3 px-3 text-left text-xs font-semibold text-muted-foreground w-16">Funnel</th>
+                {STAGES.map(stage => (
+                  <th key={stage} className={cn("py-3 px-2 text-center text-xs font-semibold", "bg-gradient-to-b", STAGE_COLORS[stage])}>
+                    {STAGE_LABELS[stage]}
+                  </th>
                 ))}
-                <tr>
-                  <td colSpan={6} className="py-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={addRow}
-                      className="text-xs text-muted-foreground hover:text-foreground"
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Add row
-                    </Button>
-                  </td>
-                </tr>
-              </tbody>
-              <tfoot>
-                <tr className="border-t-2 border-border">
-                  <td className="py-3 px-2 text-sm font-bold">TOTAL</td>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, idx) => (
+                <tr key={row.funnel_number} className={cn("border-b border-border/30", idx % 2 === 0 ? "bg-background" : "bg-muted/20")}>
+                  <td className="py-2 px-3 text-sm font-bold text-muted-foreground">{row.funnel_number}</td>
                   {STAGES.map(stage => (
-                    <td key={stage} className="py-3 px-2">
-                      <div className={cn(
-                        "h-8 flex items-center justify-center text-sm font-bold rounded",
-                        "bg-gradient-to-r from-primary/10 to-primary/5"
-                      )}>
-                        {totals[stage]}
-                      </div>
+                    <td key={stage} className="py-2 px-2">
+                      <EditableCell
+                        value={row[stage]}
+                        onChange={(value) => handleCellChange(row.funnel_number, stage, value)}
+                      />
                     </td>
                   ))}
                 </tr>
-              </tfoot>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+              <tr>
+                <td colSpan={6} className="py-2 px-3">
+                  <Button variant="ghost" size="sm" onClick={addRow} className="text-xs text-primary hover:text-primary hover:bg-primary/10">
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    Add row
+                  </Button>
+                </td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
+                <td className="py-3 px-3 text-sm font-bold">TOTAL</td>
+                {STAGES.map(stage => (
+                  <td key={stage} className="py-3 px-2">
+                    <div className="h-9 flex items-center justify-center text-base font-bold rounded-lg bg-background/80 backdrop-blur-sm shadow-sm">
+                      {totals[stage]}
+                    </div>
+                  </td>
+                ))}
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
 
       {/* Conversion Analytics */}
-      <Card className="border-0 shadow-sm bg-card">
-        <CardHeader className="pb-2">
+      <div className="glass-card rounded-2xl overflow-hidden">
+        <div className="p-4 border-b border-border/50">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-semibold flex items-center gap-2">
-              Conversion Rate <Flame className="h-5 w-5 text-orange-500" />
-            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Flame className="h-5 w-5 text-orange-500" />
+              <h3 className="font-semibold">Conversion Rate</h3>
+            </div>
             <div className="flex items-center gap-2">
               <Select value={fromStage} onValueChange={setFromStage}>
-                <SelectTrigger className="w-32 h-8 text-xs">
+                <SelectTrigger className="w-28 h-8 text-xs bg-muted/50 border-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border border-border z-50">
                   {STAGES.slice(0, -1).map(stage => (
-                    <SelectItem key={stage} value={stage} className="text-xs">
-                      {STAGE_LABELS[stage]}
-                    </SelectItem>
+                    <SelectItem key={stage} value={stage} className="text-xs">{STAGE_LABELS[stage]}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              <span className="text-muted-foreground">→</span>
               <Select value={toStage} onValueChange={setToStage}>
-                <SelectTrigger className="w-32 h-8 text-xs">
+                <SelectTrigger className="w-28 h-8 text-xs bg-muted/50 border-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border border-border z-50">
                   {STAGES.filter(s => STAGES.indexOf(s) > STAGES.indexOf(fromStage as any)).map(stage => (
-                    <SelectItem key={stage} value={stage} className="text-xs">
-                      {STAGE_LABELS[stage]}
-                    </SelectItem>
+                    <SelectItem key={stage} value={stage} className="text-xs">{STAGE_LABELS[stage]}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">
-              {STAGE_LABELS[fromStage]} → {STAGE_LABELS[toStage]}
-            </span>
-            <span className={cn("text-3xl font-bold", getConversionTextColor(conversionPercentage))}>
+        </div>
+        <div className="p-4 space-y-4">
+          <div className="flex items-end justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">{STAGE_LABELS[fromStage]} → {STAGE_LABELS[toStage]}</p>
+              <p className={cn("text-sm mt-1", getConversionTextColor(conversionPercentage))}>
+                {toValue} of {fromValue} converted
+              </p>
+            </div>
+            <span className={cn("text-4xl font-bold tracking-tight", getConversionTextColor(conversionPercentage))}>
               {conversionPercentage}%
             </span>
           </div>
           
-          <div className="relative h-3 w-full overflow-hidden rounded-full bg-secondary">
+          <div className="relative h-4 w-full overflow-hidden rounded-full bg-muted/50">
             <div
-              className={cn("h-full transition-all", getConversionColor(conversionPercentage))}
+              className={cn("h-full transition-all duration-700 ease-out", getConversionColor(conversionPercentage))}
               style={{ width: `${Math.min(conversionPercentage, 100)}%` }}
             />
           </div>
-          
-          <p className={cn("text-sm", getConversionTextColor(conversionPercentage))}>
-            {toValue} of {fromValue} converted
-          </p>
 
           {/* Step by Step Conversion */}
           <Collapsible open={stepConversionOpen} onOpenChange={setStepConversionOpen}>
             <CollapsibleTrigger asChild>
-              <Button variant="ghost" className="w-full justify-between px-0 hover:bg-transparent">
-                <span className="text-sm font-medium">Step by Step Conversion Rate</span>
+              <Button variant="ghost" className="w-full justify-between px-0 hover:bg-transparent h-10">
+                <span className="text-sm font-medium">Step by Step Conversion</span>
                 {stepConversionOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-3 pt-2">
-              {STEP_CONVERSIONS.map(step => {
+              {STEP_CONVERSIONS.map((step, i) => {
                 const conv = getStepConversion(step.from, step.to);
                 return (
-                  <div key={step.label} className="space-y-1">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">{step.label}</span>
+                  <div
+                    key={step.label}
+                    className="p-3 rounded-xl bg-muted/30 space-y-2"
+                    style={{ animationDelay: `${i * 50}ms` }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{step.label}</span>
                       <div className="flex items-center gap-2">
-                        <span className={cn("font-semibold", getConversionTextColor(conv.percentage))}>
+                        <span className={cn("text-lg font-bold", getConversionTextColor(conv.percentage))}>
                           {conv.percentage}%
                         </span>
-                        <span className="text-xs text-muted-foreground">
-                          ({conv.to}/{conv.from})
+                        <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                          {conv.to}/{conv.from}
                         </span>
                         {conv.percentage >= 70 ? (
                           <TrendingUp className="h-4 w-4 text-green-500" />
                         ) : conv.percentage >= 40 ? (
-                          <Minus className="h-4 w-4 text-yellow-500" />
+                          <Minus className="h-4 w-4 text-amber-500" />
                         ) : (
                           <TrendingDown className="h-4 w-4 text-red-500" />
                         )}
                       </div>
                     </div>
-                    <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
+                    <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted/50">
                       <div
-                        className={cn("h-full transition-all", getConversionColor(conv.percentage))}
+                        className={cn("h-full transition-all duration-500", getConversionColor(conv.percentage))}
                         style={{ width: `${Math.min(conv.percentage, 100)}%` }}
                       />
                     </div>
@@ -242,8 +239,8 @@ export function FunnelTracker() {
               })}
             </CollapsibleContent>
           </Collapsible>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
