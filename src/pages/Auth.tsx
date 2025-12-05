@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Loader2, Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import nevoraLogo from '@/assets/nevorai-logo-n.jpeg';
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -96,6 +97,7 @@ export default function Auth() {
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="w-full max-w-md bg-card rounded-2xl shadow-xl border border-border p-8">
           <div className="text-center mb-8">
+            <img src={nevoraLogo} alt="NevorAI Logo" className="w-16 h-16 mx-auto mb-3 rounded-xl" />
             <h1 className="text-2xl font-bold text-foreground">NevorAI</h1>
             <p className="text-muted-foreground text-sm mt-1">Never miss a followup Again</p>
           </div>
@@ -151,6 +153,7 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md bg-card rounded-2xl shadow-xl border border-border p-8">
         <div className="text-center mb-8">
+          <img src={nevoraLogo} alt="NevorAI Logo" className="w-16 h-16 mx-auto mb-3 rounded-xl" />
           <h1 className="text-2xl font-bold text-foreground">NevorAI</h1>
           <p className="text-muted-foreground text-sm mt-1">Never miss a followup Again</p>
         </div>
