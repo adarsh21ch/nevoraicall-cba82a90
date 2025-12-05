@@ -21,6 +21,7 @@ interface ProspectRowProps {
   onToggleExpand: () => void;
   onUpdate: (id: string, updates: Partial<Prospect>) => Promise<Prospect | null>;
   onDelete: (id: string) => Promise<boolean>;
+  onOpenReportCard: (prospect: Prospect) => void;
   isEven: boolean;
   columnOrder: string[];
   columnWidths: Record<string, number>;
@@ -35,17 +36,15 @@ export function ProspectRow({
   onToggleExpand,
   onUpdate, 
   onDelete,
+  onOpenReportCard,
   isEven,
   columnOrder,
   columnWidths,
   isMobileTable = false,
 }: ProspectRowProps) {
-  const [localName, setLocalName] = useState(prospect.name);
   const [localPhone, setLocalPhone] = useState(prospect.phone);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingPhone, setIsEditingPhone] = useState(false);
-  const nameRef = useRef<HTMLInputElement>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
   
   const { addOption, deleteOption, getOptionsForType, getCustomOptionsForType } = useCustomOptionsContext();
@@ -57,16 +56,8 @@ export function ProspectRow({
   const priorityOptions = getOptionsForType('priority', PRIORITIES) as PriorityLevel[];
 
   useEffect(() => {
-    setLocalName(prospect.name);
     setLocalPhone(prospect.phone);
   }, [prospect]);
-
-  useEffect(() => {
-    if (isEditingName && nameRef.current) {
-      nameRef.current.focus();
-      nameRef.current.select();
-    }
-  }, [isEditingName]);
 
   useEffect(() => {
     if (isEditingPhone && phoneRef.current) {
@@ -75,30 +66,12 @@ export function ProspectRow({
     }
   }, [isEditingPhone]);
 
-  const handleNameBlur = () => {
-    setIsEditingName(false);
-    if (localName !== prospect.name && localName.trim()) {
-      onUpdate(prospect.id, { name: localName.trim() });
-    } else {
-      setLocalName(prospect.name);
-    }
-  };
-
   const handlePhoneBlur = () => {
     setIsEditingPhone(false);
     if (localPhone !== prospect.phone && localPhone.trim()) {
       onUpdate(prospect.id, { phone: localPhone.trim() });
     } else {
       setLocalPhone(prospect.phone);
-    }
-  };
-
-  const handleNameKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleNameBlur();
-    } else if (e.key === 'Escape') {
-      setLocalName(prospect.name);
-      setIsEditingName(false);
     }
   };
 
@@ -186,30 +159,16 @@ export function ProspectRow({
       case 'name':
         return (
           <td key={columnId} className={cellClass} style={style}>
-            {isEditingName ? (
-              <Input
-                ref={nameRef}
-                value={localName}
-                onChange={(e) => setLocalName(e.target.value)}
-                onBlur={handleNameBlur}
-                onKeyDown={handleNameKeyDown}
-                className={cn(
-                  "h-7 px-1.5 text-sm font-semibold border-primary",
-                  isMobileTable && "h-6 text-xs w-full"
-                )}
-              />
-            ) : (
-              <button
-                onClick={() => setIsEditingName(true)}
-                className={cn(
-                  "text-left font-semibold text-foreground hover:text-primary hover:bg-muted/50 transition-colors cursor-pointer bg-transparent border-0 p-0.5 px-1 -ml-1 rounded truncate block max-w-full",
-                  isMobileTable && "text-xs"
-                )}
-                title="Click to edit name"
-              >
-                {localName}
-              </button>
-            )}
+            <button
+              onClick={() => onOpenReportCard(prospect)}
+              className={cn(
+                "text-left font-semibold text-foreground hover:text-primary hover:underline transition-colors cursor-pointer bg-transparent border-0 p-0.5 px-1 -ml-1 rounded truncate block max-w-full",
+                isMobileTable && "text-xs"
+              )}
+              title="Click to open Report Card"
+            >
+              {prospect.name}
+            </button>
           </td>
         );
       case 'phone':

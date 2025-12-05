@@ -208,6 +208,7 @@ export type Database = {
           age: number | null
           batch_date: string | null
           city: string | null
+          currently_doing: string | null
           date_added: string
           date_of_birth: string | null
           email: string | null
@@ -221,6 +222,7 @@ export type Database = {
           priority: Database["public"]["Enums"]["priority_level"] | null
           prospect_status: Database["public"]["Enums"]["prospect_status"] | null
           sheet_id: string | null
+          state: string | null
           updated_at: string
           user_id: string
           why_need: string | null
@@ -230,6 +232,7 @@ export type Database = {
           age?: number | null
           batch_date?: string | null
           city?: string | null
+          currently_doing?: string | null
           date_added?: string
           date_of_birth?: string | null
           email?: string | null
@@ -245,6 +248,7 @@ export type Database = {
             | Database["public"]["Enums"]["prospect_status"]
             | null
           sheet_id?: string | null
+          state?: string | null
           updated_at?: string
           user_id: string
           why_need?: string | null
@@ -254,6 +258,7 @@ export type Database = {
           age?: number | null
           batch_date?: string | null
           city?: string | null
+          currently_doing?: string | null
           date_added?: string
           date_of_birth?: string | null
           email?: string | null
@@ -269,6 +274,7 @@ export type Database = {
             | Database["public"]["Enums"]["prospect_status"]
             | null
           sheet_id?: string | null
+          state?: string | null
           updated_at?: string
           user_id?: string
           why_need?: string | null

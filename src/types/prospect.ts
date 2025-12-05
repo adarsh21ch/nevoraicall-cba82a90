@@ -23,9 +23,11 @@ export interface Prospect {
   sheet_id?: string | null;
   batch_date?: string | null;
   city?: string | null;
+  state?: string | null;
   age?: number | null;
   date_of_birth?: string | null;
   why_need?: string | null;
+  currently_doing?: string | null;
   enrollment_status?: EnrollmentStatus | null;
 }
 

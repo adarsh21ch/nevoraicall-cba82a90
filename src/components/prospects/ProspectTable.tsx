@@ -6,6 +6,7 @@ import { ProspectFilters } from './ProspectFilters';
 import { AddProspectDialog } from './AddProspectDialog';
 import { ImportExcelDialog } from './ImportExcelDialog';
 import { SheetTabs } from './SheetTabs';
+import { ProspectReportCard } from './ProspectReportCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Users, GripVertical, LayoutGrid, Table2 } from 'lucide-react';
@@ -79,6 +80,8 @@ export function ProspectTable({
   });
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   const [mobileViewMode, setMobileViewMode] = useState<'card' | 'table'>('table');
+  const [reportCardProspect, setReportCardProspect] = useState<Prospect | null>(null);
+  const [reportCardOpen, setReportCardOpen] = useState(false);
   const isMobile = useIsMobile();
 
   // Column state for reordering and resizing
@@ -201,6 +204,20 @@ export function ProspectTable({
   const handleToggleExpand = useCallback((prospectId: string) => {
     setExpandedRowId(prev => prev === prospectId ? null : prospectId);
   }, []);
+
+  const handleOpenReportCard = useCallback((prospect: Prospect) => {
+    setReportCardProspect(prospect);
+    setReportCardOpen(true);
+  }, []);
+
+  const handleReportCardUpdate = async (id: string, updates: Partial<Prospect>) => {
+    const result = await onUpdate(id, updates);
+    // Update the local reportCardProspect state if successful
+    if (result && reportCardProspect?.id === id) {
+      setReportCardProspect(result);
+    }
+    return result;
+  };
 
   // Column drag handlers
   const handleDragStart = (columnId: string) => {
@@ -373,6 +390,7 @@ export function ProspectTable({
               isCalling={isCalling}
               onUpdate={onUpdate}
               onDelete={onDelete}
+              onOpenReportCard={handleOpenReportCard}
             />
           ))}
           <div className="text-center text-xs text-muted-foreground py-2">
@@ -452,6 +470,7 @@ export function ProspectTable({
                     onToggleExpand={() => handleToggleExpand(prospect.id)}
                     onUpdate={onUpdate}
                     onDelete={onDelete}
+                    onOpenReportCard={handleOpenReportCard}
                     isEven={index % 2 === 0}
                     columnOrder={isMobile ? MOBILE_COLUMN_ORDER : columnOrder}
                     columnWidths={isMobile 
@@ -473,6 +492,14 @@ export function ProspectTable({
           </div>
         </div>
       )}
+
+      {/* Prospect Report Card Sheet */}
+      <ProspectReportCard
+        prospect={reportCardProspect}
+        open={reportCardOpen}
+        onOpenChange={setReportCardOpen}
+        onUpdate={handleReportCardUpdate}
+      />
     </div>
   );
 }
