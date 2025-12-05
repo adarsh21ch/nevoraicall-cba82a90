@@ -17,6 +17,7 @@ interface Filters {
   stage: FunnelStage | 'all';
   status: ProspectStatus | 'all';
   actions: ExtendedActionTaken[];
+  incompleteOnly: boolean;
 }
 
 interface ProspectTableProps {
@@ -75,6 +76,7 @@ export function ProspectTable({
     stage: 'all',
     status: 'all',
     actions: [],
+    incompleteOnly: false,
   });
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   const [mobileViewMode, setMobileViewMode] = useState<'card' | 'table'>('table');
@@ -154,7 +156,13 @@ export function ProspectTable({
         filters.actions.includes(prospect.action_taken as ExtendedActionTaken) ||
         (filters.actions.includes('Enrolled') && prospect.enrollment_status === 'Enrolled');
 
-      return matchesSearch && matchesStage && matchesStatus && matchesAction;
+      // Incomplete filter - show only prospects missing stage, status, or action
+      const matchesIncomplete = !filters.incompleteOnly || 
+        !prospect.funnel_stage || 
+        !prospect.prospect_status || 
+        !prospect.action_taken;
+
+      return matchesSearch && matchesStage && matchesStatus && matchesAction && matchesIncomplete;
     });
   }, [sheetFilteredProspects, filters]);
 
@@ -362,7 +370,7 @@ export function ProspectTable({
           <p className="text-sm text-muted-foreground">
             No prospects match your filters.{' '}
             <button
-              onClick={() => setFilters({ search: '', stage: 'all', status: 'all', actions: [] })}
+              onClick={() => setFilters({ search: '', stage: 'all', status: 'all', actions: [], incompleteOnly: false })}
               className="text-accent hover:underline"
             >
               Clear filters
