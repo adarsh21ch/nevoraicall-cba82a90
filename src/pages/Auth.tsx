@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { Loader2, Mail, Lock, Eye, EyeOff, Phone, Bell, BarChart3, Zap, ArrowRight, User, Shield } from 'lucide-react';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
@@ -14,9 +15,11 @@ export default function Auth() {
   const { user, signIn, signUp, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(true); // Default to Sign Up
+  const [rememberMe, setRememberMe] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [isResetting, setIsResetting] = useState(false);
@@ -317,11 +320,32 @@ export default function Auth() {
               </>
             ) : (
               <>
-                <h2 className="text-xl font-semibold text-foreground mb-6">
+                <h2 className="text-xl font-semibold text-foreground mb-2">
                   {isSignUp ? 'Create your account' : 'Welcome back'}
                 </h2>
+                <p className="text-sm text-muted-foreground mb-6">
+                  {isSignUp ? 'Start managing your prospects today' : 'Sign in to continue to NevorAI'}
+                </p>
                 
-                <form onSubmit={isSignUp ? handleSignUp : handleSignIn} className="space-y-5">
+                <form onSubmit={isSignUp ? handleSignUp : handleSignIn} className="space-y-4">
+                  {isSignUp && (
+                    <div className="space-y-2">
+                      <Label htmlFor="name" className="text-sm font-medium">Full Name</Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input
+                          id="name"
+                          type="text"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder="John Doe"
+                          className="pl-10 h-12 text-base"
+                          required
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="space-y-2">
                     <Label htmlFor="email" className="text-sm font-medium">Email Address</Label>
                     <div className="relative">
@@ -364,6 +388,32 @@ export default function Auth() {
                       <p className="text-xs text-muted-foreground">At least 6 characters</p>
                     )}
                   </div>
+
+                  {/* Remember Me & Forgot Password for Sign In */}
+                  {!isSignUp && (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="remember" 
+                          checked={rememberMe}
+                          onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                        />
+                        <label 
+                          htmlFor="remember" 
+                          className="text-sm text-muted-foreground cursor-pointer select-none"
+                        >
+                          Remember me
+                        </label>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowForgotPassword(true)}
+                        className="text-sm text-[hsl(221,83%,53%)] hover:text-[hsl(221,83%,45%)] font-medium transition-colors"
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
+                  )}
                   
                   <Button 
                     type="submit" 
@@ -419,23 +469,18 @@ export default function Auth() {
                   Continue with Google
                 </Button>
 
-                {/* Footer Links */}
-                <div className="flex items-center justify-between mt-6 text-sm">
-                  {!isSignUp && (
-                    <button
-                      type="button"
-                      onClick={() => setShowForgotPassword(true)}
-                      className="text-[hsl(221,83%,53%)] hover:text-[hsl(221,83%,45%)] font-medium transition-colors"
-                    >
-                      Forgot Password?
-                    </button>
-                  )}
+                {/* Footer Link */}
+                <div className="text-center mt-6">
                   <button
                     type="button"
                     onClick={() => setIsSignUp(!isSignUp)}
-                    className="text-[hsl(221,83%,53%)] hover:text-[hsl(221,83%,45%)] font-medium transition-colors ml-auto"
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    {isSignUp ? 'Already have an account? Sign In' : 'Create Account'}
+                    {isSignUp ? (
+                      <>Already have an account? <span className="text-[hsl(221,83%,53%)] font-medium">Sign In</span></>
+                    ) : (
+                      <>New here? <span className="text-[hsl(221,83%,53%)] font-medium">Create an account</span></>
+                    )}
                   </button>
                 </div>
               </>
