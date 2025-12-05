@@ -191,7 +191,7 @@ export default function Auth() {
 
           {/* Funnel Graphic */}
           <div className="w-full max-w-sm bg-white/10 backdrop-blur-sm rounded-2xl p-6 mb-8">
-            <p className="text-white/70 text-xs uppercase tracking-wider mb-4 text-center font-medium">Your Prospect Journey</p>
+            <p className="text-white/70 text-xs uppercase tracking-wider mb-4 text-center font-medium">Prospect Journey</p>
             <div className="flex items-center justify-between">
               {/* Stage 1: New Lead */}
               <div className="flex flex-col items-center gap-2">
@@ -201,28 +201,28 @@ export default function Auth() {
                 <span className="text-white/90 text-xs font-medium">New Lead</span>
               </div>
               <ArrowRight className="w-4 h-4 text-white/50 flex-shrink-0" />
-              {/* Stage 2: Follow Up */}
+              {/* Stage 2: Invitation */}
               <div className="flex flex-col items-center gap-2">
                 <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center ring-2 ring-white/30">
-                  <Bell className="w-5 h-5 text-white" />
+                  <Mail className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-white/90 text-xs font-medium">Follow Up</span>
+                <span className="text-white/90 text-xs font-medium">Invitation</span>
               </div>
               <ArrowRight className="w-4 h-4 text-white/50 flex-shrink-0" />
-              {/* Stage 3: Meeting */}
-              <div className="flex flex-col items-center gap-2">
-                <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center ring-2 ring-white/30">
-                  <Phone className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-white/90 text-xs font-medium">Meeting</span>
-              </div>
-              <ArrowRight className="w-4 h-4 text-white/50 flex-shrink-0" />
-              {/* Stage 4: Enrolled */}
+              {/* Stage 3: Enrolled */}
               <div className="flex flex-col items-center gap-2">
                 <div className="w-12 h-12 rounded-full bg-[hsl(174,72%,50%)]/40 flex items-center justify-center ring-2 ring-[hsl(174,72%,50%)]">
                   <Zap className="w-5 h-5 text-white" />
                 </div>
                 <span className="text-white font-semibold text-xs">Enrolled</span>
+              </div>
+              <ArrowRight className="w-4 h-4 text-white/50 flex-shrink-0" />
+              {/* Stage 4: FollowUp */}
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center ring-2 ring-white/30">
+                  <Bell className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-white/90 text-xs font-medium">FollowUp</span>
               </div>
             </div>
           </div>
