@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Loader2, Mail, Lock, Eye, EyeOff, Users, Bell, Target, CheckCircle2, ArrowRight, Shield } from 'lucide-react';
+import { Loader2, Mail, Lock, Eye, EyeOff, Phone, Bell, BarChart3, Zap, ArrowRight, User, Shield } from 'lucide-react';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
 
 export default function Auth() {
@@ -147,74 +147,91 @@ export default function Auth() {
           </svg>
         </div>
 
-        {/* Logo */}
-        <div className="absolute top-8 left-8 flex items-center gap-3 z-10">
-          <img 
-            src={nevoraLogo} 
-            alt="NevorAI Logo" 
-            className="h-10 w-10 rounded-lg object-cover shadow-lg"
-          />
-          <span className="text-white font-bold text-xl tracking-tight">NevorAI</span>
+        {/* Logo & Headline */}
+        <div className="absolute top-8 left-8 right-8 z-10">
+          <div className="flex items-center gap-3 mb-2">
+            <img 
+              src={nevoraLogo} 
+              alt="NevorAI Logo" 
+              className="h-10 w-10 rounded-lg object-cover shadow-lg"
+            />
+            <span className="text-white font-bold text-xl tracking-tight">NevorAI</span>
+          </div>
+          <h2 className="text-2xl font-bold text-white mt-6">Streamline Your Network Marketing</h2>
         </div>
 
-        {/* Main Illustration Content */}
-        <div className="flex flex-col items-center justify-center w-full p-12 z-10">
-          {/* Workflow Icons */}
-          <div className="flex flex-col items-center gap-8 mb-12">
-            {/* Workflow Steps */}
-            <div className="flex items-center gap-4">
-              <div className="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg hover:scale-105 transition-transform duration-300">
-                <Users className="w-10 h-10 text-white" />
+        {/* Main Content */}
+        <div className="flex flex-col items-center justify-center w-full px-8 py-12 z-10 mt-16">
+          {/* Four Feature Items */}
+          <div className="grid grid-cols-2 gap-4 w-full max-w-xs mb-10">
+            <div className="flex items-center gap-3 bg-white/15 backdrop-blur-sm rounded-xl p-4 hover:bg-white/20 transition-colors">
+              <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
+                <Phone className="w-5 h-5 text-white" />
               </div>
-              <ArrowRight className="w-6 h-6 text-white/70" />
-              <div className="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg hover:scale-105 transition-transform duration-300">
-                <Bell className="w-10 h-10 text-white" />
-              </div>
-              <ArrowRight className="w-6 h-6 text-white/70" />
-              <div className="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg hover:scale-105 transition-transform duration-300">
-                <Target className="w-10 h-10 text-white" />
-              </div>
-              <ArrowRight className="w-6 h-6 text-white/70" />
-              <div className="w-20 h-20 rounded-2xl bg-white/25 backdrop-blur-sm flex items-center justify-center shadow-lg hover:scale-105 transition-transform duration-300 ring-2 ring-white/40">
-                <CheckCircle2 className="w-10 h-10 text-white" />
-              </div>
+              <span className="text-white font-semibold text-sm">Calling</span>
             </div>
-
-            {/* Labels */}
-            <div className="flex items-center gap-4 text-white/80 text-sm font-medium">
-              <span className="w-20 text-center">Prospects</span>
-              <span className="w-6"></span>
-              <span className="w-20 text-center">Reminders</span>
-              <span className="w-6"></span>
-              <span className="w-20 text-center">Funnel</span>
-              <span className="w-6"></span>
-              <span className="w-20 text-center">Success</span>
+            <div className="flex items-center gap-3 bg-white/15 backdrop-blur-sm rounded-xl p-4 hover:bg-white/20 transition-colors">
+              <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
+                <Bell className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-white font-semibold text-sm">FollowUp</span>
+            </div>
+            <div className="flex items-center gap-3 bg-white/15 backdrop-blur-sm rounded-xl p-4 hover:bg-white/20 transition-colors">
+              <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
+                <BarChart3 className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-white font-semibold text-sm">TrackUp</span>
+            </div>
+            <div className="flex items-center gap-3 bg-white/15 backdrop-blur-sm rounded-xl p-4 hover:bg-white/20 transition-colors">
+              <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
+                <Zap className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-white font-semibold text-sm">ActionUp</span>
             </div>
           </div>
 
-          {/* Tagline */}
-          <div className="text-center text-white max-w-md">
-            <h2 className="text-3xl font-bold mb-4">Streamline Your Network Marketing</h2>
-            <p className="text-white/80 text-lg leading-relaxed">
-              Track prospects, automate follow-ups, and close more enrollments with the power of AI-driven organization.
-            </p>
+          {/* Funnel Graphic */}
+          <div className="w-full max-w-sm bg-white/10 backdrop-blur-sm rounded-2xl p-6 mb-8">
+            <p className="text-white/70 text-xs uppercase tracking-wider mb-4 text-center font-medium">Your Prospect Journey</p>
+            <div className="flex items-center justify-between">
+              {/* Stage 1: New Lead */}
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center ring-2 ring-white/30">
+                  <User className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-white/90 text-xs font-medium">New Lead</span>
+              </div>
+              <ArrowRight className="w-4 h-4 text-white/50 flex-shrink-0" />
+              {/* Stage 2: Follow Up */}
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center ring-2 ring-white/30">
+                  <Bell className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-white/90 text-xs font-medium">Follow Up</span>
+              </div>
+              <ArrowRight className="w-4 h-4 text-white/50 flex-shrink-0" />
+              {/* Stage 3: Meeting */}
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center ring-2 ring-white/30">
+                  <Phone className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-white/90 text-xs font-medium">Meeting</span>
+              </div>
+              <ArrowRight className="w-4 h-4 text-white/50 flex-shrink-0" />
+              {/* Stage 4: Enrolled */}
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-12 h-12 rounded-full bg-[hsl(174,72%,50%)]/40 flex items-center justify-center ring-2 ring-[hsl(174,72%,50%)]">
+                  <Zap className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-white font-semibold text-xs">Enrolled</span>
+              </div>
+            </div>
           </div>
 
-          {/* Stats */}
-          <div className="flex gap-12 mt-12">
-            <div className="text-center">
-              <div className="text-4xl font-bold text-white">1,000+</div>
-              <div className="text-white/70 text-sm">Active Users</div>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-white">50K+</div>
-              <div className="text-white/70 text-sm">Follow-ups Tracked</div>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-white">95%</div>
-              <div className="text-white/70 text-sm">Success Rate</div>
-            </div>
-          </div>
+          {/* Bottom Text */}
+          <p className="text-white/80 text-center text-sm max-w-xs leading-relaxed">
+            Organize prospects, track every touch, and never miss the next action.
+          </p>
         </div>
       </div>
 
