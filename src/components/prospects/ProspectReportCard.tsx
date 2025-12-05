@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Prospect, FUNNEL_STAGES, ACTIONS, STATUSES, PRIORITIES, ENROLLMENT_STATUSES } from '@/types/prospect';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,9 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { StageBadge, StatusBadge, PriorityBadge, EnrollBadge } from './StatusBadge';
-import { Phone, MessageCircle, Calendar as CalendarIcon, Clock, User, MapPin, Cake, Target } from 'lucide-react';
+import { Phone, MessageCircle, Calendar as CalendarIcon, Clock, User, MapPin, Cake, Target, Briefcase, Save } from 'lucide-react';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface ProspectReportCardProps {
   prospect: Prospect | null;
@@ -22,6 +23,8 @@ interface ProspectReportCardProps {
 
 export function ProspectReportCard({ prospect, open, onOpenChange, onUpdate }: ProspectReportCardProps) {
   const [localData, setLocalData] = useState<Partial<Prospect>>({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
     if (prospect) {
@@ -30,9 +33,11 @@ export function ProspectReportCard({ prospect, open, onOpenChange, onUpdate }: P
         phone: prospect.phone,
         email: prospect.email || '',
         city: prospect.city || '',
+        state: prospect.state || '',
         age: prospect.age || undefined,
         date_of_birth: prospect.date_of_birth || '',
         why_need: prospect.why_need || '',
+        currently_doing: prospect.currently_doing || '',
         notes: prospect.notes || '',
         funnel_stage: prospect.funnel_stage,
         enrollment_status: prospect.enrollment_status || 'Not Enrolled',
@@ -41,14 +46,54 @@ export function ProspectReportCard({ prospect, open, onOpenChange, onUpdate }: P
         priority: prospect.priority,
         last_contact_date: prospect.last_contact_date,
       });
+      setHasChanges(false);
     }
   }, [prospect]);
 
   if (!prospect) return null;
 
-  const handleUpdate = (field: keyof Prospect, value: any) => {
+  const handleFieldChange = (field: keyof Prospect, value: any) => {
     setLocalData(prev => ({ ...prev, [field]: value }));
-    onUpdate(prospect.id, { [field]: value });
+    setHasChanges(true);
+  };
+
+  const handleSave = async () => {
+    if (!prospect || !hasChanges) return;
+    
+    setIsSaving(true);
+    try {
+      const updates: Partial<Prospect> = {};
+      
+      // Only include changed fields
+      if (localData.name !== prospect.name) updates.name = localData.name;
+      if (localData.phone !== prospect.phone) updates.phone = localData.phone;
+      if ((localData.email || null) !== (prospect.email || null)) updates.email = localData.email || null;
+      if ((localData.city || null) !== (prospect.city || null)) updates.city = localData.city || null;
+      if ((localData.state || null) !== (prospect.state || null)) updates.state = localData.state || null;
+      if ((localData.age || null) !== (prospect.age || null)) updates.age = localData.age || null;
+      if ((localData.date_of_birth || null) !== (prospect.date_of_birth || null)) updates.date_of_birth = localData.date_of_birth || null;
+      if ((localData.why_need || null) !== (prospect.why_need || null)) updates.why_need = localData.why_need || null;
+      if ((localData.currently_doing || null) !== (prospect.currently_doing || null)) updates.currently_doing = localData.currently_doing || null;
+      if ((localData.notes || null) !== (prospect.notes || null)) updates.notes = localData.notes || null;
+      if (localData.funnel_stage !== prospect.funnel_stage) updates.funnel_stage = localData.funnel_stage;
+      if (localData.enrollment_status !== prospect.enrollment_status) updates.enrollment_status = localData.enrollment_status;
+      if (localData.action_taken !== prospect.action_taken) updates.action_taken = localData.action_taken;
+      if (localData.prospect_status !== prospect.prospect_status) updates.prospect_status = localData.prospect_status;
+      if (localData.priority !== prospect.priority) updates.priority = localData.priority;
+      if (localData.last_contact_date !== prospect.last_contact_date) updates.last_contact_date = localData.last_contact_date;
+
+      if (Object.keys(updates).length > 0) {
+        const result = await onUpdate(prospect.id, updates);
+        if (result) {
+          toast.success('Prospect updated successfully');
+          setHasChanges(false);
+        }
+      }
+    } catch (error) {
+      toast.error('Failed to update prospect');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const cleanPhoneNumber = (phone: string) => phone.replace(/[^0-9+]/g, '');
@@ -63,12 +108,12 @@ export function ProspectReportCard({ prospect, open, onOpenChange, onUpdate }: P
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-lg overflow-y-auto flex flex-col">
         <SheetHeader className="pb-4 border-b border-border/50">
           <SheetTitle className="text-left">Prospect Report Card</SheetTitle>
         </SheetHeader>
 
-        <div className="py-6 space-y-6">
+        <div className="py-6 space-y-6 flex-1 overflow-y-auto">
           {/* Quick Actions */}
           <div className="flex gap-2">
             <Button onClick={openCall} variant="outline" className="flex-1 gap-2">
@@ -83,10 +128,10 @@ export function ProspectReportCard({ prospect, open, onOpenChange, onUpdate }: P
 
           {/* Status Badges */}
           <div className="flex flex-wrap gap-2">
-            <StageBadge stage={prospect.funnel_stage} />
-            {prospect.enrollment_status && <EnrollBadge status={prospect.enrollment_status} />}
-            {prospect.prospect_status && <StatusBadge status={prospect.prospect_status} />}
-            <PriorityBadge priority={prospect.priority} />
+            <StageBadge stage={localData.funnel_stage} />
+            {localData.enrollment_status && <EnrollBadge status={localData.enrollment_status} />}
+            {localData.prospect_status && <StatusBadge status={localData.prospect_status} />}
+            <PriorityBadge priority={localData.priority} />
           </div>
 
           {/* Basic Info */}
@@ -94,24 +139,24 @@ export function ProspectReportCard({ prospect, open, onOpenChange, onUpdate }: P
             <div className="space-y-2">
               <Label className="flex items-center gap-2 text-muted-foreground">
                 <User className="h-4 w-4" />
-                Name
+                Name *
               </Label>
               <Input
                 value={localData.name || ''}
-                onChange={(e) => setLocalData(prev => ({ ...prev, name: e.target.value }))}
-                onBlur={() => localData.name !== prospect.name && handleUpdate('name', localData.name)}
+                onChange={(e) => handleFieldChange('name', e.target.value)}
+                placeholder="Prospect name"
               />
             </div>
 
             <div className="space-y-2">
               <Label className="flex items-center gap-2 text-muted-foreground">
                 <Phone className="h-4 w-4" />
-                Phone
+                Phone *
               </Label>
               <Input
                 value={localData.phone || ''}
-                onChange={(e) => setLocalData(prev => ({ ...prev, phone: e.target.value }))}
-                onBlur={() => localData.phone !== prospect.phone && handleUpdate('phone', localData.phone)}
+                onChange={(e) => handleFieldChange('phone', e.target.value)}
+                placeholder="Phone number"
               />
             </div>
 
@@ -120,8 +165,7 @@ export function ProspectReportCard({ prospect, open, onOpenChange, onUpdate }: P
               <Input
                 type="email"
                 value={localData.email || ''}
-                onChange={(e) => setLocalData(prev => ({ ...prev, email: e.target.value }))}
-                onBlur={() => localData.email !== prospect.email && handleUpdate('email', localData.email || null)}
+                onChange={(e) => handleFieldChange('email', e.target.value)}
                 placeholder="email@example.com"
               />
             </div>
@@ -134,48 +178,65 @@ export function ProspectReportCard({ prospect, open, onOpenChange, onUpdate }: P
                 </Label>
                 <Input
                   value={localData.city || ''}
-                  onChange={(e) => setLocalData(prev => ({ ...prev, city: e.target.value }))}
-                  onBlur={() => localData.city !== prospect.city && handleUpdate('city', localData.city || null)}
+                  onChange={(e) => handleFieldChange('city', e.target.value)}
                   placeholder="City"
                 />
               </div>
 
               <div className="space-y-2">
+                <Label className="text-muted-foreground">State</Label>
+                <Input
+                  value={localData.state || ''}
+                  onChange={(e) => handleFieldChange('state', e.target.value)}
+                  placeholder="State"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
                 <Label className="text-muted-foreground">Age</Label>
                 <Input
                   type="number"
                   value={localData.age || ''}
-                  onChange={(e) => setLocalData(prev => ({ ...prev, age: e.target.value ? parseInt(e.target.value) : undefined }))}
-                  onBlur={() => localData.age !== prospect.age && handleUpdate('age', localData.age || null)}
+                  onChange={(e) => handleFieldChange('age', e.target.value ? parseInt(e.target.value) : undefined)}
                   placeholder="Age"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-muted-foreground">
+                  <Cake className="h-4 w-4" />
+                  Date of Birth
+                </Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {localData.date_of_birth ? format(parseISO(localData.date_of_birth), 'MMM d, yyyy') : 'Select'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 bg-popover border-border z-50" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={localData.date_of_birth ? parseISO(localData.date_of_birth) : undefined}
+                      onSelect={(date) => handleFieldChange('date_of_birth', date ? format(date, 'yyyy-MM-dd') : null)}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
 
             <div className="space-y-2">
               <Label className="flex items-center gap-2 text-muted-foreground">
-                <Cake className="h-4 w-4" />
-                Date of Birth
+                <Briefcase className="h-4 w-4" />
+                Currently Doing (Job/Business/Profession)
               </Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start text-left font-normal">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {localData.date_of_birth ? format(parseISO(localData.date_of_birth), 'PPP') : 'Select date'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-popover border-border z-50" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={localData.date_of_birth ? parseISO(localData.date_of_birth) : undefined}
-                    onSelect={(date) => {
-                      const dateStr = date ? format(date, 'yyyy-MM-dd') : null;
-                      setLocalData(prev => ({ ...prev, date_of_birth: dateStr || '' }));
-                      handleUpdate('date_of_birth', dateStr);
-                    }}
-                  />
-                </PopoverContent>
-              </Popover>
+              <Input
+                value={localData.currently_doing || ''}
+                onChange={(e) => handleFieldChange('currently_doing', e.target.value)}
+                placeholder="e.g., Software Engineer, Business Owner, Student"
+              />
             </div>
           </div>
 
@@ -184,11 +245,11 @@ export function ProspectReportCard({ prospect, open, onOpenChange, onUpdate }: P
             <div className="space-y-2">
               <Label className="text-muted-foreground">Stage</Label>
               <Select
-                value={localData.funnel_stage}
-                onValueChange={(value) => handleUpdate('funnel_stage', value)}
+                value={localData.funnel_stage || ''}
+                onValueChange={(value) => handleFieldChange('funnel_stage', value)}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Select stage" />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border-border z-50">
                   {FUNNEL_STAGES.map(stage => (
@@ -199,10 +260,27 @@ export function ProspectReportCard({ prospect, open, onOpenChange, onUpdate }: P
             </div>
 
             <div className="space-y-2">
+              <Label className="text-muted-foreground">Status</Label>
+              <Select
+                value={localData.prospect_status || ''}
+                onValueChange={(value) => handleFieldChange('prospect_status', value || null)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border-border z-50">
+                  {STATUSES.map(status => (
+                    <SelectItem key={status} value={status}>{status}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label className="text-muted-foreground">Enrollment</Label>
               <Select
                 value={localData.enrollment_status || 'Not Enrolled'}
-                onValueChange={(value) => handleUpdate('enrollment_status', value)}
+                onValueChange={(value) => handleFieldChange('enrollment_status', value)}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -219,7 +297,7 @@ export function ProspectReportCard({ prospect, open, onOpenChange, onUpdate }: P
               <Label className="text-muted-foreground">Action</Label>
               <Select
                 value={localData.action_taken || ''}
-                onValueChange={(value) => handleUpdate('action_taken', value || null)}
+                onValueChange={(value) => handleFieldChange('action_taken', value || null)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select action" />
@@ -233,30 +311,13 @@ export function ProspectReportCard({ prospect, open, onOpenChange, onUpdate }: P
             </div>
 
             <div className="space-y-2">
-              <Label className="text-muted-foreground">Status</Label>
-              <Select
-                value={localData.prospect_status || ''}
-                onValueChange={(value) => handleUpdate('prospect_status', value || null)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover border-border z-50">
-                  {STATUSES.map(status => (
-                    <SelectItem key={status} value={status}>{status}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
               <Label className="text-muted-foreground">Priority</Label>
               <Select
-                value={localData.priority}
-                onValueChange={(value) => handleUpdate('priority', value)}
+                value={localData.priority || ''}
+                onValueChange={(value) => handleFieldChange('priority', value)}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Select priority" />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border-border z-50">
                   {PRIORITIES.map(priority => (
@@ -279,7 +340,7 @@ export function ProspectReportCard({ prospect, open, onOpenChange, onUpdate }: P
                   <Calendar
                     mode="single"
                     selected={localData.last_contact_date ? parseISO(localData.last_contact_date) : undefined}
-                    onSelect={(date) => handleUpdate('last_contact_date', date ? format(date, 'yyyy-MM-dd') : null)}
+                    onSelect={(date) => handleFieldChange('last_contact_date', date ? format(date, 'yyyy-MM-dd') : null)}
                   />
                 </PopoverContent>
               </Popover>
@@ -294,8 +355,7 @@ export function ProspectReportCard({ prospect, open, onOpenChange, onUpdate }: P
             </Label>
             <Textarea
               value={localData.why_need || ''}
-              onChange={(e) => setLocalData(prev => ({ ...prev, why_need: e.target.value }))}
-              onBlur={() => localData.why_need !== prospect.why_need && handleUpdate('why_need', localData.why_need || null)}
+              onChange={(e) => handleFieldChange('why_need', e.target.value)}
               placeholder="Why do they want to earn? What's their motivation?"
               className="min-h-[80px] resize-none"
             />
@@ -306,8 +366,7 @@ export function ProspectReportCard({ prospect, open, onOpenChange, onUpdate }: P
             <Label className="text-muted-foreground">Notes</Label>
             <Textarea
               value={localData.notes || ''}
-              onChange={(e) => setLocalData(prev => ({ ...prev, notes: e.target.value }))}
-              onBlur={() => localData.notes !== prospect.notes && handleUpdate('notes', localData.notes || null)}
+              onChange={(e) => handleFieldChange('notes', e.target.value)}
               placeholder="Recent conversations, call notes, action items..."
               className="min-h-[120px] resize-none"
             />
@@ -325,6 +384,18 @@ export function ProspectReportCard({ prospect, open, onOpenChange, onUpdate }: P
             </div>
           </div>
         </div>
+
+        {/* Fixed Save Button at bottom */}
+        <SheetFooter className="border-t border-border/50 pt-4">
+          <Button 
+            onClick={handleSave} 
+            disabled={isSaving || !hasChanges}
+            className="w-full gap-2"
+          >
+            <Save className="h-4 w-4" />
+            {isSaving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </SheetFooter>
       </SheetContent>
     </Sheet>
   );
