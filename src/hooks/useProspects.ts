@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Prospect } from '@/types/prospect';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,37 +10,59 @@ export function useProspects() {
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [loading, setLoading] = useState(true);
   const { encryptFields, decryptBatch } = useEncryption();
+  
+  // Use refs to avoid infinite loop with useCallback dependencies
+  const decryptBatchRef = useRef(decryptBatch);
+  const encryptFieldsRef = useRef(encryptFields);
+  
+  // Keep refs updated
+  useEffect(() => {
+    decryptBatchRef.current = decryptBatch;
+    encryptFieldsRef.current = encryptFields;
+  }, [decryptBatch, encryptFields]);
 
   const fetchProspects = useCallback(async () => {
     if (!user) return;
     
     setLoading(true);
-    const { data, error } = await supabase
-      .from('prospects')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('date_added', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('prospects')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date_added', { ascending: false });
 
-    if (error) {
-      toast.error('Failed to fetch prospects');
-      console.error('Error fetching prospects:', error);
-    } else {
-      // Decrypt phone and email fields
-      const decryptedData = await decryptBatch(data as Prospect[]);
-      setProspects(decryptedData);
+      if (error) {
+        toast.error('Failed to fetch prospects');
+        console.error('Error fetching prospects:', error);
+        setProspects([]);
+      } else {
+        // Decrypt phone and email fields
+        const decryptedData = await decryptBatchRef.current(data as Prospect[]);
+        setProspects(decryptedData);
+      }
+    } catch (err) {
+      console.error('Error in fetchProspects:', err);
+      setProspects([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  }, [user, decryptBatch]);
+  }, [user]); // Only depend on user, not decryptBatch
 
   useEffect(() => {
-    fetchProspects();
-  }, [fetchProspects]);
+    if (user) {
+      fetchProspects();
+    } else {
+      setProspects([]);
+      setLoading(false);
+    }
+  }, [user, fetchProspects]);
 
   const addProspect = async (prospect: Partial<Prospect>) => {
     if (!user) return null;
 
     // Encrypt sensitive fields before storing
-    const encrypted = await encryptFields({
+    const encrypted = await encryptFieldsRef.current({
       phone: prospect.phone,
       email: prospect.email || undefined
     });
@@ -85,7 +107,7 @@ export function useProspects() {
     let encryptedUpdates = { ...updates };
     
     if (updates.phone || updates.email) {
-      const encrypted = await encryptFields({
+      const encrypted = await encryptFieldsRef.current({
         phone: updates.phone,
         email: updates.email || undefined
       });
@@ -148,7 +170,7 @@ export function useProspects() {
     // Encrypt phone and email for each prospect
     const prospectsToInsert = await Promise.all(
       validProspects.map(async (p) => {
-        const encrypted = await encryptFields({
+        const encrypted = await encryptFieldsRef.current({
           phone: p.phone,
           email: p.email || undefined
         });
@@ -183,7 +205,7 @@ export function useProspects() {
     }
 
     // Decrypt for display
-    const decryptedData = await decryptBatch(data as Prospect[]);
+    const decryptedData = await decryptBatchRef.current(data as Prospect[]);
     setProspects(prev => [...decryptedData, ...prev]);
     return { imported: data.length, skipped };
   };
