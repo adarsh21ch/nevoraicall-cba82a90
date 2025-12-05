@@ -14,6 +14,9 @@ import Tracking from "./pages/Tracking";
 import ActionUp from "./pages/ActionUp";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
+import Refund from "./pages/Refund";
 
 // Error Boundary to catch rendering errors
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
@@ -70,6 +73,9 @@ function App() {
               <Route path="/home" element={<Home />} />
               <Route path="/action" element={<ActionUp />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/refund" element={<Refund />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>

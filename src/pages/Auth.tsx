@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -248,6 +248,13 @@ export default function Auth() {
           >
             {isSignUp ? 'Sign in' : 'Sign up'}
           </button>
+        </p>
+
+        <p className="text-center text-xs text-muted-foreground mt-4">
+          By continuing, you agree to our{' '}
+          <Link to="/terms" target="_blank" className="text-primary hover:underline">Terms & Conditions</Link>,{' '}
+          <Link to="/privacy" target="_blank" className="text-primary hover:underline">Privacy Policy</Link>, and{' '}
+          <Link to="/refund" target="_blank" className="text-primary hover:underline">Refund Policy</Link>.
         </p>
       </div>
     </div>
