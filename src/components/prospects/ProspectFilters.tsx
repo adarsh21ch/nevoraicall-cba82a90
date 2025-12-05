@@ -13,6 +13,7 @@ interface Filters {
   stage: FunnelStage | 'all';
   status: ProspectStatus | 'all';
   actions: ExtendedActionTaken[];
+  incompleteOnly: boolean;
 }
 
 interface ProspectFiltersProps {
@@ -22,7 +23,7 @@ interface ProspectFiltersProps {
 }
 
 export function ProspectFilters({ filters, onFiltersChange, onExport }: ProspectFiltersProps) {
-  const hasFilters = filters.search || filters.stage !== 'all' || filters.status !== 'all' || filters.actions.length > 0;
+  const hasFilters = filters.search || filters.stage !== 'all' || filters.status !== 'all' || filters.actions.length > 0 || filters.incompleteOnly;
   const isMobile = useIsMobile();
 
   const clearFilters = () => {
@@ -31,6 +32,7 @@ export function ProspectFilters({ filters, onFiltersChange, onExport }: Prospect
       stage: 'all',
       status: 'all',
       actions: [],
+      incompleteOnly: false,
     });
   };
 
@@ -152,6 +154,19 @@ export function ProspectFilters({ filters, onFiltersChange, onExport }: Prospect
             )}
           </PopoverContent>
         </Popover>
+
+        {/* Incomplete Records Filter */}
+        <Button
+          variant={filters.incompleteOnly ? "default" : "outline"}
+          size="sm"
+          onClick={() => onFiltersChange({ ...filters, incompleteOnly: !filters.incompleteOnly })}
+          className={cn(
+            "h-10 sm:h-9 text-xs shrink-0",
+            filters.incompleteOnly && "bg-amber-500 hover:bg-amber-600 text-white border-amber-500"
+          )}
+        >
+          Incomplete
+        </Button>
 
         {hasFilters && (
           <Button variant="ghost" size="sm" onClick={clearFilters} className="h-10 sm:h-9 px-2 text-xs shrink-0">
