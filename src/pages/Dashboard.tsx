@@ -2,8 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProspects } from '@/hooks/useProspects';
-import { useSheets } from '@/hooks/useSheets';
+import { useData } from '@/contexts/DataContext';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { ProspectTable } from '@/components/prospects/ProspectTable';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -15,8 +14,20 @@ import { CustomOptionsProvider } from '@/contexts/CustomOptionsContext';
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { prospects, loading, addProspect, updateProspect, deleteProspect, importProspects } = useProspects();
-  const { sheets, selectedSheetId, setSelectedSheetId, addSheet, updateSheet, deleteSheet } = useSheets();
+  const { 
+    prospects, 
+    prospectsLoading, 
+    addProspect, 
+    updateProspect, 
+    deleteProspect, 
+    importProspects,
+    sheets,
+    selectedSheetId,
+    setSelectedSheetId,
+    addSheet,
+    updateSheet,
+    deleteSheet
+  } = useData();
   
   const [mainTab, setMainTab] = useState<'calling' | 'funnel'>('calling');
 
@@ -82,7 +93,7 @@ export default function Dashboard() {
             <TabsTrigger 
               value="calling" 
               className={cn(
-                "rounded-xl flex flex-col items-center justify-center gap-0.5 h-full transition-all duration-300",
+                "rounded-xl flex flex-col items-center justify-center gap-0.5 h-full transition-all duration-200",
                 "data-[state=active]:bg-card data-[state=active]:shadow-lg data-[state=active]:shadow-primary/10",
                 "data-[state=active]:text-primary"
               )}
@@ -93,7 +104,7 @@ export default function Dashboard() {
             <TabsTrigger 
               value="funnel" 
               className={cn(
-                "rounded-xl flex flex-col items-center justify-center gap-0.5 h-full transition-all duration-300",
+                "rounded-xl flex flex-col items-center justify-center gap-0.5 h-full transition-all duration-200",
                 "data-[state=active]:bg-card data-[state=active]:shadow-lg data-[state=active]:shadow-primary/10",
                 "data-[state=active]:text-primary"
               )}
@@ -103,10 +114,18 @@ export default function Dashboard() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="calling" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+          {/* Keep both tabs mounted for instant switching */}
+          <TabsContent 
+            value="calling" 
+            forceMount 
+            className={cn(
+              "mt-0 focus-visible:outline-none focus-visible:ring-0",
+              mainTab !== 'calling' && "hidden"
+            )}
+          >
             <ProspectTable
               prospects={prospects}
-              loading={loading}
+              loading={prospectsLoading}
               onAdd={addProspect}
               onUpdate={updateProspect}
               onDelete={deleteProspect}
@@ -122,10 +141,17 @@ export default function Dashboard() {
             />
           </TabsContent>
 
-          <TabsContent value="funnel" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+          <TabsContent 
+            value="funnel" 
+            forceMount 
+            className={cn(
+              "mt-0 focus-visible:outline-none focus-visible:ring-0",
+              mainTab !== 'funnel' && "hidden"
+            )}
+          >
             <ProspectTable
               prospects={prospects}
-              loading={loading}
+              loading={prospectsLoading}
               onAdd={addProspect}
               onUpdate={updateProspect}
               onDelete={deleteProspect}
