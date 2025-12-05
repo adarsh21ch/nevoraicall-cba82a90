@@ -1,8 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Prospect } from '@/types/prospect';
+import { Prospect, mapOldStatusToNew } from '@/types/prospect';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+
+// Map database prospect to app prospect (handles status mapping)
+const mapDbProspect = (dbProspect: any): Prospect => ({
+  ...dbProspect,
+  prospect_status: mapOldStatusToNew(dbProspect.prospect_status),
+});
 
 export function useProspects() {
   const { user } = useAuth();
@@ -29,7 +35,7 @@ export function useProspects() {
         console.error('Error fetching prospects:', error);
         setProspects([]);
       } else {
-        setProspects((data || []) as Prospect[]);
+        setProspects((data || []).map(mapDbProspect));
       }
     } catch (err) {
       console.error('Error in fetchProspects:', err);
@@ -76,7 +82,7 @@ export function useProspects() {
       return null;
     }
 
-    const newProspect = data as Prospect;
+    const newProspect = mapDbProspect(data);
     setProspects(prev => [newProspect, ...prev]);
     toast.success('Prospect added');
     return newProspect;
@@ -96,7 +102,7 @@ export function useProspects() {
       return null;
     }
 
-    const updatedProspect = data as Prospect;
+    const updatedProspect = mapDbProspect(data);
     setProspects(prev => prev.map(p => p.id === id ? updatedProspect : p));
     return updatedProspect;
   };
@@ -146,7 +152,7 @@ export function useProspects() {
 
     const { data, error } = await supabase
       .from('prospects')
-      .insert(prospectsToInsert)
+      .insert(prospectsToInsert as any)
       .select();
 
     if (error) {
@@ -155,8 +161,8 @@ export function useProspects() {
       return { imported: 0, skipped: prospectsData.length };
     }
 
-    setProspects(prev => [...(data as Prospect[]), ...prev]);
-    return { imported: data.length, skipped };
+    setProspects(prev => [...(data || []).map(mapDbProspect), ...prev]);
+    return { imported: data?.length || 0, skipped };
   };
 
   return {

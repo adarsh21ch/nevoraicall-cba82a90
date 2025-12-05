@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { Prospect, FunnelStage, ActionTaken, ProspectStatus, PriorityLevel, FUNNEL_STAGES, EXTENDED_ACTIONS, STATUSES, PRIORITIES, ExtendedActionTaken } from '@/types/prospect';
+import { Prospect, FunnelStage, ActionTaken, ProspectStatus, FUNNEL_STAGES, EXTENDED_ACTIONS, STATUSES, ExtendedActionTaken } from '@/types/prospect';
 import { InlineSelect } from './InlineSelect';
-import { StatusBadge, PriorityBadge, StageBadge, ActionBadge } from './StatusBadge';
+import { StatusBadge, StageBadge, ActionBadge } from './StatusBadge';
 import { InlineReportCard } from './InlineReportCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,7 +51,6 @@ export function ProspectRow({
   const stageOptions = getOptionsForType('funnel_stage', FUNNEL_STAGES) as FunnelStage[];
   const actionOptions = getOptionsForType('action_taken', EXTENDED_ACTIONS) as ExtendedActionTaken[];
   const statusOptions = getOptionsForType('prospect_status', STATUSES) as ProspectStatus[];
-  const priorityOptions = getOptionsForType('priority', PRIORITIES) as PriorityLevel[];
 
   useEffect(() => {
     setLocalPhone(prospect.phone);
@@ -136,13 +135,15 @@ export function ProspectRow({
     // Determine background for sticky columns
     const bgColor = isEven ? "bg-muted/20" : "bg-card";
     const isNameColumn = columnId === 'name';
+    const isIndexColumn = columnId === 'index';
     
     const cellClass = cn(
       "px-2 py-2 whitespace-nowrap",
       !isMobileTable && "px-3 py-3",
       isMobileTable && "text-xs",
-      // Make name column sticky on mobile
-      isMobileTable && isNameColumn && `sticky left-0 z-10 ${bgColor} shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)]`
+      // Make name column sticky on mobile (positioned after index column)
+      isMobileTable && isNameColumn && `sticky left-[36px] z-10 ${bgColor} shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)]`,
+      isMobileTable && isIndexColumn && `sticky left-0 z-10 ${bgColor}`
     );
     
     switch (columnId) {
@@ -204,16 +205,6 @@ export function ProspectRow({
                 >
                   {localPhone}
                 </button>
-              )}
-              {!isMobileTable && (
-                <>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" onClick={openCall}>
-                    <Phone className="h-3.5 w-3.5 text-accent" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-green-500 hover:text-green-600" onClick={openWhatsApp}>
-                    <MessageCircle className="h-3.5 w-3.5" />
-                  </Button>
-                </>
               )}
             </div>
           </td>
@@ -289,23 +280,6 @@ export function ProspectRow({
               onAddOption={addOption}
               onDeleteOption={deleteOption}
               defaultOptions={STATUSES}
-            />
-          </td>
-        );
-      case 'priority':
-        return (
-          <td key={columnId} className={cellClass} style={style}>
-            <InlineSelect
-              value={prospect.priority}
-              options={priorityOptions}
-              onChange={(value) => onUpdate(prospect.id, { priority: value })}
-              renderValue={(value) => <PriorityBadge priority={value} />}
-              placeholder="Select..."
-              optionType="priority"
-              customOptions={getCustomOptionsForType('priority')}
-              onAddOption={addOption}
-              onDeleteOption={deleteOption}
-              defaultOptions={PRIORITIES}
             />
           </td>
         );

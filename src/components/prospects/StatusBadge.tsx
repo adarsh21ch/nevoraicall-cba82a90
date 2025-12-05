@@ -7,10 +7,9 @@ interface StatusBadgeProps {
 
 export function StatusBadge({ status }: StatusBadgeProps) {
   const colorClasses: Record<ProspectStatus, string> = {
-    '+VE': 'bg-status-positive/15 text-status-positive border-status-positive/30',
-    '-VE': 'bg-status-negative/15 text-status-negative border-status-negative/30',
-    '50-50': 'bg-status-neutral/15 text-status-neutral border-status-neutral/30',
-    '30-70': 'bg-muted text-muted-foreground border-border',
+    'Good': 'bg-status-positive/15 text-status-positive border-status-positive/30',
+    'Medium': 'bg-status-neutral/15 text-status-neutral border-status-neutral/30',
+    'Bad': 'bg-status-negative/15 text-status-negative border-status-negative/30',
   };
 
   return (

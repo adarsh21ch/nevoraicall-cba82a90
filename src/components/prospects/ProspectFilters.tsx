@@ -1,15 +1,18 @@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, X, Download } from 'lucide-react';
-import { FUNNEL_STAGES, STATUSES, PRIORITIES, FunnelStage, ProspectStatus, PriorityLevel } from '@/types/prospect';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Search, X, Download, ChevronDown } from 'lucide-react';
+import { FUNNEL_STAGES, STATUSES, EXTENDED_ACTIONS, FunnelStage, ProspectStatus, ExtendedActionTaken } from '@/types/prospect';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 interface Filters {
   search: string;
   stage: FunnelStage | 'all';
   status: ProspectStatus | 'all';
-  priority: PriorityLevel | 'all';
+  actions: ExtendedActionTaken[];
 }
 
 interface ProspectFiltersProps {
@@ -19,7 +22,7 @@ interface ProspectFiltersProps {
 }
 
 export function ProspectFilters({ filters, onFiltersChange, onExport }: ProspectFiltersProps) {
-  const hasFilters = filters.search || filters.stage !== 'all' || filters.status !== 'all' || filters.priority !== 'all';
+  const hasFilters = filters.search || filters.stage !== 'all' || filters.status !== 'all' || filters.actions.length > 0;
   const isMobile = useIsMobile();
 
   const clearFilters = () => {
@@ -27,8 +30,21 @@ export function ProspectFilters({ filters, onFiltersChange, onExport }: Prospect
       search: '',
       stage: 'all',
       status: 'all',
-      priority: 'all',
+      actions: [],
     });
+  };
+
+  const toggleAction = (action: ExtendedActionTaken) => {
+    const newActions = filters.actions.includes(action)
+      ? filters.actions.filter(a => a !== action)
+      : [...filters.actions, action];
+    onFiltersChange({ ...filters, actions: newActions });
+  };
+
+  const getActionsLabel = () => {
+    if (filters.actions.length === 0) return 'All Actions';
+    if (filters.actions.length === 1) return filters.actions[0];
+    return `${filters.actions.length} Actions`;
   };
 
   return (
@@ -90,27 +106,52 @@ export function ProspectFilters({ filters, onFiltersChange, onExport }: Prospect
           </SelectContent>
         </Select>
 
-        <Select
-          value={filters.priority}
-          onValueChange={(value) => onFiltersChange({ ...filters, priority: value as PriorityLevel | 'all' })}
-        >
-          <SelectTrigger className="h-10 sm:h-9 min-w-[90px] w-auto text-xs shrink-0">
-            <SelectValue placeholder="Priority" />
-          </SelectTrigger>
-          <SelectContent 
-            className="bg-popover border-border z-[100]" 
-            position="popper" 
-            sideOffset={4}
+        {/* Multi-select Actions Filter */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button 
+              variant="outline" 
+              className={cn(
+                "h-10 sm:h-9 min-w-[100px] w-auto text-xs shrink-0 justify-between gap-1",
+                filters.actions.length > 0 && "border-primary/50 bg-primary/5"
+              )}
+            >
+              <span className="truncate">{getActionsLabel()}</span>
+              <ChevronDown className="h-3.5 w-3.5 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent 
+            className="w-48 p-2 bg-popover border-border z-[100]" 
             align="start"
+            sideOffset={4}
           >
-            <SelectItem value="all" className="min-h-[44px] sm:min-h-0">All Priority</SelectItem>
-            {PRIORITIES.map((priority) => (
-              <SelectItem key={priority} value={priority} className="text-xs min-h-[44px] sm:min-h-0">
-                {priority}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+            <div className="space-y-1">
+              {EXTENDED_ACTIONS.map((action) => (
+                <label
+                  key={action}
+                  className="flex items-center gap-2 px-2 py-2 rounded-md hover:bg-muted cursor-pointer min-h-[40px]"
+                >
+                  <Checkbox
+                    checked={filters.actions.includes(action)}
+                    onCheckedChange={() => toggleAction(action)}
+                    className="h-4 w-4"
+                  />
+                  <span className="text-sm">{action}</span>
+                </label>
+              ))}
+            </div>
+            {filters.actions.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full mt-2 h-8 text-xs"
+                onClick={() => onFiltersChange({ ...filters, actions: [] })}
+              >
+                Clear Actions
+              </Button>
+            )}
+          </PopoverContent>
+        </Popover>
 
         {hasFilters && (
           <Button variant="ghost" size="sm" onClick={clearFilters} className="h-10 sm:h-9 px-2 text-xs shrink-0">
