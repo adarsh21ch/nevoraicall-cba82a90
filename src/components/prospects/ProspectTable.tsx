@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Users, GripVertical, LayoutGrid, Table2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { cn } from '@/lib/utils';
 
 interface Filters {
@@ -81,6 +82,9 @@ export function ProspectTable({
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   const [mobileViewMode, setMobileViewMode] = useState<'card' | 'table'>('table');
   const isMobile = useIsMobile();
+  
+  // Debounce search for better performance
+  const debouncedSearch = useDebouncedValue(filters.search, 200);
 
   // Column state for reordering and resizing
   const [columnOrder, setColumnOrder] = useState<string[]>(COLUMNS.map(c => c.id));
@@ -139,11 +143,11 @@ export function ProspectTable({
     return baseProspects.filter(p => p.sheet_id === selectedSheetId);
   }, [baseProspects, selectedSheetId]);
 
-  // Apply search and other filters
+  // Apply search and other filters (using debounced search)
   const filteredProspects = useMemo(() => {
     return sheetFilteredProspects.filter((prospect) => {
-      const searchLower = filters.search.toLowerCase();
-      const matchesSearch = !filters.search ||
+      const searchLower = debouncedSearch.toLowerCase();
+      const matchesSearch = !debouncedSearch ||
         prospect.name.toLowerCase().includes(searchLower) ||
         prospect.phone.toLowerCase().includes(searchLower) ||
         (prospect.notes?.toLowerCase().includes(searchLower));
@@ -164,7 +168,7 @@ export function ProspectTable({
 
       return matchesSearch && matchesStage && matchesStatus && matchesAction && matchesIncomplete;
     });
-  }, [sheetFilteredProspects, filters]);
+  }, [sheetFilteredProspects, debouncedSearch, filters.stage, filters.status, filters.actions, filters.incompleteOnly]);
 
   const exportToCSV = () => {
     const headers = ['#', 'Name', 'Phone', 'City & State', 'Funnel Stage', 'Action Taken', 'Status', 'Notes', 'Last Contact Date', 'Date Added'];

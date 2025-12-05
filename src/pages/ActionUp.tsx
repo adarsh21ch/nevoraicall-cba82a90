@@ -1,27 +1,32 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProspects } from '@/hooks/useProspects';
+import { useData } from '@/contexts/DataContext';
 import { useActivityLogs } from '@/hooks/useActivityLogs';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { StageBadge, StatusBadge } from '@/components/prospects/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Activity, Clock, UserPlus, GitBranch, CheckCircle, Bell, Sparkles, Filter, Search } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Loader2, Activity, Clock, UserPlus, GitBranch, CheckCircle, Bell, Sparkles, Search } from 'lucide-react';
 import { formatDistanceToNow, parseISO, isToday, isPast } from 'date-fns';
 import { cn } from '@/lib/utils';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 
 type ActivityFilter = 'all' | 'prospect_added' | 'stage_change' | 'enrollment' | 'action_change' | 'note_added';
 
 export default function ActionUp() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { prospects } = useProspects();
+  const { prospects } = useData();
   const { activities, loading: activitiesLoading } = useActivityLogs(100);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<ActivityFilter>('all');
+  
+  // Debounce search for performance
+  const debouncedSearch = useDebouncedValue(searchQuery, 300);
 
   useEffect(() => {
     if (!user && !authLoading) {
@@ -31,7 +36,6 @@ export default function ActionUp() {
 
   // Calculate summary stats
   const summaryStats = useMemo(() => {
-    const today = new Date();
     const followUpsDueToday = prospects.filter(p => 
       p.last_contact_date && (isToday(parseISO(p.last_contact_date)) || isPast(parseISO(p.last_contact_date)))
     ).length;
@@ -47,7 +51,7 @@ export default function ActionUp() {
     return { followUpsDueToday, newProspectsToday, enrollmentsToday };
   }, [prospects]);
 
-  // Filter activities
+  // Filter activities with debounced search
   const filteredActivities = useMemo(() => {
     let filtered = activities;
     
@@ -55,15 +59,15 @@ export default function ActionUp() {
       filtered = filtered.filter(a => a.activity_type === activeFilter);
     }
     
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+    if (debouncedSearch) {
+      const query = debouncedSearch.toLowerCase();
       filtered = filtered.filter(a => 
         a.description.toLowerCase().includes(query)
       );
     }
     
     return filtered;
-  }, [activities, activeFilter, searchQuery]);
+  }, [activities, activeFilter, debouncedSearch]);
 
   // Generate activity from prospects if no activity logs yet
   const recentProspectActivity = useMemo(() => {
@@ -222,8 +226,8 @@ export default function ActionUp() {
           </div>
           
           {activitiesLoading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <div className="space-y-2">
+              {[1,2,3,4].map(i => <Skeleton key={i} className="h-16 rounded-xl" />)}
             </div>
           ) : filteredActivities.length > 0 ? (
             <div className="space-y-2">
