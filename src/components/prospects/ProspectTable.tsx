@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Prospect, FunnelStage, ProspectStatus, PriorityLevel, Sheet } from '@/types/prospect';
+import { Prospect, FunnelStage, ProspectStatus, Sheet, ExtendedActionTaken } from '@/types/prospect';
 import { ProspectRow } from './ProspectRow';
 import { MobileProspectCard } from './MobileProspectCard';
 import { ProspectFilters } from './ProspectFilters';
@@ -16,7 +16,7 @@ interface Filters {
   search: string;
   stage: FunnelStage | 'all';
   status: ProspectStatus | 'all';
-  priority: PriorityLevel | 'all';
+  actions: ExtendedActionTaken[];
 }
 
 interface ProspectTableProps {
@@ -38,22 +38,21 @@ interface ProspectTableProps {
   subFilter: 'all' | 'hot' | 'scheduled' | 'day1' | 'progress';
 }
 
-// Column configuration - desktop widths
+// Column configuration - desktop widths (removed priority)
 const COLUMNS = [
-  { id: 'index', label: '#', defaultWidth: 50, minWidth: 40, mobileWidth: 32, showOnMobile: true },
-  { id: 'name', label: 'Name', defaultWidth: 180, minWidth: 120, mobileWidth: 100, showOnMobile: true },
-  { id: 'phone', label: 'Phone', defaultWidth: 160, minWidth: 120, mobileWidth: 90, showOnMobile: true },
-  { id: 'contact', label: 'Call', defaultWidth: 70, minWidth: 60, mobileWidth: 60, showOnMobile: true },
-  { id: 'stage', label: 'Stage', defaultWidth: 120, minWidth: 100, mobileWidth: 80, showOnMobile: true },
-  { id: 'action', label: 'Action', defaultWidth: 140, minWidth: 100, mobileWidth: 80, showOnMobile: false },
-  { id: 'status', label: 'Status', defaultWidth: 100, minWidth: 80, mobileWidth: 70, showOnMobile: false },
-  { id: 'priority', label: 'Priority', defaultWidth: 100, minWidth: 80, mobileWidth: 70, showOnMobile: true },
-  { id: 'lastContact', label: 'Date', defaultWidth: 110, minWidth: 90, mobileWidth: 70, showOnMobile: true },
-  { id: 'actions', label: '', defaultWidth: 90, minWidth: 80, mobileWidth: 50, showOnMobile: true },
+  { id: 'index', label: '#', defaultWidth: 50, minWidth: 40, mobileWidth: 36 },
+  { id: 'name', label: 'Name', defaultWidth: 180, minWidth: 120, mobileWidth: 130 },
+  { id: 'phone', label: 'Phone', defaultWidth: 160, minWidth: 120, mobileWidth: 100 },
+  { id: 'contact', label: 'Call', defaultWidth: 70, minWidth: 60, mobileWidth: 60 },
+  { id: 'stage', label: 'Stage', defaultWidth: 120, minWidth: 100, mobileWidth: 80 },
+  { id: 'action', label: 'Action', defaultWidth: 140, minWidth: 100, mobileWidth: 90 },
+  { id: 'status', label: 'Status', defaultWidth: 100, minWidth: 80, mobileWidth: 80 },
+  { id: 'lastContact', label: 'Date', defaultWidth: 110, minWidth: 90, mobileWidth: 70 },
+  { id: 'actions', label: '', defaultWidth: 90, minWidth: 80, mobileWidth: 50 },
 ];
 
-// Mobile column order: #, Name, Phone, Call/WhatsApp, Stage, Priority, Date, Actions
-const MOBILE_COLUMN_ORDER = ['index', 'name', 'phone', 'contact', 'stage', 'priority', 'lastContact', 'actions'];
+// Mobile column order (removed priority)
+const MOBILE_COLUMN_ORDER = ['index', 'name', 'phone', 'contact', 'stage', 'action', 'status', 'lastContact', 'actions'];
 
 export function ProspectTable({
   prospects,
@@ -75,7 +74,7 @@ export function ProspectTable({
     search: '',
     stage: 'all',
     status: 'all',
-    priority: 'all',
+    actions: [],
   });
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   const [mobileViewMode, setMobileViewMode] = useState<'card' | 'table'>('table');
@@ -112,7 +111,7 @@ export function ProspectTable({
     if (filterMode === 'calling') {
       switch (subFilter) {
         case 'hot':
-          return base.filter(p => p.priority === 'High' || p.prospect_status === '+VE');
+          return base.filter(p => p.priority === 'High' || p.prospect_status === 'Good');
         case 'scheduled':
           return base.filter(p => p.last_contact_date);
         default:
@@ -149,26 +148,28 @@ export function ProspectTable({
 
       const matchesStage = filters.stage === 'all' || prospect.funnel_stage === filters.stage;
       const matchesStatus = filters.status === 'all' || prospect.prospect_status === filters.status;
-      const matchesPriority = filters.priority === 'all' || prospect.priority === filters.priority;
+      
+      // Multi-select action filter
+      const matchesAction = filters.actions.length === 0 || 
+        filters.actions.includes(prospect.action_taken as ExtendedActionTaken) ||
+        (filters.actions.includes('Enrolled') && prospect.enrollment_status === 'Enrolled');
 
-      return matchesSearch && matchesStage && matchesStatus && matchesPriority;
+      return matchesSearch && matchesStage && matchesStatus && matchesAction;
     });
   }, [sheetFilteredProspects, filters]);
 
   const exportToCSV = () => {
-    const headers = ['#', 'Name', 'Phone', 'Email', 'Funnel Stage', 'Enrollment', 'Action Taken', 'Status', 'Priority', 'Notes', 'Last Contact Date', 'Date Added'];
+    const headers = ['#', 'Name', 'Phone', 'City & State', 'Funnel Stage', 'Action Taken', 'Status', 'Notes', 'Last Contact Date', 'Date Added'];
     const csvContent = [
       headers.join(','),
       ...filteredProspects.map((p, i) => [
         i + 1,
         `"${p.name}"`,
         `"${p.phone}"`,
-        `"${p.email || ''}"`,
+        `"${[p.city, p.state].filter(Boolean).join(', ')}"`,
         `"${p.funnel_stage}"`,
-        `"${p.enrollment_status || 'Not Enrolled'}"`,
         `"${p.action_taken || ''}"`,
         `"${p.prospect_status || ''}"`,
-        `"${p.priority}"`,
         `"${(p.notes || '').replace(/"/g, '""')}"`,
         `"${p.last_contact_date || ''}"`,
         `"${p.date_added}"`,
@@ -361,7 +362,7 @@ export function ProspectTable({
           <p className="text-sm text-muted-foreground">
             No prospects match your filters.{' '}
             <button
-              onClick={() => setFilters({ search: '', stage: 'all', status: 'all', priority: 'all' })}
+              onClick={() => setFilters({ search: '', stage: 'all', status: 'all', actions: [] })}
               className="text-accent hover:underline"
             >
               Clear filters
@@ -400,16 +401,18 @@ export function ProspectTable({
           >
             <table 
               className="text-sm border-collapse"
-              style={{ width: '100%', minWidth: isMobile ? '580px' : '800px' }}
+              style={{ width: '100%', minWidth: isMobile ? '680px' : '800px' }}
             >
               <thead className="bg-muted/50 text-xs font-semibold text-muted-foreground border-b border-border">
                 <tr>
                   {(isMobile ? MOBILE_COLUMN_ORDER : columnOrder).map((columnId) => {
                     const col = COLUMNS.find(c => c.id === columnId);
-                    const width = isMobile ? col?.mobileWidth : columnWidths[columnId];
+                    if (!col) return null;
+                    const width = isMobile ? col.mobileWidth : columnWidths[columnId];
                     const isDragging = draggedColumn === columnId;
                     const isResizing = resizingColumn === columnId;
                     const isNameColumn = columnId === 'name';
+                    const isIndexColumn = columnId === 'index';
                     
                     return (
                       <th
@@ -424,8 +427,9 @@ export function ProspectTable({
                           columnId === 'index' && "text-center",
                           !isMobile && "hover:bg-muted/50 cursor-grab active:cursor-grabbing px-3 py-3 relative select-none",
                           isMobile && "text-[11px]",
-                          // Make name column header sticky on mobile
-                          isMobile && isNameColumn && "sticky left-0 z-20 bg-muted/50 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)]"
+                          // Make name column header sticky on mobile (positioned after index)
+                          isMobile && isNameColumn && "sticky left-[36px] z-20 bg-muted/50 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)]",
+                          isMobile && isIndexColumn && "sticky left-0 z-20 bg-muted/50"
                         )}
                         style={{ width: `${width}px`, minWidth: `${width}px` }}
                       >
@@ -460,22 +464,15 @@ export function ProspectTable({
                     onDelete={onDelete}
                     isEven={index % 2 === 0}
                     columnOrder={isMobile ? MOBILE_COLUMN_ORDER : columnOrder}
-                    columnWidths={isMobile 
-                      ? Object.fromEntries(COLUMNS.map(c => [c.id, c.mobileWidth])) 
-                      : columnWidths
-                    }
+                    columnWidths={isMobile ? Object.fromEntries(COLUMNS.map(c => [c.id, c.mobileWidth])) : columnWidths}
                     isMobileTable={isMobile}
                   />
                 ))}
               </tbody>
             </table>
           </div>
-          <div className={cn(
-            "px-4 py-2 border-t border-border/50 bg-muted/20 text-xs text-muted-foreground flex items-center justify-between",
-            isMobile && "px-2 py-1.5"
-          )}>
-            <span>{filteredProspects.length} of {baseProspects.length}</span>
-            {!isMobile && <span className="text-muted-foreground/60">Drag columns to reorder • Drag edges to resize</span>}
+          <div className="px-4 py-3 border-t border-border bg-muted/20 text-xs text-muted-foreground flex items-center justify-between">
+            <span>Showing {filteredProspects.length} of {baseProspects.length} prospects</span>
           </div>
         </div>
       )}

@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Prospect, FunnelStage, ProspectStatus, PriorityLevel, FUNNEL_STAGES, EXTENDED_ACTIONS, STATUSES, PRIORITIES, ExtendedActionTaken, ActionTaken } from '@/types/prospect';
+import { Prospect, FunnelStage, ProspectStatus, FUNNEL_STAGES, EXTENDED_ACTIONS, STATUSES, ExtendedActionTaken, ActionTaken } from '@/types/prospect';
 import { InlineSelect } from './InlineSelect';
-import { StatusBadge, PriorityBadge, StageBadge, ActionBadge } from './StatusBadge';
+import { StatusBadge, StageBadge, ActionBadge } from './StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { MessageCircle, Phone, Trash2, Calendar as CalendarIcon, ChevronDown, MapPin, Mail, Target } from 'lucide-react';
+import { MessageCircle, Phone, Trash2, Calendar as CalendarIcon, ChevronDown, MapPin, Target } from 'lucide-react';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useActivityLogs } from '@/hooks/useActivityLogs';
@@ -27,8 +27,8 @@ export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDel
   const [localData, setLocalData] = useState({
     name: prospect.name,
     phone: prospect.phone,
-    email: prospect.email || '',
     city: prospect.city || '',
+    state: prospect.state || '',
     why_need: prospect.why_need || '',
     notes: prospect.notes || '',
   });
@@ -40,14 +40,13 @@ export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDel
   const stageOptions = getOptionsForType('funnel_stage', FUNNEL_STAGES) as (typeof FUNNEL_STAGES[number])[];
   const actionOptions = getOptionsForType('action_taken', EXTENDED_ACTIONS) as (typeof EXTENDED_ACTIONS[number])[];
   const statusOptions = getOptionsForType('prospect_status', STATUSES) as (typeof STATUSES[number])[];
-  const priorityOptions = getOptionsForType('priority', PRIORITIES) as (typeof PRIORITIES[number])[];
 
   useEffect(() => {
     setLocalData({
       name: prospect.name,
       phone: prospect.phone,
-      email: prospect.email || '',
       city: prospect.city || '',
+      state: prospect.state || '',
       why_need: prospect.why_need || '',
       notes: prospect.notes || '',
     });
@@ -103,6 +102,25 @@ export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDel
     }
   };
 
+  // Handle combined city & state field
+  const handleCityStateChange = (value: string) => {
+    const parts = value.split(',').map(p => p.trim());
+    if (parts.length >= 2) {
+      setLocalData(prev => ({ ...prev, city: parts[0], state: parts.slice(1).join(', ') }));
+    } else {
+      setLocalData(prev => ({ ...prev, city: value, state: '' }));
+    }
+  };
+
+  const handleCityStateBlur = () => {
+    if (localData.city !== prospect.city) {
+      onUpdate(prospect.id, { city: localData.city || null });
+    }
+    if (localData.state !== prospect.state) {
+      onUpdate(prospect.id, { state: localData.state || null });
+    }
+  };
+
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-sm overflow-hidden">
       {/* Header: Name + Phone + Quick Actions */}
@@ -146,7 +164,7 @@ export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDel
         </div>
       </div>
 
-      {/* Status Chips Row */}
+      {/* Status Chips Row (removed Priority) */}
       <div className="px-4 py-3 flex flex-wrap items-center gap-2 bg-muted/10">
         {!isCalling && (
           <InlineSelect<FunnelStage>
@@ -185,18 +203,6 @@ export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDel
           onAddOption={addOption}
           onDeleteOption={deleteOption}
           defaultOptions={STATUSES}
-        />
-        <InlineSelect<PriorityLevel>
-          value={prospect.priority}
-          options={priorityOptions as PriorityLevel[]}
-          onChange={(value) => onUpdate(prospect.id, { priority: value })}
-          renderValue={(value) => <PriorityBadge priority={value} />}
-          placeholder="Priority"
-          optionType="priority"
-          customOptions={getCustomOptionsForType('priority')}
-          onAddOption={addOption}
-          onDeleteOption={deleteOption}
-          defaultOptions={PRIORITIES}
         />
       </div>
 
@@ -270,28 +276,15 @@ export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDel
           {/* Contact Info */}
           <div className="space-y-2">
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Contact Info</h4>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="flex items-center gap-2">
-                <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                <Input
-                  type="email"
-                  value={localData.email}
-                  onChange={(e) => setLocalData(prev => ({ ...prev, email: e.target.value }))}
-                  onBlur={() => handleFieldUpdate('email', localData.email)}
-                  placeholder="Email"
-                  className="h-8 text-sm"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                <Input
-                  value={localData.city}
-                  onChange={(e) => setLocalData(prev => ({ ...prev, city: e.target.value }))}
-                  onBlur={() => handleFieldUpdate('city', localData.city)}
-                  placeholder="City"
-                  className="h-8 text-sm"
-                />
-              </div>
+            <div className="flex items-center gap-2">
+              <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <Input
+                value={[localData.city, localData.state].filter(Boolean).join(', ')}
+                onChange={(e) => handleCityStateChange(e.target.value)}
+                onBlur={handleCityStateBlur}
+                placeholder="City, State"
+                className="h-8 text-sm"
+              />
             </div>
           </div>
 

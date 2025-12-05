@@ -1,7 +1,7 @@
 export type FunnelStage = 'Enrollment' | 'Day 1' | 'Day 2' | 'Day 3' | 'Minimum Bill' | 'Level Up' | '2CC';
 export type ActionTaken = 'Video Sent' | 'Called' | 'Not Picked' | 'Busy' | 'Follow Up Scheduled';
 export type ExtendedActionTaken = ActionTaken | 'Enrolled';
-export type ProspectStatus = '+VE' | '-VE' | '50-50' | '30-70';
+export type ProspectStatus = 'Good' | 'Medium' | 'Bad';
 export type PriorityLevel = 'High' | 'Medium' | 'Low';
 export type EnrollmentStatus = 'Enrolled' | 'Not Enrolled';
 
@@ -64,9 +64,24 @@ export const CALLING_STAGES: FunnelStage[] = ['Enrollment'];
 export const FUNNEL_TAB_STAGES: FunnelStage[] = ['Day 1', 'Day 2', 'Day 3', 'Minimum Bill', 'Level Up', '2CC'];
 export const ACTIONS: ActionTaken[] = ['Video Sent', 'Called', 'Not Picked', 'Busy', 'Follow Up Scheduled'];
 export const EXTENDED_ACTIONS: ExtendedActionTaken[] = ['Video Sent', 'Called', 'Not Picked', 'Busy', 'Follow Up Scheduled', 'Enrolled'];
-export const STATUSES: ProspectStatus[] = ['+VE', '-VE', '50-50', '30-70'];
+export const STATUSES: ProspectStatus[] = ['Good', 'Medium', 'Bad'];
 export const PRIORITIES: PriorityLevel[] = ['High', 'Medium', 'Low'];
 export const ENROLLMENT_STATUSES: EnrollmentStatus[] = ['Enrolled', 'Not Enrolled'];
+
+// Helper to map old status values to new ones
+export const mapOldStatusToNew = (oldStatus: string | null | undefined): ProspectStatus | null => {
+  if (!oldStatus) return null;
+  const mapping: Record<string, ProspectStatus> = {
+    '+VE': 'Good',
+    'Good': 'Good',
+    '-VE': 'Bad',
+    'Bad': 'Bad',
+    '50-50': 'Medium',
+    '30-70': 'Medium',
+    'Medium': 'Medium',
+  };
+  return mapping[oldStatus] || null;
+};
 
 export const FUNNEL_STAGE_ORDER: Record<FunnelStage, number> = {
   'Enrollment': 0,

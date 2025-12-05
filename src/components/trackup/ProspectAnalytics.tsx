@@ -12,7 +12,7 @@ interface ProspectAnalyticsProps {
 export function ProspectAnalytics({ prospects }: ProspectAnalyticsProps) {
   const stats = useMemo(() => {
     const totalProspects = prospects.length;
-    const positiveCount = prospects.filter(p => p.prospect_status === '+VE').length;
+    const positiveCount = prospects.filter(p => p.prospect_status === 'Good').length;
     const highPriorityCount = prospects.filter(p => p.priority === 'High').length;
     const levelUpCount = prospects.filter(p => p.funnel_stage === 'Level Up').length;
     return { totalProspects, positiveCount, highPriorityCount, levelUpCount };
@@ -28,10 +28,10 @@ export function ProspectAnalytics({ prospects }: ProspectAnalyticsProps) {
 
   const statusCounts = useMemo(() => {
     const counts: Record<ProspectStatus | 'None', number> = {
-      '+VE': 0, '-VE': 0, '50-50': 0, '30-70': 0, 'None': 0,
+      'Good': 0, 'Medium': 0, 'Bad': 0, 'None': 0,
     };
     prospects.forEach((p) => {
-      if (p.prospect_status) counts[p.prospect_status]++;
+      if (p.prospect_status && counts[p.prospect_status] !== undefined) counts[p.prospect_status]++;
       else counts['None']++;
     });
     return counts;
@@ -48,7 +48,7 @@ export function ProspectAnalytics({ prospects }: ProspectAnalyticsProps) {
 
   const statCards = [
     { title: 'Total Prospects', value: stats.totalProspects, icon: Users, gradient: 'from-blue-500/20 to-blue-600/10', iconColor: 'text-blue-500' },
-    { title: '+VE Prospects', value: stats.positiveCount, icon: UserCheck, gradient: 'from-green-500/20 to-green-600/10', iconColor: 'text-green-500' },
+    { title: 'Good Prospects', value: stats.positiveCount, icon: UserCheck, gradient: 'from-green-500/20 to-green-600/10', iconColor: 'text-green-500' },
     { title: 'High Priority', value: stats.highPriorityCount, icon: AlertTriangle, gradient: 'from-red-500/20 to-red-600/10', iconColor: 'text-red-500' },
     { title: 'Level Up', value: stats.levelUpCount, icon: TrendingUp, gradient: 'from-purple-500/20 to-purple-600/10', iconColor: 'text-purple-500' },
   ];
@@ -78,7 +78,6 @@ export function ProspectAnalytics({ prospects }: ProspectAnalyticsProps) {
                   <Icon className="h-5 w-5" />
                 </div>
               </div>
-              {/* Decorative element */}
               <div className="absolute -right-4 -bottom-4 w-20 h-20 rounded-full bg-white/5" />
             </div>
           );
@@ -148,10 +147,9 @@ export function ProspectAnalytics({ prospects }: ProspectAnalyticsProps) {
                   <div
                     className={cn(
                       "h-full rounded-full transition-all duration-500",
-                      status === '+VE' && 'bg-green-500',
-                      status === '-VE' && 'bg-red-500',
-                      status === '50-50' && 'bg-amber-500',
-                      status === '30-70' && 'bg-slate-400',
+                      status === 'Good' && 'bg-green-500',
+                      status === 'Bad' && 'bg-red-500',
+                      status === 'Medium' && 'bg-amber-500',
                     )}
                     style={{ width: `${percentage}%` }}
                   />

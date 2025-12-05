@@ -9,14 +9,13 @@ interface StatusDistributionProps {
 export function StatusDistribution({ prospects }: StatusDistributionProps) {
   const statusCounts = useMemo(() => {
     const counts: Record<ProspectStatus | 'None', number> = {
-      '+VE': 0,
-      '-VE': 0,
-      '50-50': 0,
-      '30-70': 0,
+      'Good': 0,
+      'Medium': 0,
+      'Bad': 0,
       'None': 0,
     };
     prospects.forEach((p) => {
-      if (p.prospect_status) {
+      if (p.prospect_status && counts[p.prospect_status] !== undefined) {
         counts[p.prospect_status]++;
       } else {
         counts['None']++;
