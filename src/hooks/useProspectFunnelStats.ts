@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { FunnelStage } from '@/types/prospect';
 
 export interface FunnelStats {
   enrollment: number;
@@ -13,32 +12,24 @@ export interface FunnelStats {
   two_cc: number;
 }
 
-const STAGE_MAPPING: Record<FunnelStage, keyof FunnelStats> = {
-  'Enrollment': 'enrollment',
-  'Day 1': 'day_1',
-  'Day 2': 'day_2',
-  'Day 3': 'day_3',
-  'Minimum Bill': 'minimum_bill',
-  'Level Up': 'level_up',
-  '2CC': 'two_cc',
-};
-
+// Note: funnel_stage was removed from prospects table in simplified model
+// This hook now returns total prospect count only
 export function useProspectFunnelStats() {
   const [loading, setLoading] = useState(true);
-  const [prospects, setProspects] = useState<{ funnel_stage: FunnelStage }[]>([]);
+  const [totalProspects, setTotalProspects] = useState(0);
   const { user } = useAuth();
 
   const fetchData = useCallback(async () => {
     if (!user) return;
     
     setLoading(true);
-    const { data, error } = await supabase
+    const { count, error } = await supabase
       .from('prospects')
-      .select('funnel_stage')
+      .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id);
 
-    if (!error && data) {
-      setProspects(data as { funnel_stage: FunnelStage }[]);
+    if (!error && count !== null) {
+      setTotalProspects(count);
     }
     setLoading(false);
   }, [user]);
@@ -47,27 +38,15 @@ export function useProspectFunnelStats() {
     fetchData();
   }, [fetchData]);
 
-  const totals = useMemo<FunnelStats>(() => {
-    const counts: FunnelStats = {
-      enrollment: 0,
-      day_1: 0,
-      day_2: 0,
-      day_3: 0,
-      minimum_bill: 0,
-      level_up: 0,
-      two_cc: 0,
-    };
-
-    prospects.forEach((p) => {
-      if (p.funnel_stage && STAGE_MAPPING[p.funnel_stage]) {
-        counts[STAGE_MAPPING[p.funnel_stage]]++;
-      }
-    });
-
-    return counts;
-  }, [prospects]);
-
-  const totalProspects = prospects.length;
+  const totals = useMemo<FunnelStats>(() => ({
+    enrollment: 0,
+    day_1: 0,
+    day_2: 0,
+    day_3: 0,
+    minimum_bill: 0,
+    level_up: 0,
+    two_cc: 0,
+  }), []);
 
   return { totals, loading, totalProspects, refetch: fetchData };
 }

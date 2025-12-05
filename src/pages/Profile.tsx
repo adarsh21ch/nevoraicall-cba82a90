@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { EditProfileDialog } from '@/components/profile/EditProfileDialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { User, LogOut, ChevronRight, Crown, Phone, Building2, MapPin, Loader2 } from 'lucide-react';
+import { User, LogOut, ChevronRight, Crown, Phone, Building2, MapPin, Loader2, FileText, Shield, Receipt } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
 
@@ -159,6 +159,43 @@ export default function Profile() {
             </div>
             <ChevronRight className="h-5 w-5 text-muted-foreground" />
           </button>
+        </div>
+
+        {/* Legal & Policies */}
+        <div className="rounded-2xl p-4 bg-card border border-border/50">
+          <h3 className="text-sm font-semibold text-foreground mb-3">Legal & Policies</h3>
+          <div className="space-y-2">
+            <Link
+              to="/terms"
+              className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">Terms & Conditions</span>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </Link>
+            <Link
+              to="/privacy"
+              className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Shield className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">Privacy Policy</span>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </Link>
+            <Link
+              to="/refund"
+              className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Receipt className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">Refund Policy</span>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </Link>
+          </div>
         </div>
 
         {/* Sign Out */}
