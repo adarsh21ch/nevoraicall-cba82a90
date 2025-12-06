@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useProspectFunnelStats, FunnelStats } from '@/hooks/useProspectFunnelStats';
 import { useFunnelTracking } from '@/hooks/useFunnelTracking';
+import { useProspects } from '@/hooks/useProspects';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronDown, ChevronUp, Flame, TrendingUp, TrendingDown, Minus, Sparkles, Users, Plus, Grid3X3 } from 'lucide-react';
@@ -8,6 +9,8 @@ import { cn } from '@/lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { EditableCell } from './EditableCell';
+import { ExportFunnelData } from './ExportFunnelData';
+
 const STAGES = ['enrollment', 'day_1', 'day_2', 'day_3', 'minimum_bill', 'level_up', 'two_cc'] as const;
 type StageKey = typeof STAGES[number];
 
@@ -69,6 +72,7 @@ interface FunnelTrackerProps {
 export function FunnelTracker({ isPro = true }: FunnelTrackerProps) {
   const { totals, loading, totalProspects } = useProspectFunnelStats();
   const { rows, loading: funnelLoading, updateCell, addRow, totals: funnelTotals } = useFunnelTracking();
+  const { prospects, loading: prospectsLoading } = useProspects();
   const [fromStage, setFromStage] = useState<StageKey>('enrollment');
   const [toStage, setToStage] = useState<StageKey>('day_1');
   const [stepConversionOpen, setStepConversionOpen] = useState(true);
@@ -84,7 +88,7 @@ export function FunnelTracker({ isPro = true }: FunnelTrackerProps) {
     return { from: fromVal, to: toVal, percentage };
   };
 
-  if (loading || funnelLoading) {
+  if (loading || funnelLoading || prospectsLoading) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-64 w-full rounded-2xl" />
@@ -356,6 +360,9 @@ export function FunnelTracker({ isPro = true }: FunnelTrackerProps) {
           </Collapsible>
         </div>
       </div>
+
+      {/* Export Data Section */}
+      <ExportFunnelData prospects={prospects} isPro={isPro} />
     </div>
   );
 }
