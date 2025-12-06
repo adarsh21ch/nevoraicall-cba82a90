@@ -43,8 +43,7 @@ export function useAdmin() {
     }
     
     setLoading(false);
-    return isAdmin;
-  }, [user, isAdmin]);
+  }, [user]);
 
   useEffect(() => {
     checkIsAdmin();
