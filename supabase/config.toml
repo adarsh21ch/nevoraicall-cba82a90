@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.check-expired-subscriptions]
 verify_jwt = false
+
+[functions.send-expiry-reminder]
+verify_jwt = false
