@@ -18,7 +18,7 @@ export default function Profile() {
   const { user, loading: authLoading, signOut } = useAuth();
   const { profile, loading: profileLoading, updating, updateProfile } = useProfile();
   const { isAdmin } = useAdmin();
-  const { isPro, isAdminOverride, loading: subLoading } = useSubscription();
+  const { isPro, isAdminOverride, daysRemaining, subscription, loading: subLoading } = useSubscription();
   const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
@@ -92,8 +92,13 @@ export default function Profile() {
                       <CheckCircle className="h-3 w-3" />
                       <span className="font-medium">Pro Plan Active</span>
                     </div>
+                    {subscription?.expires_at && (
+                      <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                        {daysRemaining} days left
+                      </span>
+                    )}
                     {isAdminOverride && (
-                      <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">Admin Override</span>
+                      <span className="text-[10px] text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded">Admin</span>
                     )}
                   </>
                 ) : (

@@ -16,7 +16,7 @@ export function UpgradeBar({ onUpgrade }: UpgradeBarProps) {
       title: "Opening Payment Gateway",
       description: "Redirecting to Razorpay for ₹249 subscription...",
     });
-    window.open('https://rzp.io/rzp/uuE0lO96', '_blank');
+    window.open('https://rzp.io/rzp/5mROfK1h', '_blank');
     if (onUpgrade) onUpgrade();
   };
 

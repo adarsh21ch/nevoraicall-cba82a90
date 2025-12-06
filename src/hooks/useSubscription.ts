@@ -10,6 +10,7 @@ export interface Subscription {
   subscribed_at: string | null;
   expires_at: string | null;
   payment_id: string | null;
+  status: string;
   created_at: string;
   updated_at: string;
 }
@@ -58,17 +59,45 @@ export function useSubscription() {
     fetchSubscription();
   }, [fetchSubscription]);
 
-  const isPro = subscription?.plan === 'pro';
+  // Check if Pro is active and not expired
+  const isProActive = () => {
+    if (!subscription) return false;
+    if (subscription.is_admin_override && subscription.plan === 'pro') return true;
+    if (subscription.plan !== 'pro') return false;
+    if (subscription.status !== 'active') return false;
+    if (!subscription.expires_at) return false;
+    
+    const expiresAt = new Date(subscription.expires_at);
+    const now = new Date();
+    return expiresAt >= now;
+  };
+
+  const isPro = isProActive();
   const isAdminOverride = subscription?.is_admin_override || false;
+  
+  // Calculate days remaining
+  const daysRemaining = () => {
+    if (!subscription?.expires_at || !isPro) return 0;
+    const expiresAt = new Date(subscription.expires_at);
+    const now = new Date();
+    const diff = expiresAt.getTime() - now.getTime();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  };
 
   const upgradeToPro = async (paymentId: string) => {
     if (!user) return { error: 'No user' };
+
+    const now = new Date();
+    const expiresAt = new Date(now);
+    expiresAt.setDate(expiresAt.getDate() + 30);
 
     const { error } = await supabase
       .from('user_subscriptions')
       .update({
         plan: 'pro',
-        subscribed_at: new Date().toISOString(),
+        status: 'active',
+        subscribed_at: now.toISOString(),
+        expires_at: expiresAt.toISOString(),
         payment_id: paymentId,
       })
       .eq('user_id', user.id);
@@ -79,5 +108,13 @@ export function useSubscription() {
     return { error };
   };
 
-  return { subscription, loading, isPro, isAdminOverride, upgradeToPro, refetch: fetchSubscription };
+  return { 
+    subscription, 
+    loading, 
+    isPro, 
+    isAdminOverride, 
+    daysRemaining: daysRemaining(),
+    upgradeToPro, 
+    refetch: fetchSubscription 
+  };
 }
