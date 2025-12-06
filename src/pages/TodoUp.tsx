@@ -9,12 +9,145 @@ import { UpgradeBar } from '@/components/subscription/UpgradeBar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, CheckCircle, Lock, Trash2, Edit2, Send, X, Check } from 'lucide-react';
+import { Loader2, CheckCircle, Lock, Trash2, Edit2, Send, X, Check, Phone, MessageCircle, Plus } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { Prospect } from '@/types/prospect';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
 
 const FUNNEL_COLUMNS = ['Day 1', 'Day 2', 'Minimum Bill', 'Level Up'] as const;
+
+interface MiniReportCardProps {
+  prospect: Prospect;
+  onAddTodo: (text: string) => void;
+}
+
+function MiniReportCard({ prospect, onAddTodo }: MiniReportCardProps) {
+  const handleCall = () => {
+    window.location.href = `tel:${prospect.phone}`;
+  };
+
+  const handleWhatsApp = () => {
+    const phone = prospect.phone.replace(/\D/g, '');
+    window.location.href = `whatsapp://send?phone=${phone}`;
+  };
+
+  const handleAddTodoClick = () => {
+    onAddTodo(`Follow up with ${prospect.name} (Stage: ${prospect.funnel_stage || 'N/A'})...`);
+  };
+
+  return (
+    <div className="mt-2 p-3 bg-accent/5 rounded-lg border border-accent/20 animate-in fade-in slide-in-from-top-2 duration-200">
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h4 className="font-semibold text-sm text-foreground">{prospect.name}</h4>
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-50"
+              onClick={handleCall}
+            >
+              <Phone className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-50"
+              onClick={handleWhatsApp}
+            >
+              <MessageCircle className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+          <div>
+            <span className="text-muted-foreground">Phone:</span>
+            <span className="ml-1 font-medium">{prospect.phone || '–'}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Age/Gender:</span>
+            <span className="ml-1 font-medium">
+              {prospect.age_or_dob || '–'} / {prospect.gender || '–'}
+            </span>
+          </div>
+          <div className="col-span-2">
+            <span className="text-muted-foreground">Address:</span>
+            <span className="ml-1 font-medium">{prospect.address || '–'}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Stage:</span>
+            <span className="ml-1 font-medium text-accent">{prospect.funnel_stage || '–'}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Action:</span>
+            <span className="ml-1 font-medium">{prospect.action_taken || '–'}</span>
+          </div>
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full mt-2 h-7 text-xs border-accent/30 text-accent hover:bg-accent/10"
+          onClick={handleAddTodoClick}
+        >
+          <Plus className="h-3 w-3 mr-1" />
+          Add To-Do for this prospect
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+interface FunnelColumnProps {
+  stage: string;
+  prospects: Prospect[];
+  isPro: boolean;
+  expandedProspectId: string | null;
+  onToggleExpand: (prospectId: string) => void;
+  onAddTodo: (text: string) => void;
+}
+
+function FunnelColumn({ stage, prospects, isPro, expandedProspectId, onToggleExpand, onAddTodo }: FunnelColumnProps) {
+  return (
+    <div className="bg-accent/5 rounded-xl overflow-hidden border border-accent/10 hover:shadow-md transition-shadow">
+      {/* Header */}
+      <div className="bg-accent text-accent-foreground px-3 py-2">
+        <p className="text-xs font-semibold truncate">{stage}</p>
+        <p className="text-lg font-bold">{isPro ? prospects.length : '–'}</p>
+      </div>
+      
+      {/* Prospect Names */}
+      <div className="p-2 max-h-48 overflow-y-auto space-y-1">
+        {!isPro ? (
+          <p className="text-xs text-muted-foreground text-center py-4">Upgrade to view</p>
+        ) : prospects.length === 0 ? (
+          <p className="text-xs text-muted-foreground text-center py-4">No prospects</p>
+        ) : (
+          prospects.map((prospect) => (
+            <div key={prospect.id}>
+              <button
+                onClick={() => onToggleExpand(prospect.id)}
+                className={cn(
+                  "w-full text-left px-2 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                  "hover:bg-accent/10",
+                  expandedProspectId === prospect.id && "bg-accent/10"
+                )}
+              >
+                <span className="block truncate">{prospect.name}</span>
+              </button>
+              
+              {expandedProspectId === prospect.id && (
+                <MiniReportCard prospect={prospect} onAddTodo={onAddTodo} />
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function TodoUp() {
   const navigate = useNavigate();
@@ -25,6 +158,7 @@ export default function TodoUp() {
   const [newTodoInput, setNewTodoInput] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
+  const [expandedProspectId, setExpandedProspectId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user && !authLoading) {
@@ -32,9 +166,9 @@ export default function TodoUp() {
     }
   }, [user, authLoading, navigate]);
 
-  // Group prospects by funnel stage for the dashboard
+  // Group prospects by funnel stage - now stores full Prospect objects
   const funnelData = useMemo(() => {
-    const groups: Record<string, string[]> = {
+    const groups: Record<string, Prospect[]> = {
       'Day 1': [],
       'Day 2': [],
       'Minimum Bill': [],
@@ -43,17 +177,28 @@ export default function TodoUp() {
     
     prospects.forEach(p => {
       if (p.funnel_stage && groups[p.funnel_stage] !== undefined) {
-        groups[p.funnel_stage].push(p.name);
+        groups[p.funnel_stage].push(p);
       }
     });
     
     return groups;
   }, [prospects]);
 
-  const handleAddTodo = async () => {
-    if (!newTodoInput.trim()) return;
-    await addTodo(newTodoInput.trim());
+  const handleAddTodo = async (text?: string) => {
+    const todoText = text || newTodoInput.trim();
+    if (!todoText) return;
+    await addTodo(todoText);
     setNewTodoInput('');
+  };
+
+  const handlePreFillTodo = (text: string) => {
+    setNewTodoInput(text);
+    // Focus the input
+    const input = document.querySelector('input[placeholder="Add a to-do task or reminder…"]') as HTMLInputElement;
+    if (input) {
+      input.focus();
+      input.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   const handleStartEdit = (id: string, title: string) => {
@@ -73,10 +218,14 @@ export default function TodoUp() {
     setEditingTitle('');
   };
 
+  const handleToggleExpand = (prospectId: string) => {
+    setExpandedProspectId(prev => prev === prospectId ? null : prospectId);
+  };
+
   if (authLoading || subLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loader2 className="h-8 w-8 animate-spin text-accent" />
       </div>
     );
   }
@@ -106,9 +255,9 @@ export default function TodoUp() {
           <h2 className="text-2xl font-bold tracking-tight">Todo Up</h2>
           <p className="text-sm text-muted-foreground">Your Tasks & Funnel Overview</p>
           <div className="flex items-center gap-1 mt-2">
-            <div className="w-8 h-1 bg-primary rounded-full" />
-            <div className="w-2 h-1 bg-primary/50 rounded-full" />
-            <div className="w-1 h-1 bg-primary/30 rounded-full" />
+            <div className="w-8 h-1 bg-accent rounded-full" />
+            <div className="w-2 h-1 bg-accent/50 rounded-full" />
+            <div className="w-1 h-1 bg-accent/30 rounded-full" />
           </div>
         </div>
 
@@ -128,64 +277,62 @@ export default function TodoUp() {
         )}
 
         {/* Funnel Stage Dashboard - 4 columns */}
-        <div className="bg-card rounded-2xl p-4 border border-border/50">
-          <h3 className="font-semibold mb-4 text-sm">Funnel Stage Overview</h3>
-          <div className="grid grid-cols-4 gap-2">
+        <div className="bg-card rounded-2xl p-4 border border-border/50 shadow-sm">
+          <p className="text-xs text-muted-foreground mb-3 font-medium">Funnel Stage Overview</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {FUNNEL_COLUMNS.map(stage => (
-              <div key={stage} className="text-center">
-                <div className="bg-primary/10 rounded-lg py-2 px-1 mb-2">
-                  <p className="text-[10px] font-semibold text-primary truncate">{stage}</p>
-                  <p className="text-lg font-bold">{isPro ? funnelData[stage].length : '–'}</p>
-                </div>
-                <div className="max-h-32 overflow-y-auto space-y-1">
-                  {isPro && funnelData[stage].slice(0, 5).map((name, idx) => (
-                    <p key={idx} className="text-[10px] text-muted-foreground truncate px-1">
-                      {name}
-                    </p>
-                  ))}
-                  {isPro && funnelData[stage].length > 5 && (
-                    <p className="text-[10px] text-primary font-medium">
-                      +{funnelData[stage].length - 5} more
-                    </p>
-                  )}
-                </div>
-              </div>
+              <FunnelColumn
+                key={stage}
+                stage={stage}
+                prospects={funnelData[stage]}
+                isPro={isPro}
+                expandedProspectId={expandedProspectId}
+                onToggleExpand={handleToggleExpand}
+                onAddTodo={handlePreFillTodo}
+              />
             ))}
           </div>
         </div>
 
         {/* To-Do List */}
-        <div className="bg-card rounded-2xl p-4 border border-border/50 flex-1">
+        <div className="bg-card rounded-2xl p-4 border border-border/50 shadow-sm flex-1">
           <div className="flex items-center gap-2 mb-4">
-            <CheckCircle className="h-5 w-5 text-primary" />
+            <CheckCircle className="h-5 w-5 text-accent" />
             <h3 className="font-semibold">My To-Do List</h3>
           </div>
 
           {!isPro ? (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              Upgrade to Pro to manage tasks
-            </p>
+            <div className="bg-accent/5 rounded-xl py-8">
+              <p className="text-sm text-muted-foreground text-center">
+                Upgrade to Pro to manage tasks
+              </p>
+            </div>
           ) : todosLoading ? (
             <div className="flex justify-center py-8">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : todos.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              No tasks yet. Add one below!
-            </p>
+            <div className="bg-accent/5 rounded-xl py-8">
+              <p className="text-sm text-muted-foreground text-center">
+                No tasks yet. Add one below!
+              </p>
+            </div>
           ) : (
             <div className="space-y-2 max-h-[40vh] overflow-y-auto">
               {todos.map(todo => (
                 <div
                   key={todo.id}
                   className={cn(
-                    "flex items-center gap-3 p-3 rounded-xl transition-colors group",
-                    todo.completed ? "bg-muted/20" : "bg-muted/30"
+                    "flex items-center gap-3 p-3 rounded-xl transition-all group",
+                    todo.completed 
+                      ? "bg-muted/20" 
+                      : "bg-accent/5 hover:bg-accent/10"
                   )}
                 >
                   <Checkbox
                     checked={todo.completed}
                     onCheckedChange={(checked) => toggleTodo(todo.id, !!checked)}
+                    className="data-[state=checked]:bg-accent data-[state=checked]:border-accent"
                   />
                   
                   {editingId === todo.id ? (
@@ -253,7 +400,7 @@ export default function TodoUp() {
       {isPro && (
         <div className="fixed bottom-20 left-0 right-0 z-30 px-4 pb-2 bg-gradient-to-t from-background via-background to-transparent pt-4">
           <div className="max-w-lg mx-auto">
-            <div className="flex items-center gap-2 bg-card border border-border/50 rounded-2xl p-2 shadow-lg">
+            <div className="flex items-center gap-2 bg-card border border-accent/30 rounded-2xl p-2 shadow-lg">
               <Input
                 placeholder="Add a to-do task or reminder…"
                 value={newTodoInput}
@@ -268,8 +415,8 @@ export default function TodoUp() {
               />
               <Button
                 size="icon"
-                className="h-9 w-9 rounded-xl shrink-0"
-                onClick={handleAddTodo}
+                className="h-9 w-9 rounded-xl shrink-0 bg-accent hover:bg-accent/90"
+                onClick={() => handleAddTodo()}
                 disabled={!newTodoInput.trim()}
               >
                 <Send className="h-4 w-4" />
