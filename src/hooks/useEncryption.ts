@@ -1,15 +1,26 @@
 import { supabase } from '@/integrations/supabase/client';
 
 export function useEncryption() {
+  const getSession = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session;
+  };
+
   const encryptFields = async (data: { phone?: string; email?: string }) => {
     try {
+      const session = await getSession();
+      if (!session) {
+        console.warn('No active session for encryption, returning original data');
+        return data;
+      }
+
       const { data: result, error } = await supabase.functions.invoke('encrypt-data', {
         body: { action: 'encrypt', data }
       });
 
       if (error) {
         console.error('Encryption error:', error);
-        return data; // Return original on error
+        return data;
       }
 
       return result.encrypted;
@@ -21,6 +32,12 @@ export function useEncryption() {
 
   const decryptFields = async (data: { phone?: string; email?: string }) => {
     try {
+      const session = await getSession();
+      if (!session) {
+        console.warn('No active session for decryption, returning original data');
+        return data;
+      }
+
       const { data: result, error } = await supabase.functions.invoke('encrypt-data', {
         body: { action: 'decrypt', data }
       });
@@ -41,6 +58,12 @@ export function useEncryption() {
     if (records.length === 0) return records;
 
     try {
+      const session = await getSession();
+      if (!session) {
+        console.warn('No active session for batch decryption, returning original data');
+        return records;
+      }
+
       const { data: result, error } = await supabase.functions.invoke('encrypt-data', {
         body: { action: 'decrypt-batch', data: { records } }
       });
@@ -61,6 +84,12 @@ export function useEncryption() {
     if (records.length === 0) return records;
 
     try {
+      const session = await getSession();
+      if (!session) {
+        console.warn('No active session for batch encryption, returning original data');
+        return records;
+      }
+
       const { data: result, error } = await supabase.functions.invoke('encrypt-data', {
         body: { action: 'encrypt-batch', data: { records } }
       });
