@@ -77,7 +77,7 @@ export function useProfile() {
       setProfile(data as Profile);
     }
     setLoading(false);
-  }, [user, toast, decryptFields]);
+  }, [user, toast]);
 
   useEffect(() => {
     fetchProfile();
