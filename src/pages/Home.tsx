@@ -150,12 +150,25 @@ export default function Home() {
         {/* Monthly Targets - Collapsible */}
         <div className="bg-card rounded-2xl p-4 border border-border/50">
           <Collapsible open={targetsExpanded} onOpenChange={setTargetsExpanded}>
-            <div className="flex items-center justify-between">
-              <CollapsibleTrigger className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <div className="flex items-center justify-between gap-2">
+              <CollapsibleTrigger className="flex items-center gap-2 hover:opacity-80 transition-opacity flex-shrink-0">
                 <Target className="h-5 w-5 text-primary" />
                 <h3 className="font-semibold">Monthly Targets</h3>
                 <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", targetsExpanded && "rotate-180")} />
               </CollapsibleTrigger>
+              
+              {/* Enrollment summary - always visible */}
+              {!targetsExpanded && (
+                <div className="flex items-center gap-2 flex-1 max-w-[160px]">
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    Enroll: <span className="font-semibold text-foreground">{kpis.stageCounts['Enrollment']}</span>/{targets['Enrollment'] || 0}
+                  </span>
+                  <Progress 
+                    value={targets['Enrollment'] ? Math.min((kpis.stageCounts['Enrollment'] / targets['Enrollment']) * 100, 100) : 0} 
+                    className="h-1.5 flex-1" 
+                  />
+                </div>
+              )}
               <Dialog open={editTargetsOpen} onOpenChange={setEditTargetsOpen}>
                 <DialogTrigger asChild>
                   <Button 
