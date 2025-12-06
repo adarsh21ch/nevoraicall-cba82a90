@@ -6,7 +6,7 @@ import { useProspects } from '@/hooks/useProspects';
 import { useUserTargets } from '@/hooks/useUserTargets';
 import { useActivityLogs } from '@/hooks/useActivityLogs';
 import { BottomNav } from '@/components/layout/BottomNav';
-import { StageBadge, PriorityBadge } from '@/components/prospects/StatusBadge';
+import { StageBadge, StatusBadge } from '@/components/prospects/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
@@ -14,10 +14,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Label } from '@/components/ui/label';
 import { 
-  Loader2, Users, CheckCircle, TrendingUp, Target, Calendar as CalendarIcon,
-  Phone, MessageCircle, ChevronRight, Settings2, ChevronDown, Activity
+  Loader2, Users, CheckCircle, TrendingUp, Target,
+  Settings2, ChevronDown, Activity, Clock
 } from 'lucide-react';
-import { format, parseISO, isToday, isPast, startOfDay } from 'date-fns';
+import { format, parseISO, startOfDay, formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
 import { FUNNEL_STAGES, FunnelStage } from '@/types/prospect';
@@ -349,6 +349,40 @@ export default function Home() {
                   </span>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* Recent Activity - from prospects */}
+        <div className="bg-card rounded-2xl p-4 border border-border/50">
+          <div className="flex items-center gap-2 mb-4">
+            <Clock className="h-5 w-5 text-primary" />
+            <h3 className="font-semibold">Recent Activity</h3>
+          </div>
+          {prospects.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">No recent activity</p>
+          ) : (
+            <div className="space-y-2">
+              {[...prospects]
+                .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+                .slice(0, 8)
+                .map((prospect) => (
+                  <div
+                    key={prospect.id}
+                    className="flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{prospect.name}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <StageBadge stage={prospect.funnel_stage} />
+                        {prospect.prospect_status && <StatusBadge status={prospect.prospect_status} />}
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground shrink-0 ml-2">
+                      {formatDistanceToNow(parseISO(prospect.updated_at), { addSuffix: true })}
+                    </p>
+                  </div>
+                ))}
             </div>
           )}
         </div>
