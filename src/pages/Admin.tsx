@@ -143,11 +143,13 @@ export default function Admin() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                     <span className="text-xs text-muted-foreground">Pro</span>
                     <Switch
                       checked={u.plan === 'pro'}
-                      onCheckedChange={(checked) => toggleUserAccess(u.id, checked)}
+                      onCheckedChange={(checked) => {
+                        toggleUserAccess(u.id, checked);
+                      }}
                     />
                   </div>
                 </div>
