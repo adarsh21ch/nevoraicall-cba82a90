@@ -1,7 +1,7 @@
 import { Lock, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
-import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface UpgradeBarProps {
   onUpgrade?: () => void;
@@ -9,18 +9,10 @@ interface UpgradeBarProps {
 
 export function UpgradeBar({ onUpgrade }: UpgradeBarProps) {
   const { isPro, loading } = useSubscription();
-  const { toast } = useToast();
+  const navigate = useNavigate();
 
-  const handleSubscribe = () => {
-    // Open PhonePe payment - for now show toast
-    toast({
-      title: "Opening Payment Gateway",
-      description: "Redirecting to PhonePe for ₹249 subscription...",
-    });
-    
-    // PhonePe payment link - replace with actual payment link
-    window.open('https://phon.pe/nevorai249', '_blank');
-    
+  const handleNavigateToProfile = () => {
+    navigate('/profile');
     if (onUpgrade) onUpgrade();
   };
 
@@ -44,7 +36,7 @@ export function UpgradeBar({ onUpgrade }: UpgradeBarProps) {
             </div>
           </div>
           <Button 
-            onClick={handleSubscribe}
+            onClick={handleNavigateToProfile}
             variant="secondary"
             size="sm"
             className="shrink-0 font-semibold"
