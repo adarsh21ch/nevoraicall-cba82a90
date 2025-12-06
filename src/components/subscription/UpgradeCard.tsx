@@ -10,11 +10,11 @@ export function UpgradeCard() {
   const handleSubscribe = () => {
     toast({
       title: "Opening Payment Gateway",
-      description: "Redirecting to PhonePe for ₹249 subscription...",
+      description: "Redirecting to Razorpay for ₹249 subscription...",
     });
     
-    // PhonePe payment link - replace with actual payment link
-    window.open('https://phon.pe/nevorai249', '_blank');
+    // Razorpay payment link
+    window.open('https://rzp.io/rzp/uuE0lO96', '_blank');
   };
 
   if (loading) return null;

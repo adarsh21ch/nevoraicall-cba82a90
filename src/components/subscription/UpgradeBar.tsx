@@ -31,7 +31,7 @@ export function UpgradeBar({ onUpgrade }: UpgradeBarProps) {
                 🔒 Upgrade to unlock this feature
               </p>
               <p className="text-xs text-primary-foreground/80">
-                Subscription ₹249
+                Subscribe at ₹249
               </p>
             </div>
           </div>
