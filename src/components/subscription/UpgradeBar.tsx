@@ -14,9 +14,9 @@ export function UpgradeBar({ onUpgrade }: UpgradeBarProps) {
   const handleSubscribe = () => {
     toast({
       title: "Opening Payment Gateway",
-      description: "Redirecting to Razorpay for ₹249 subscription...",
+      description: "Redirecting to Razorpay for Pro access...",
     });
-    window.open('https://rzp.io/rzp/5mROfK1h', '_blank');
+    window.open('https://rzp.io/rzp/iQIz9kH', '_blank');
     if (onUpgrade) onUpgrade();
   };
 
@@ -35,7 +35,7 @@ export function UpgradeBar({ onUpgrade }: UpgradeBarProps) {
                 🔒 Upgrade to unlock this feature
               </p>
               <p className="text-xs text-primary-foreground/80">
-                Subscribe at ₹249
+                ₹249 for 30 days
               </p>
             </div>
           </div>
@@ -46,7 +46,7 @@ export function UpgradeBar({ onUpgrade }: UpgradeBarProps) {
             className="shrink-0 font-semibold"
           >
             <Sparkles className="h-4 w-4 mr-1" />
-            Unlock Now
+            Unlock Pro
           </Button>
         </div>
       </div>
