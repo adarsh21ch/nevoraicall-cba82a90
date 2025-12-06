@@ -15,47 +15,59 @@ import { cn } from '@/lib/utils';
 import { Prospect, FunnelStage } from '@/types/prospect';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
 
-// All funnel stages for the Smart Prospect Board
-const FUNNEL_STAGES: FunnelStage[] = ['Enrollment', 'Day 1', 'Day 2', 'Day 3', 'Minimum Bill', 'Level Up', '2CC'];
+// Only 4 funnel stages with pastel colors
+const FUNNEL_STAGES: { stage: FunnelStage; color: string; label: string }[] = [
+  { stage: 'Day 1', color: '#D9E7FF', label: 'Day 1' },
+  { stage: 'Day 2', color: '#FFE0E7', label: 'Day 2' },
+  { stage: 'Minimum Bill', color: '#DFF8E7', label: 'Minimum Billings' },
+  { stage: 'Level Up', color: '#FFEFD6', label: 'Level Up' },
+];
 
-// Premium stage card component
+// Premium stage card component with pastel colors
 interface StageCardProps {
   stage: string;
+  label: string;
+  color: string;
   prospects: Prospect[];
   isPro: boolean;
 }
 
-function StageCard({ stage, prospects, isPro }: StageCardProps) {
+function StageCard({ stage, label, color, prospects, isPro }: StageCardProps) {
   return (
     <div 
-      className="min-w-[160px] w-[160px] shrink-0 bg-white dark:bg-card rounded-2xl border border-border/40 overflow-hidden"
-      style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}
+      className="min-w-[150px] sm:min-w-[170px] w-[150px] sm:w-[170px] shrink-0 bg-white dark:bg-card rounded-xl overflow-hidden transition-all duration-200 hover:translate-y-[-2px] hover:shadow-lg"
+      style={{ 
+        boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+        border: '1px solid rgba(0,0,0,0.04)'
+      }}
     >
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-border/30 bg-[#F7F8FA] dark:bg-muted/30">
-        <div className="flex items-center justify-between">
-          <h3 className="font-bold text-sm text-foreground truncate">{stage}</h3>
-          <span className="text-xs font-semibold text-muted-foreground bg-white dark:bg-background px-2 py-0.5 rounded-full shadow-sm">
+      {/* Header with pastel color */}
+      <div 
+        className="px-3 py-2.5 sm:px-4 sm:py-3"
+        style={{ backgroundColor: color }}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="font-semibold text-xs sm:text-sm text-gray-800 truncate">{label}</h3>
+          <span className="text-xs font-bold text-gray-700 bg-white/80 px-2 py-0.5 rounded-full min-w-[24px] text-center">
             {isPro ? prospects.length : '–'}
           </span>
         </div>
       </div>
       
-      {/* Prospect names */}
-      <div className="p-3 max-h-[180px] overflow-y-auto space-y-1.5 bg-[#F7F8FA]/50 dark:bg-muted/10">
+      {/* Prospect names - white background */}
+      <div className="p-2.5 sm:p-3 max-h-[160px] sm:max-h-[180px] overflow-y-auto space-y-1 bg-white dark:bg-card">
         {!isPro ? (
-          <p className="text-xs text-muted-foreground text-center py-4">Upgrade to view</p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground text-center py-4">Upgrade to view</p>
         ) : prospects.length === 0 ? (
-          <p className="text-xs text-muted-foreground/60 text-center py-6">No prospects</p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground/60 text-center py-6">No prospects</p>
         ) : (
           prospects.map((prospect, index) => (
             <div 
               key={prospect.id}
-              className="text-sm text-foreground/90 py-1.5 px-2 rounded-lg hover:bg-white dark:hover:bg-card transition-colors duration-150 animate-in fade-in slide-in-from-left-2"
-              style={{ animationDelay: `${index * 30}ms` }}
+              className="text-xs sm:text-sm text-foreground/90 py-1 px-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-muted/30 transition-colors duration-150 break-words"
             >
-              <span className="text-muted-foreground/50 text-xs mr-1.5">{index + 1}.</span>
-              <span className="font-medium">{prospect.name}</span>
+              <span className="text-muted-foreground/50 text-[10px] sm:text-xs mr-1">{index + 1}.</span>
+              <span className="font-medium leading-snug">{prospect.name}</span>
             </div>
           ))
         )}
@@ -64,7 +76,7 @@ function StageCard({ stage, prospects, isPro }: StageCardProps) {
   );
 }
 
-// Todo item component with animations
+// Todo item component with dotted blue line separator
 interface TodoItemProps {
   todo: {
     id: string;
@@ -121,7 +133,7 @@ function TodoItem({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-2",
+        "relative overflow-hidden transition-all duration-300 animate-in fade-in slide-in-from-bottom-2",
         isDeleting && "opacity-0 scale-95 -translate-x-full"
       )}
       onTouchStart={handleTouchStart}
@@ -138,11 +150,10 @@ function TodoItem({
       
       <div
         className={cn(
-          "bg-white dark:bg-card border border-border/40 p-4 rounded-xl transition-all duration-300 group",
+          "bg-white dark:bg-card p-3 sm:p-4 transition-all duration-300 group",
           todo.completed && "opacity-60"
         )}
         style={{ 
-          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
           transform: `translateX(-${swipeOffset}px)`
         }}
       >
@@ -215,6 +226,16 @@ function TodoItem({
           </div>
         )}
       </div>
+      
+      {/* Dotted blue separator line */}
+      <div 
+        className="h-px mx-3"
+        style={{ 
+          backgroundImage: 'linear-gradient(to right, #4A6CF7 50%, transparent 50%)',
+          backgroundSize: '8px 1px',
+          backgroundRepeat: 'repeat-x'
+        }}
+      />
     </div>
   );
 }
@@ -240,7 +261,7 @@ export default function TodoUp() {
   // Group prospects by funnel stage
   const funnelData = useMemo(() => {
     const groups: Record<string, Prospect[]> = {};
-    FUNNEL_STAGES.forEach(stage => {
+    FUNNEL_STAGES.forEach(({ stage }) => {
       groups[stage] = [];
     });
     
@@ -331,39 +352,8 @@ export default function TodoUp() {
           </div>
         )}
 
-        {/* Section 1: Smart Prospect Board */}
-        <section className="pt-5 pb-4">
-          <div className="px-4 mb-3">
-            <h2 className="text-base font-bold text-foreground">Smart Prospect Board</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">Track prospects across funnel stages</p>
-          </div>
-          
-          {/* Horizontal scrolling cards */}
-          <div 
-            ref={scrollContainerRef}
-            className="flex gap-3 overflow-x-auto px-4 pb-2 scroll-smooth snap-x snap-mandatory"
-            style={{ 
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none',
-              WebkitOverflowScrolling: 'touch'
-            }}
-          >
-            {FUNNEL_STAGES.map(stage => (
-              <div key={stage} className="snap-start">
-                <StageCard
-                  stage={stage}
-                  prospects={funnelData[stage]}
-                  isPro={isPro}
-                />
-              </div>
-            ))}
-            {/* Extra padding at end for scroll */}
-            <div className="w-1 shrink-0" />
-          </div>
-        </section>
-
-        {/* Section 2: Personal To-Do List */}
-        <section className="px-4 pt-2">
+        {/* Section 1: Personal To-Do List (MOVED TO TOP) */}
+        <section className="px-4 pt-5">
           <div className="mb-4">
             <h2 className="text-base font-bold text-foreground">My To-Do List</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -371,9 +361,19 @@ export default function TodoUp() {
             </p>
           </div>
 
+          {/* Dotted blue line under header */}
+          <div 
+            className="h-px mb-4"
+            style={{ 
+              backgroundImage: 'linear-gradient(to right, #4A6CF7 50%, transparent 50%)',
+              backgroundSize: '8px 1px',
+              backgroundRepeat: 'repeat-x'
+            }}
+          />
+
           {!isPro ? (
             <div 
-              className="bg-white dark:bg-card rounded-2xl py-12 border border-border/30"
+              className="bg-white dark:bg-card rounded-xl py-12 border border-border/30"
               style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
             >
               <p className="text-sm text-muted-foreground text-center">
@@ -386,7 +386,7 @@ export default function TodoUp() {
             </div>
           ) : sortedTodos.length === 0 ? (
             <div 
-              className="bg-white dark:bg-card rounded-2xl py-12 border border-border/30"
+              className="bg-white dark:bg-card rounded-xl py-12 border border-border/30"
               style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
             >
               <p className="text-sm text-muted-foreground text-center">
@@ -394,7 +394,10 @@ export default function TodoUp() {
               </p>
             </div>
           ) : (
-            <div className="space-y-3 max-h-[45vh] overflow-y-auto pr-1">
+            <div 
+              className="bg-white dark:bg-card rounded-xl overflow-hidden border border-border/30 max-h-[35vh] overflow-y-auto"
+              style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
+            >
               {sortedTodos.map(todo => (
                 <TodoItem
                   key={todo.id}
@@ -411,6 +414,38 @@ export default function TodoUp() {
               ))}
             </div>
           )}
+        </section>
+
+        {/* Section 2: Smart Prospect Board (MOVED BELOW TO-DO) */}
+        <section className="pt-8 pb-4">
+          <div className="px-4 mb-3">
+            <h2 className="text-base font-bold text-foreground">Smart Prospect Board</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Track prospects across funnel stages</p>
+          </div>
+          
+          {/* Horizontal scrolling cards - 4 pastel columns */}
+          <div 
+            ref={scrollContainerRef}
+            className="flex gap-3 overflow-x-auto px-4 pb-2 scroll-smooth"
+            style={{ 
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+              WebkitOverflowScrolling: 'touch'
+            }}
+          >
+            {FUNNEL_STAGES.map(({ stage, color, label }) => (
+              <StageCard
+                key={stage}
+                stage={stage}
+                label={label}
+                color={color}
+                prospects={funnelData[stage] || []}
+                isPro={isPro}
+              />
+            ))}
+            {/* Extra padding at end for scroll */}
+            <div className="w-1 shrink-0" />
+          </div>
         </section>
       </main>
 
