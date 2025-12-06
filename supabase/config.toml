@@ -1,1 +1,4 @@
 project_id = "kisankusogixarejjphi"
+
+[functions.migrate-encrypt-phones]
+verify_jwt = false
