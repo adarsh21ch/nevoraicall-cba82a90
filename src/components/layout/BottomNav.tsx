@@ -1,12 +1,12 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Calendar, CheckSquare, Home, Zap, User } from 'lucide-react';
+import { Calendar, BarChart3, Home, ListTodo, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { path: '/home', icon: Home, label: 'Home' },
-  { path: '/tracking', icon: CheckSquare, label: 'TrackUp' },
+  { path: '/tracking', icon: BarChart3, label: 'Track Up' },
   { path: '/dashboard', icon: Calendar, label: 'Follow Up' },
-  { path: '/action', icon: Zap, label: 'ActionUp' },
+  { path: '/action', icon: ListTodo, label: 'Todo Up' },
   { path: '/profile', icon: User, label: 'Profile' },
 ];
 
