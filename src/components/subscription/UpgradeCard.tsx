@@ -1,10 +1,11 @@
-import { Crown, Sparkles, Check, TrendingUp, Activity } from 'lucide-react';
+import { Crown, Sparkles, Check, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 
 export function UpgradeCard() {
-  const { isPro, isAdminOverride, loading } = useSubscription();
+  const { isPro, isAdminOverride, daysRemaining, subscription, loading } = useSubscription();
   const { toast } = useToast();
 
   const handleSubscribe = () => {
@@ -14,12 +15,16 @@ export function UpgradeCard() {
     });
     
     // Razorpay payment link
-    window.open('https://rzp.io/rzp/uuE0lO96', '_blank');
+    window.open('https://rzp.io/rzp/5mROfK1h', '_blank');
   };
 
   if (loading) return null;
 
   if (isPro) {
+    const expiryDate = subscription?.expires_at 
+      ? format(new Date(subscription.expires_at), 'MMM d, yyyy')
+      : null;
+
     return (
       <div className="rounded-2xl p-5 bg-gradient-to-br from-emerald-500/20 via-emerald-500/10 to-transparent border border-emerald-500/20">
         <div className="flex items-center gap-3 mb-3">
@@ -33,9 +38,17 @@ export function UpgradeCard() {
             )}
           </div>
         </div>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground mb-3">
           You have full access to all premium features including Track Up and Action Up.
         </p>
+        {expiryDate && !isAdminOverride && (
+          <div className="flex items-center gap-2 text-sm bg-emerald-500/10 rounded-lg p-2">
+            <Calendar className="h-4 w-4 text-emerald-600" />
+            <span className="text-emerald-700 font-medium">
+              Valid until {expiryDate} ({daysRemaining} days left)
+            </span>
+          </div>
+        )}
       </div>
     );
   }

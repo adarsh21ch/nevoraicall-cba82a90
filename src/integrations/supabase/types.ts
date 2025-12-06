@@ -353,6 +353,7 @@ export type Database = {
           is_admin_override: boolean
           payment_id: string | null
           plan: Database["public"]["Enums"]["user_plan"]
+          status: string
           subscribed_at: string | null
           updated_at: string
           user_id: string
@@ -364,6 +365,7 @@ export type Database = {
           is_admin_override?: boolean
           payment_id?: string | null
           plan?: Database["public"]["Enums"]["user_plan"]
+          status?: string
           subscribed_at?: string | null
           updated_at?: string
           user_id: string
@@ -375,6 +377,7 @@ export type Database = {
           is_admin_override?: boolean
           payment_id?: string | null
           plan?: Database["public"]["Enums"]["user_plan"]
+          status?: string
           subscribed_at?: string | null
           updated_at?: string
           user_id?: string
