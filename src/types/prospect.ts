@@ -1,4 +1,5 @@
-export type FunnelStage = 'Enrollment' | 'Day 1' | 'Day 2' | 'Day 3' | 'Minimum Bill' | 'Level Up' | '2CC';
+// Funnel stages - Enrollment removed (now tracked via Response "Enrolled" option)
+export type FunnelStage = 'Day 1' | 'Day 2' | 'Day 3' | 'Minimum Bill' | 'Level Up' | '2CC';
 export type ActionTaken = 'Video Sent' | 'Called' | 'Not Picked' | 'Busy' | 'Follow Up Scheduled';
 export type ExtendedActionTaken = ActionTaken | 'Enrolled';
 export type ProspectStatus = 'Good' | 'Medium' | 'Bad';
@@ -63,8 +64,9 @@ export interface ActivityLog {
   created_at: string;
 }
 
-export const FUNNEL_STAGES: FunnelStage[] = ['Enrollment', 'Day 1', 'Day 2', 'Day 3', 'Minimum Bill', 'Level Up', '2CC'];
-export const CALLING_STAGES: FunnelStage[] = ['Enrollment'];
+// Funnel stages - Enrollment removed (enrollment tracked via Response "Enrolled" option)
+export const FUNNEL_STAGES: FunnelStage[] = ['Day 1', 'Day 2', 'Day 3', 'Minimum Bill', 'Level Up', '2CC'];
+export const CALLING_STAGES: FunnelStage[] = [];
 export const FUNNEL_TAB_STAGES: FunnelStage[] = ['Day 1', 'Day 2', 'Day 3', 'Minimum Bill', 'Level Up', '2CC'];
 export const ACTIONS: ActionTaken[] = ['Video Sent', 'Called', 'Not Picked', 'Busy', 'Follow Up Scheduled'];
 export const EXTENDED_ACTIONS: ExtendedActionTaken[] = ['Video Sent', 'Called', 'Not Picked', 'Busy', 'Follow Up Scheduled', 'Enrolled'];
@@ -89,7 +91,6 @@ export const mapOldStatusToNew = (oldStatus: string | null | undefined): Prospec
 };
 
 export const FUNNEL_STAGE_ORDER: Record<FunnelStage, number> = {
-  'Enrollment': 0,
   'Day 1': 1,
   'Day 2': 2,
   'Day 3': 3,

@@ -174,10 +174,24 @@ export function InlineReportCard({ prospect, onUpdate, onClose, colSpan }: Inlin
     <tr className="animate-in fade-in-0 slide-in-from-top-2 duration-200">
       <td colSpan={colSpan} className="p-0">
         <div className="px-3 py-2 border-t border-b border-primary/20 bg-gradient-to-b from-muted/40 to-background/50 backdrop-blur-sm shadow-inner">
-          {/* Row 1: Header - Name with Tags, Quick Actions, Close */}
+          {/* Row 1: Header - Name with Call/WhatsApp icons inline, Tags, Close */}
           <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-semibold text-foreground text-sm">{localData.name}</span>
+              {/* Name with Call/WhatsApp icons immediately next to it */}
+              <div className="flex items-center gap-1">
+                <span className="font-semibold text-foreground text-sm">{localData.name}</span>
+                <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-accent/10" onClick={openCall}>
+                  <Phone className="h-3 w-3 text-accent" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-green-500 hover:text-green-600 hover:bg-green-500/10" onClick={openWhatsApp}>
+                  <MessageCircle className="h-3 w-3" />
+                </Button>
+                {localData.instagram && (
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-pink-500 hover:text-pink-600 hover:bg-pink-500/10" onClick={openInstagram}>
+                    <Instagram className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
               {/* Editable Stage/Quality/Action tags */}
               <div className="flex items-center gap-1.5 flex-wrap">
                 <EditableTag
@@ -185,7 +199,7 @@ export function InlineReportCard({ prospect, onUpdate, onClose, colSpan }: Inlin
                   options={FUNNEL_STAGES}
                   onChange={(val) => handleFieldChange('funnel_stage', val)}
                   renderBadge={(val) => <StageBadge stage={val} />}
-                  placeholder="Stage"
+                  placeholder="Funnel"
                 />
                 <EditableTag
                   value={localData.prospect_status as ProspectStatus}
@@ -199,27 +213,13 @@ export function InlineReportCard({ prospect, onUpdate, onClose, colSpan }: Inlin
                   options={ACTIONS}
                   onChange={(val) => handleFieldChange('action_taken', val)}
                   renderBadge={(val) => <ActionBadge action={val} />}
-                  placeholder="Action"
+                  placeholder="Response"
                 />
               </div>
             </div>
-            <div className="flex items-center gap-1">
-              {/* Quick Call/WhatsApp/Instagram */}
-              <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-accent/10" onClick={openCall}>
-                <Phone className="h-3.5 w-3.5 text-accent" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-green-500 hover:text-green-600 hover:bg-green-500/10" onClick={openWhatsApp}>
-                <MessageCircle className="h-3.5 w-3.5" />
-              </Button>
-              {localData.instagram && (
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-pink-500 hover:text-pink-600 hover:bg-pink-500/10" onClick={openInstagram}>
-                  <Instagram className="h-3.5 w-3.5" />
-                </Button>
-              )}
-              <Button variant="ghost" size="icon" onClick={onClose} className="h-6 w-6 ml-1">
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
+            <Button variant="ghost" size="icon" onClick={onClose} className="h-6 w-6">
+              <X className="h-3 w-3" />
+            </Button>
           </div>
 
           {/* Row 2: Compact editable fields grid */}

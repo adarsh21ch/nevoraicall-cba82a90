@@ -94,7 +94,7 @@ export default function Home() {
   // Calculate KPIs - 2CC counts as 2 in Total CC
   const kpis = useMemo(() => {
     const stageCounts: Record<FunnelStage, number> = {
-      'Enrollment': 0, 'Day 1': 0, 'Day 2': 0, 'Day 3': 0,
+      'Day 1': 0, 'Day 2': 0, 'Day 3': 0,
       'Minimum Bill': 0, 'Level Up': 0, '2CC': 0,
     };
     
@@ -245,14 +245,14 @@ export default function Home() {
               </Dialog>
             </div>
 
-            {/* Enrollment Row - Always Visible */}
+            {/* Enrolled Row - Always Visible (tracked via enrollment_status now) */}
             <div className="space-y-1.5 pb-3 border-b border-border/50">
               <div className="flex items-center justify-between text-sm">
-                <span className="font-medium text-foreground">Enrollment</span>
-                <span className="font-semibold">{kpis.stageCounts['Enrollment']} / {targets['Enrollment'] || 0}</span>
+                <span className="font-medium text-foreground">Enrolled</span>
+                <span className="font-semibold">{kpis.totalEnrolled} / 100</span>
               </div>
               <Progress 
-                value={targets['Enrollment'] ? Math.min((kpis.stageCounts['Enrollment'] / targets['Enrollment']) * 100, 100) : 0} 
+                value={Math.min((kpis.totalEnrolled / 100) * 100, 100)} 
                 className="h-2.5" 
               />
             </div>
@@ -265,7 +265,7 @@ export default function Home() {
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-2">
                 <div className="space-y-3">
-                  {FUNNEL_STAGES.filter(stage => stage !== 'Enrollment').map(stage => {
+                  {FUNNEL_STAGES.map(stage => {
                     const current = kpis.stageCounts[stage];
                     const target = targets[stage] || 0;
                     const progress = target > 0 ? Math.min((current / target) * 100, 100) : 0;
