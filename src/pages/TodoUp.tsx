@@ -269,97 +269,79 @@ export default function TodoUp() {
                 ))}
               </div>
               
-              {/* Row-based layout: serial numbers on left, 3 columns on right */}
-              <div className="flex max-h-56 overflow-y-auto">
-                {/* Serial number sidebar */}
-                <div className="w-8 shrink-0 border-r border-border/30 bg-muted/20">
-                  <div className="py-2">
-                    {maxRows === 0 ? (
-                      <div className="h-10" />
-                    ) : (
-                      Array.from({ length: maxRows }).map((_, index) => (
-                        <div key={index} className="h-8 flex items-center justify-center">
-                          <span className="text-xs text-muted-foreground/70">{index + 1}</span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-                
-                {/* Three stage columns */}
-                <div className="flex flex-1 divide-x divide-border/30">
-                  {FUNNEL_STAGES.map((stage) => {
-                    const stageProspects = prospectsByStage[stage];
-                    return (
-                      <div key={stage} className="flex-1 min-w-0 py-2 px-1">
-                        {stageProspects.length === 0 ? (
-                          <p className="text-xs text-muted-foreground text-center py-3">
-                            No prospects
-                          </p>
-                        ) : (
-                          <div>
-                            {stageProspects.map((prospect) => {
-                              const isExpanded = expandedProspectId === prospect.id;
-                              return (
-                                <div key={prospect.id}>
-                                  {/* Clickable first name row - height matches serial number row */}
-                                  <button
-                                    onClick={() => toggleProspectExpand(prospect.id)}
-                                    className="w-full h-8 flex items-center gap-1 text-left px-1.5 rounded hover:bg-muted/40 transition-colors"
-                                  >
-                                    <span className="text-sm font-medium text-foreground truncate flex-1">
-                                      {getFirstName(prospect.name)}
-                                    </span>
-                                    {isExpanded ? (
-                                      <ChevronUp className="h-3 w-3 text-muted-foreground shrink-0" />
-                                    ) : (
-                                      <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" />
-                                    )}
-                                  </button>
-                                  
-                                  {/* Expandable mini report card */}
-                                  {isExpanded && (
-                                    <div className="mx-1 mb-1 p-2 rounded-lg bg-muted/30 border border-border/40 space-y-1.5 text-xs">
-                                      <p className="font-medium text-foreground">{prospect.name}</p>
-                                      {prospect.address && (
-                                        <p className="text-muted-foreground">{prospect.address}</p>
-                                      )}
-                                      {prospect.age_or_dob && (
-                                        <p className="text-muted-foreground">Age: {prospect.age_or_dob}</p>
-                                      )}
-                                      <div className="flex items-center gap-2 pt-1">
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleCall(prospect.phone);
-                                          }}
-                                          className="flex items-center gap-1 px-2 py-1 rounded-md bg-gray-900 text-white hover:bg-gray-800 transition-colors"
-                                        >
-                                          <Phone className="h-3 w-3" />
-                                          <span>Call</span>
-                                        </button>
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleWhatsApp(prospect.phone);
-                                          }}
-                                          className="flex items-center gap-1 px-2 py-1 rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors"
-                                        >
-                                          <MessageCircle className="h-3 w-3" />
-                                          <span>WhatsApp</span>
-                                        </button>
-                                      </div>
-                                    </div>
+              {/* Three stage columns - no serial numbers */}
+              <div className="flex max-h-56 overflow-y-auto divide-x divide-border/30">
+                {FUNNEL_STAGES.map((stage) => {
+                  const stageProspects = prospectsByStage[stage];
+                  return (
+                    <div key={stage} className="flex-1 min-w-0 py-2 px-1">
+                      {stageProspects.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-3">
+                          No prospects
+                        </p>
+                      ) : (
+                        <div>
+                          {stageProspects.map((prospect) => {
+                            const isExpanded = expandedProspectId === prospect.id;
+                            return (
+                              <div key={prospect.id}>
+                                {/* Clickable first name row */}
+                                <button
+                                  onClick={() => toggleProspectExpand(prospect.id)}
+                                  className="w-full h-8 flex items-center gap-1 text-left px-1.5 rounded hover:bg-muted/40 transition-colors"
+                                >
+                                  <span className="text-sm font-medium text-foreground truncate flex-1">
+                                    {getFirstName(prospect.name)}
+                                  </span>
+                                  {isExpanded ? (
+                                    <ChevronUp className="h-3 w-3 text-muted-foreground shrink-0" />
+                                  ) : (
+                                    <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" />
                                   )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                                </button>
+                                
+                                {/* Expandable mini report card */}
+                                {isExpanded && (
+                                  <div className="mx-1 mb-1 p-2 rounded-lg bg-muted/30 border border-border/40 space-y-1.5 text-xs">
+                                    <p className="font-medium text-foreground">{prospect.name}</p>
+                                    {prospect.address && (
+                                      <p className="text-muted-foreground">{prospect.address}</p>
+                                    )}
+                                    {prospect.age_or_dob && (
+                                      <p className="text-muted-foreground">Age: {prospect.age_or_dob}</p>
+                                    )}
+                                    <div className="flex items-center gap-2 pt-1">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleCall(prospect.phone);
+                                        }}
+                                        className="flex items-center gap-1 px-2 py-1 rounded-md bg-gray-900 text-white hover:bg-gray-800 transition-colors"
+                                      >
+                                        <Phone className="h-3 w-3" />
+                                        <span>Call</span>
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleWhatsApp(prospect.phone);
+                                        }}
+                                        className="flex items-center gap-1 px-2 py-1 rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors"
+                                      >
+                                        <MessageCircle className="h-3 w-3" />
+                                        <span>WhatsApp</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
