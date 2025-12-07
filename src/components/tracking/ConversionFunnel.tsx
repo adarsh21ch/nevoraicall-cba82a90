@@ -25,7 +25,6 @@ export function ConversionFunnel({ prospects }: ConversionFunnelProps) {
 
   const stageCounts = useMemo(() => {
     const counts: Record<FunnelStage, number> = {
-      'Enrollment': 0,
       'Day 1': 0,
       'Day 2': 0,
       'Day 3': 0,
@@ -62,16 +61,16 @@ export function ConversionFunnel({ prospects }: ConversionFunnelProps) {
       });
     }
 
-    // Overall conversion
-    const enrollmentCount = prospects.filter(p => p.funnel_stage && FUNNEL_STAGE_ORDER[p.funnel_stage] >= FUNNEL_STAGE_ORDER['Enrollment']).length;
+    // Overall conversion - from Day 1 to Level Up (since Enrollment removed from Funnel)
+    const day1Count = prospects.filter(p => p.funnel_stage && FUNNEL_STAGE_ORDER[p.funnel_stage] >= FUNNEL_STAGE_ORDER['Day 1']).length;
     const levelUpCount = prospects.filter(p => p.funnel_stage === 'Level Up').length;
     
     metrics.push({
-      fromStage: 'Enrollment',
+      fromStage: 'Day 1',
       toStage: 'Level Up',
-      fromCount: enrollmentCount,
+      fromCount: day1Count,
       toCount: levelUpCount,
-      rate: enrollmentCount > 0 ? (levelUpCount / enrollmentCount) * 100 : 0,
+      rate: day1Count > 0 ? (levelUpCount / day1Count) * 100 : 0,
     });
 
     return metrics;
@@ -123,7 +122,7 @@ export function ConversionFunnel({ prospects }: ConversionFunnelProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {autoConversions.map((metric, index) => {
             const Icon = getRateIcon(metric.rate);
-            const isOverall = metric.fromStage === 'Enrollment' && metric.toStage === 'Level Up';
+            const isOverall = metric.fromStage === 'Day 1' && metric.toStage === 'Level Up';
             
             return (
               <div

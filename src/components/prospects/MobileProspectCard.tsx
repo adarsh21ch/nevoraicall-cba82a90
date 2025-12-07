@@ -71,16 +71,16 @@ export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDel
   };
 
   // Handle action change - if "Enrolled" is selected, also update enrollment_status
-  // Changed: Set funnel_stage to 'Enrollment' instead of 'Day 1' for duplication trigger
   const handleActionChange = (value: ExtendedActionTaken) => {
     const updates: Partial<Prospect> = {};
     
     if (value === 'Enrolled') {
+      // Set enrollment_status and default funnel_stage to Day 1 if not set
       updates.enrollment_status = 'Enrolled';
       if (!prospect.funnel_stage) {
-        updates.funnel_stage = 'Enrollment';
+        updates.funnel_stage = 'Day 1';
       }
-      updates.action_taken = prospect.action_taken;
+      // Keep existing action_taken unchanged when marking as Enrolled
     } else {
       updates.action_taken = value as ActionTaken;
     }

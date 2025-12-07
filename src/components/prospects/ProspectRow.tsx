@@ -87,12 +87,12 @@ export function ProspectRow({
     const updates: Partial<Prospect> = {};
     
     if (value === 'Enrolled') {
+      // Set enrollment_status and default funnel_stage to Day 1 if not set
       updates.enrollment_status = 'Enrolled';
-      // Changed: Set funnel_stage to 'Enrollment' instead of 'Day 1' for duplication trigger
       if (!prospect.funnel_stage) {
-        updates.funnel_stage = 'Enrollment';
+        updates.funnel_stage = 'Day 1';
       }
-      updates.action_taken = prospect.action_taken;
+      // Keep existing action_taken unchanged when marking as Enrolled
     } else {
       updates.action_taken = value as ActionTaken;
     }
@@ -122,15 +122,16 @@ export function ProspectRow({
     const isNameColumn = columnId === 'name';
     const isIndexColumn = columnId === 'index';
     
-    // Fixed: Ensure sticky columns have solid background to hide content behind them
-    const stickyBg = isEven ? "bg-muted/20" : "bg-card";
+    // Fixed: Ensure sticky columns have SOLID opaque background to completely hide content behind them
+    // Use explicit background colors instead of transparent/semi-transparent ones
+    const stickyBgClass = isEven ? "bg-[hsl(var(--muted))]" : "bg-[hsl(var(--card))]";
     const cellClass = cn(
       "px-2 py-2 whitespace-nowrap",
       !isMobileTable && "px-3 py-3",
       isMobileTable && "text-xs",
-      // Fixed z-index issue: solid background, higher z-index for sticky columns
-      isMobileTable && isNameColumn && `sticky left-[36px] z-20 ${stickyBg} shadow-[2px_0_4px_-2px_rgba(0,0,0,0.2)]`,
-      isMobileTable && isIndexColumn && `sticky left-0 z-20 ${stickyBg}`
+      // Fixed z-index issue: solid opaque background, higher z-index for sticky columns
+      isMobileTable && isNameColumn && `sticky left-[36px] z-30 ${stickyBgClass} shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)]`,
+      isMobileTable && isIndexColumn && `sticky left-0 z-30 ${stickyBgClass}`
     );
     
     switch (columnId) {

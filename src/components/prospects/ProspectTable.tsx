@@ -102,11 +102,11 @@ export function ProspectTable({
   }, [prospects]);
 
   const funnelProspects = useMemo(() => {
-    // Funnel tab shows prospects that have any funnel_stage OR are enrolled
-    // Trigger changed: Now prospects with 'Enrollment' funnel_stage appear in Funnel tab
+    // Funnel tab shows prospects that are enrolled (via Response "Enrolled" option)
+    // or have any funnel_stage set
     return prospects.filter(p => 
       p.enrollment_status === 'Enrolled' ||
-      p.funnel_stage // Any funnel_stage including 'Enrollment' will show in Funnel tab
+      p.funnel_stage
     );
   }, [prospects]);
 
@@ -201,7 +201,7 @@ export function ProspectTable({
         'Age': p.age_or_dob || '',
         'Gender': p.gender || '',
         'Address': p.address || '',
-        'Enrollment Status': p.enrollment_status || (p.funnel_stage && p.funnel_stage !== 'Enrollment' ? 'Enrolled' : 'Not Enrolled'),
+        'Enrollment Status': p.enrollment_status || (p.funnel_stage ? 'Enrolled' : 'Not Enrolled'),
         'Funnel Stage': p.funnel_stage || '',
         'Last Action': p.action_taken || 'No Action',
         'Last Action Date': p.updated_at ? format(new Date(p.updated_at), 'dd/MM/yyyy HH:mm') : '',
@@ -503,9 +503,9 @@ export function ProspectTable({
                           columnId === 'index' && "text-center",
                           !isMobile && "hover:bg-muted/50 cursor-grab active:cursor-grabbing px-3 py-3 relative select-none group",
                           isMobile && "text-[11px]",
-                          // Make name column header sticky on mobile (positioned after index)
-                          isMobile && isNameColumn && "sticky left-[36px] z-20 bg-muted/50 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)]",
-                          isMobile && isIndexColumn && "sticky left-0 z-20 bg-muted/50"
+                          // Make name column header sticky on mobile with solid opaque background
+                          isMobile && isNameColumn && "sticky left-[36px] z-30 bg-[hsl(var(--muted))] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)]",
+                          isMobile && isIndexColumn && "sticky left-0 z-30 bg-[hsl(var(--muted))]"
                         )}
                         style={{ width: `${width}px`, minWidth: `${width}px` }}
                       >

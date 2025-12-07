@@ -11,9 +11,8 @@ interface UserTarget {
   target_value: number;
 }
 
-// Default targets if user hasn't set any
+// Default targets if user hasn't set any (Enrollment removed - now tracked via Response)
 const DEFAULT_TARGETS: Record<FunnelStage, number> = {
-  'Enrollment': 100,
   'Day 1': 80,
   'Day 2': 60,
   'Day 3': 50,
