@@ -43,19 +43,19 @@ interface ProspectTableProps {
 }
 
 // Column configuration - wider desktop widths for better visibility
+// Renamed: Stage -> Funnel, Action -> Response, Reordered: Response before Funnel
 const COLUMNS = [
   { id: 'index', label: '#', defaultWidth: 50, minWidth: 40, mobileWidth: 36, resizable: false },
   { id: 'name', label: 'Name', defaultWidth: 180, minWidth: 140, mobileWidth: 130, resizable: true },
-  { id: 'phone', label: 'Phone', defaultWidth: 140, minWidth: 120, mobileWidth: 100, resizable: true },
   { id: 'contact', label: 'Call', defaultWidth: 70, minWidth: 60, mobileWidth: 60, resizable: false },
-  { id: 'stage', label: 'Stage', defaultWidth: 130, minWidth: 110, mobileWidth: 85, resizable: true },
-  { id: 'action', label: 'Action', defaultWidth: 130, minWidth: 100, mobileWidth: 85, resizable: true },
+  { id: 'action', label: 'Response', defaultWidth: 130, minWidth: 100, mobileWidth: 85, resizable: true },
+  { id: 'stage', label: 'Funnel', defaultWidth: 130, minWidth: 110, mobileWidth: 85, resizable: true },
   { id: 'quality', label: 'Quality', defaultWidth: 100, minWidth: 85, mobileWidth: 75, resizable: true },
   { id: 'actions', label: '', defaultWidth: 80, minWidth: 70, mobileWidth: 50, resizable: false },
 ];
 
-// Mobile column order
-const MOBILE_COLUMN_ORDER = ['index', 'name', 'phone', 'contact', 'stage', 'action', 'quality', 'actions'];
+// Mobile column order - Response before Funnel, phone removed from main columns
+const MOBILE_COLUMN_ORDER = ['index', 'name', 'contact', 'action', 'stage', 'quality', 'actions'];
 
 export function ProspectTable({
   prospects,
@@ -102,10 +102,11 @@ export function ProspectTable({
   }, [prospects]);
 
   const funnelProspects = useMemo(() => {
-    // Funnel tab shows prospects that are enrolled OR have a funnel stage beyond Enrollment
+    // Funnel tab shows prospects that have any funnel_stage OR are enrolled
+    // Trigger changed: Now prospects with 'Enrollment' funnel_stage appear in Funnel tab
     return prospects.filter(p => 
       p.enrollment_status === 'Enrolled' ||
-      (p.funnel_stage && p.funnel_stage !== 'Enrollment')
+      p.funnel_stage // Any funnel_stage including 'Enrollment' will show in Funnel tab
     );
   }, [prospects]);
 

@@ -88,8 +88,9 @@ export function ProspectRow({
     
     if (value === 'Enrolled') {
       updates.enrollment_status = 'Enrolled';
-      if (!prospect.funnel_stage || prospect.funnel_stage === 'Enrollment') {
-        updates.funnel_stage = 'Day 1';
+      // Changed: Set funnel_stage to 'Enrollment' instead of 'Day 1' for duplication trigger
+      if (!prospect.funnel_stage) {
+        updates.funnel_stage = 'Enrollment';
       }
       updates.action_taken = prospect.action_taken;
     } else {
@@ -121,12 +122,15 @@ export function ProspectRow({
     const isNameColumn = columnId === 'name';
     const isIndexColumn = columnId === 'index';
     
+    // Fixed: Ensure sticky columns have solid background to hide content behind them
+    const stickyBg = isEven ? "bg-muted/20" : "bg-card";
     const cellClass = cn(
       "px-2 py-2 whitespace-nowrap",
       !isMobileTable && "px-3 py-3",
       isMobileTable && "text-xs",
-      isMobileTable && isNameColumn && `sticky left-[36px] z-10 ${bgColor} shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)]`,
-      isMobileTable && isIndexColumn && `sticky left-0 z-10 ${bgColor}`
+      // Fixed z-index issue: solid background, higher z-index for sticky columns
+      isMobileTable && isNameColumn && `sticky left-[36px] z-20 ${stickyBg} shadow-[2px_0_4px_-2px_rgba(0,0,0,0.2)]`,
+      isMobileTable && isIndexColumn && `sticky left-0 z-20 ${stickyBg}`
     );
     
     switch (columnId) {
