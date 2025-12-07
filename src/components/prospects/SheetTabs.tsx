@@ -3,8 +3,8 @@ import { Sheet } from '@/types/prospect';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, MoreVertical, Pencil, Trash2, FileSpreadsheet } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Plus, MoreVertical, Pencil, Trash2, FileSpreadsheet, CheckSquare, Trash } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
@@ -15,6 +15,8 @@ interface SheetTabsProps {
   onAddSheet: (name: string) => Promise<Sheet | null>;
   onUpdateSheet: (id: string, name: string) => Promise<Sheet | null>;
   onDeleteSheet: (id: string) => Promise<boolean>;
+  onSelectAllInSheet?: (sheetId: string) => void;
+  onDeleteAllInSheet?: (sheetId: string) => void;
 }
 
 export function SheetTabs({
@@ -24,6 +26,8 @@ export function SheetTabs({
   onAddSheet,
   onUpdateSheet,
   onDeleteSheet,
+  onSelectAllInSheet,
+  onDeleteAllInSheet,
 }: SheetTabsProps) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -105,12 +109,33 @@ export function SheetTabs({
                     <Pencil className="h-3.5 w-3.5 mr-2" />
                     Rename
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {onSelectAllInSheet && (
+                    <DropdownMenuItem onClick={() => onSelectAllInSheet(sheet.id)}>
+                      <CheckSquare className="h-3.5 w-3.5 mr-2" />
+                      Select All
+                    </DropdownMenuItem>
+                  )}
+                  {onDeleteAllInSheet && (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        if (confirm(`Delete all prospects in "${sheet.name}"? This cannot be undone.`)) {
+                          onDeleteAllInSheet(sheet.id);
+                        }
+                      }}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash className="h-3.5 w-3.5 mr-2" />
+                      Delete All Prospects
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() => handleDeleteSheet(sheet)}
                     className="text-destructive focus:text-destructive"
                   >
                     <Trash2 className="h-3.5 w-3.5 mr-2" />
-                    Delete
+                    Delete Sheet
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
