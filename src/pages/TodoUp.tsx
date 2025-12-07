@@ -316,20 +316,20 @@ export default function TodoUp() {
                                           e.stopPropagation();
                                           handleCall(prospect.phone);
                                         }}
-                                        className="flex items-center gap-1 px-2 py-1 rounded-md bg-gray-900 text-white hover:bg-gray-800 transition-colors"
+                                        className="p-2 rounded-md bg-gray-900 text-white hover:bg-gray-800 transition-colors"
+                                        aria-label="Call"
                                       >
-                                        <Phone className="h-3 w-3" />
-                                        <span>Call</span>
+                                        <Phone className="h-4 w-4" />
                                       </button>
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           handleWhatsApp(prospect.phone);
                                         }}
-                                        className="flex items-center gap-1 px-2 py-1 rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors"
+                                        className="p-2 rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors"
+                                        aria-label="WhatsApp"
                                       >
-                                        <MessageCircle className="h-3 w-3" />
-                                        <span>WhatsApp</span>
+                                        <MessageCircle className="h-4 w-4" />
                                       </button>
                                     </div>
                                   </div>

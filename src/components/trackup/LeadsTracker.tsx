@@ -54,12 +54,11 @@ export function LeadsTracker({ isPro = true }: LeadsTrackerProps) {
     <div className="space-y-4 animate-fade-in">
       {/* Daily Leads Table - Moved to Top */}
       <div className="glass-card rounded-2xl overflow-hidden">
-        <div className="p-3 border-b border-border/50">
-          <div className="flex items-center gap-2 mb-0.5">
+        <div className="px-3 py-2 border-b border-border/50">
+          <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-primary" />
-            <h3 className="font-semibold text-sm">Daily Leads Metrics</h3>
+            <h3 className="font-semibold text-sm">Daily Leads Tracking</h3>
           </div>
-          <p className="text-xs text-muted-foreground">Data synced from Follow Up list. 5-minute confirmation applied.</p>
         </div>
 
         {/* Month Selector */}
@@ -79,16 +78,16 @@ export function LeadsTracker({ isPro = true }: LeadsTrackerProps) {
           </Button>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto max-h-[350px] overflow-y-auto">
+        {/* Table - taller to show ~10 days, with bottom padding for TOTAL row visibility */}
+        <div className="overflow-x-auto max-h-[420px] overflow-y-auto pb-14">
           <table className="w-full">
             <thead className="sticky top-0 z-10">
               <tr className="bg-card">
-                <th className="py-2 px-3 text-left text-xs font-semibold text-muted-foreground w-24 bg-card">Date</th>
+                <th className="py-1.5 px-3 text-left text-xs font-semibold text-muted-foreground w-24 bg-card">Date</th>
                 {METRICS.map(metric => {
                   const config = METRIC_CONFIG[metric];
                   return (
-                    <th key={metric} className={cn("py-2 px-2 text-center text-xs font-semibold bg-gradient-to-b", config.bgGradient)}>
+                    <th key={metric} className={cn("py-1.5 px-2 text-center text-xs font-semibold bg-gradient-to-b", config.bgGradient)}>
                       {TABLE_LABELS[metric]}
                     </th>
                   );
@@ -98,10 +97,10 @@ export function LeadsTracker({ isPro = true }: LeadsTrackerProps) {
             <tbody>
               {dailyMetrics.map((row, idx) => (
                 <tr key={row.dayNumber} className={cn("border-b border-border/30", idx % 2 === 0 ? "bg-background" : "bg-muted/20")}>
-                  <td className="py-1.5 px-3 text-xs font-medium text-muted-foreground">{row.date}</td>
+                  <td className="py-1 px-3 text-xs font-medium text-muted-foreground">{row.date}</td>
                   {METRICS.map(metric => (
-                    <td key={metric} className="py-1.5 px-2">
-                      <div className="h-7 flex items-center justify-center text-sm font-medium rounded-lg bg-background/50">
+                    <td key={metric} className="py-1 px-2">
+                      <div className="h-6 flex items-center justify-center text-sm font-medium rounded-lg bg-background/50">
                         {isPro ? row[metric] : '–'}
                       </div>
                     </td>
@@ -109,19 +108,24 @@ export function LeadsTracker({ isPro = true }: LeadsTrackerProps) {
                 </tr>
               ))}
             </tbody>
-            <tfoot className="sticky bottom-0">
-              <tr className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
-                <td className="py-2 px-3 text-xs font-bold bg-card">TOTAL</td>
-                {METRICS.map(metric => (
-                  <td key={metric} className="py-2 px-2">
-                    <div className="h-7 flex items-center justify-center text-sm font-bold rounded-lg bg-background/80 backdrop-blur-sm shadow-sm">
-                      {isPro ? totals[metric] : '–'}
-                    </div>
-                  </td>
-                ))}
-              </tr>
-            </tfoot>
           </table>
+          {/* Sticky TOTAL row at bottom of scrollable area */}
+          <div className="sticky bottom-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-t border-border/50">
+            <table className="w-full">
+              <tbody>
+                <tr>
+                  <td className="py-2 px-3 text-xs font-bold bg-card w-24">TOTAL</td>
+                  {METRICS.map(metric => (
+                    <td key={metric} className="py-2 px-2">
+                      <div className="h-7 flex items-center justify-center text-sm font-bold rounded-lg bg-background/80 backdrop-blur-sm shadow-sm">
+                        {isPro ? totals[metric] : '–'}
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
