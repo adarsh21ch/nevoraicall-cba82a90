@@ -87,12 +87,12 @@ export function ProspectRow({
     const updates: Partial<Prospect> = {};
     
     if (value === 'Enrollment') {
-      updates.action_taken = 'Enrollment' as ActionTaken;
+      updates.action_taken = 'Enrollment';
       if (!prospect.funnel_stage) {
         updates.funnel_stage = 'Day 1';
       }
     } else {
-      updates.action_taken = value as ActionTaken;
+      updates.action_taken = value;
     }
     
     onUpdate(prospect.id, updates);
