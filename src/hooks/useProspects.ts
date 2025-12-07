@@ -181,8 +181,83 @@ export function useProspects() {
     }
 
     setProspects(prev => prev.filter(p => p.id !== id));
-    toast.success('Prospect deleted');
     return true;
+  };
+
+  const bulkDeleteProspects = async (ids: string[]) => {
+    if (!user || ids.length === 0) return { deleted: 0, prospects: [] };
+
+    const toDelete = prospects.filter(p => ids.includes(p.id));
+
+    const { error } = await supabase
+      .from('prospects')
+      .delete()
+      .in('id', ids);
+
+    if (error) {
+      toast.error('Failed to delete prospects');
+      console.error('Error deleting prospects:', error);
+      return { deleted: 0, prospects: [] };
+    }
+
+    setProspects(prev => prev.filter(p => !ids.includes(p.id)));
+    return { deleted: toDelete.length, prospects: toDelete };
+  };
+
+  const restoreProspect = async (prospect: Prospect) => {
+    if (!user) return null;
+
+    // Encrypt phone number before storing
+    let encryptedPhone = prospect.phone;
+    try {
+      const encrypted = await encryptFields({ phone: prospect.phone });
+      encryptedPhone = encrypted.phone || prospect.phone;
+    } catch (err) {
+      console.error('Failed to encrypt phone:', err);
+    }
+
+    const { data, error } = await supabase
+      .from('prospects')
+      .insert({
+        id: prospect.id,
+        name: prospect.name,
+        phone: encryptedPhone,
+        user_id: user.id,
+        address: prospect.address || null,
+        age_or_dob: (prospect as any).age_or_dob || null,
+        gender: (prospect as any).gender || null,
+        instagram: (prospect as any).instagram || null,
+        profession: (prospect as any).profession || null,
+        sheet_id: prospect.sheet_id || null,
+        batch_date: prospect.batch_date || new Date().toISOString().split('T')[0],
+        funnel_stage: prospect.funnel_stage || null,
+        action_taken: prospect.action_taken || null,
+        prospect_status: prospect.prospect_status || null,
+        priority: prospect.priority || null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      toast.error('Failed to restore prospect');
+      console.error('Error restoring prospect:', error);
+      return null;
+    }
+
+    const restoredProspect = mapDbProspect({ ...data, phone: prospect.phone });
+    setProspects(prev => [restoredProspect, ...prev]);
+    return restoredProspect;
+  };
+
+  const restoreProspects = async (prospectsToRestore: Prospect[]) => {
+    if (!user || prospectsToRestore.length === 0) return 0;
+
+    let restored = 0;
+    for (const prospect of prospectsToRestore) {
+      const result = await restoreProspect(prospect);
+      if (result) restored++;
+    }
+    return restored;
   };
 
   const importProspects = async (prospectsData: Partial<Prospect>[]) => {
@@ -281,6 +356,9 @@ export function useProspects() {
     addProspect,
     updateProspect,
     deleteProspect,
+    bulkDeleteProspects,
+    restoreProspect,
+    restoreProspects,
     importProspects,
     reorderProspects,
     refetch: fetchProspects,
