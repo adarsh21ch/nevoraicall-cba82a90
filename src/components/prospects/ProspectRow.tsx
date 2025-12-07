@@ -87,11 +87,10 @@ export function ProspectRow({
     const updates: Partial<Prospect> = {};
     
     if (value === 'Enrollment') {
-      updates.enrollment_status = 'Enrolled';
+      updates.action_taken = 'Enrollment' as ActionTaken;
       if (!prospect.funnel_stage) {
         updates.funnel_stage = 'Day 1';
       }
-      updates.action_taken = prospect.action_taken;
     } else {
       updates.action_taken = value as ActionTaken;
     }
@@ -110,7 +109,7 @@ export function ProspectRow({
   };
 
   const getActionDisplayValue = (): ExtendedActionTaken | null => {
-    if (prospect.enrollment_status === 'Enrolled') return 'Enrollment';
+    if (prospect.action_taken === 'Enrollment') return 'Enrollment';
     return prospect.action_taken || null;
   };
 
