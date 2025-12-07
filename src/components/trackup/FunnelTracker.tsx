@@ -308,8 +308,8 @@ export function FunnelTracker({ isPro = true }: FunnelTrackerProps) {
               </tr>
               <tr className="bg-muted/40 font-semibold">
                 <td className="px-3 py-3 text-muted-foreground">TOTAL</td>
-                <td className="px-3 py-3 text-center">{isPro ? funnelTotals.day_1 : '–'}</td>
-                <td className="px-3 py-3 text-center">{isPro ? funnelTotals.day_2 : '–'}</td>
+                <td className="px-3 py-3 text-center">{isPro ? totals.day_1 : '–'}</td>
+                <td className="px-3 py-3 text-center">{isPro ? totals.day_2 : '–'}</td>
                 {visibleDayStages >= 3 && (
                   <td className="px-3 py-3 text-center">{isPro ? totals.day_3 : '–'}</td>
                 )}
@@ -319,9 +319,9 @@ export function FunnelTracker({ isPro = true }: FunnelTrackerProps) {
                 {visibleDayStages >= 5 && (
                   <td className="px-3 py-3 text-center text-muted-foreground">–</td>
                 )}
-                <td className="px-3 py-3 text-center">{isPro ? funnelTotals.minimum_billing : '–'}</td>
-                <td className="px-3 py-3 text-center">{isPro ? funnelTotals.level_up : '–'}</td>
-                <td className="px-3 py-3 text-center">{isPro ? funnelTotals.two_cc : '–'}</td>
+                <td className="px-3 py-3 text-center">{isPro ? totals.minimum_bill : '–'}</td>
+                <td className="px-3 py-3 text-center">{isPro ? totals.level_up : '–'}</td>
+                <td className="px-3 py-3 text-center">{isPro ? totals.two_cc : '–'}</td>
               </tr>
             </tfoot>
           </table>
