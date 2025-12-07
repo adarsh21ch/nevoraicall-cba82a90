@@ -769,32 +769,28 @@ export function ProspectTable({
       ) : (
         // Table Layout
         <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
-          {/* Sticky container for SheetTabs and Table Header */}
-          <div className="sticky top-0 z-30 bg-card">
-            {/* Sheet tabs - replaces the "Swipe to see more columns" hint */}
-            {renderSheetTabs()}
-          </div>
           <div 
             className="overflow-x-auto"
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
-            <table 
-              className="text-sm border-collapse w-full"
-              style={{ minWidth: isMobile ? '580px' : '880px' }}
-            >
-              <thead className="sticky top-[37px] z-20 bg-muted/95 backdrop-blur-sm text-xs font-semibold text-muted-foreground border-b border-border">
-                <tr>
+            {/* Sheet tabs + Header as one compact sticky block */}
+            <div className="sticky top-0 z-30 bg-card" style={{ minWidth: isMobile ? '580px' : '880px' }}>
+              {/* Sheet tabs directly above header - no gap */}
+              {renderSheetTabs()}
+              {/* Table header row */}
+              <div className="bg-muted/95 backdrop-blur-sm text-xs font-semibold text-muted-foreground border-b border-border">
+                <div className="flex">
                   {/* Selection checkbox header */}
                   {selectionMode.active && (
-                    <th className="px-2 py-2.5 w-10 min-w-10">
+                    <div className="px-2 py-2.5 w-10 min-w-10 flex items-center justify-center">
                       <Checkbox
                         checked={selectedIds.size === selectionProspects.length && selectionProspects.length > 0}
                         onCheckedChange={handleSelectAll}
                       />
-                    </th>
+                    </div>
                   )}
                   {/* Drag handle header */}
-                  <th className="px-1 py-2.5 w-8 min-w-8"></th>
+                  <div className="px-1 py-2.5 w-8 min-w-8"></div>
                   {(isMobile ? MOBILE_COLUMN_ORDER : columnOrder).map((columnId) => {
                     const col = COLUMNS.find(c => c.id === columnId);
                     if (!col) return null;
@@ -805,7 +801,7 @@ export function ProspectTable({
                     const isIndexColumn = columnId === 'index';
                     
                     return (
-                      <th
+                      <div
                         key={columnId}
                         draggable={col.resizable !== false}
                         onDragStart={() => col.resizable !== false && handleDragStart(columnId)}
@@ -814,13 +810,13 @@ export function ProspectTable({
                         onTouchStart={() => col.resizable !== false && handleDragStart(columnId)}
                         onTouchEnd={() => handleDragEnd()}
                         className={cn(
-                          "px-2 py-2.5 text-left whitespace-nowrap",
+                          "px-2 py-2.5 text-left whitespace-nowrap flex-shrink-0",
                           isDragging && "opacity-50 bg-primary/10",
                           columnId === 'index' && "text-center",
                           "hover:bg-muted/50 cursor-grab active:cursor-grabbing px-3 py-3 relative select-none group",
                           isMobile && "text-[11px]",
-                          isMobile && isNameColumn && "sticky left-[68px] z-20 bg-muted/50 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)]",
-                          isMobile && isIndexColumn && "sticky left-[32px] z-20 bg-muted/50"
+                          isMobile && isNameColumn && "sticky left-[68px] z-20 bg-muted/95 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)]",
+                          isMobile && isIndexColumn && "sticky left-[32px] z-20 bg-muted/95"
                         )}
                         style={{ width: `${width}px`, minWidth: `${width}px` }}
                       >
@@ -837,11 +833,17 @@ export function ProspectTable({
                             onMouseDown={(e) => handleResizeStart(e, columnId)}
                           />
                         )}
-                      </th>
+                      </div>
                     );
                   })}
-                </tr>
-              </thead>
+                </div>
+              </div>
+            </div>
+            {/* Table body */}
+            <table 
+              className="text-sm border-collapse w-full"
+              style={{ minWidth: isMobile ? '580px' : '880px' }}
+            >
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
