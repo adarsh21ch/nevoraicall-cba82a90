@@ -235,11 +235,13 @@ export type Database = {
       prospects: {
         Row: {
           action_taken: string | null
+          action_taken_at: string | null
           address: string | null
           age_or_dob: string | null
           batch_date: string | null
           date_added: string
           funnel_stage: string | null
+          funnel_stage_at: string | null
           gender: string | null
           id: string
           instagram: string | null
@@ -255,11 +257,13 @@ export type Database = {
         }
         Insert: {
           action_taken?: string | null
+          action_taken_at?: string | null
           address?: string | null
           age_or_dob?: string | null
           batch_date?: string | null
           date_added?: string
           funnel_stage?: string | null
+          funnel_stage_at?: string | null
           gender?: string | null
           id?: string
           instagram?: string | null
@@ -275,11 +279,13 @@ export type Database = {
         }
         Update: {
           action_taken?: string | null
+          action_taken_at?: string | null
           address?: string | null
           age_or_dob?: string | null
           batch_date?: string | null
           date_added?: string
           funnel_stage?: string | null
+          funnel_stage_at?: string | null
           gender?: string | null
           id?: string
           instagram?: string | null

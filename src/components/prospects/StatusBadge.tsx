@@ -103,6 +103,7 @@ export function ActionBadge({ action }: ActionBadgeProps) {
     'Not Picked': 'bg-orange-500/15 text-orange-600 border-orange-500/30',
     'Call Back': 'bg-cyan-500/15 text-cyan-600 border-cyan-500/30',
     'Call Cut': 'bg-status-negative/15 text-status-negative border-status-negative/30',
+    'Not Interested': 'bg-gray-500/15 text-gray-600 border-gray-500/30',
   };
 
   return (
