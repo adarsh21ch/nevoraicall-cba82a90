@@ -1,15 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
 import { useProspectFunnelStats, FunnelStats } from '@/hooks/useProspectFunnelStats';
 import { useFunnelTracking } from '@/hooks/useFunnelTracking';
+import { useFunnelConfig } from '@/hooks/useFunnelConfig';
 import { useProspects } from '@/hooks/useProspects';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronDown, ChevronUp, Flame, TrendingUp, TrendingDown, Minus, Sparkles, Users, Plus, Grid3X3 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Flame, TrendingUp, TrendingDown, Minus, Sparkles, Users, Plus, Grid3X3, Settings2, CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { EditableCell } from './EditableCell';
 import { ExportFunnelData } from './ExportFunnelData';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 
 const STAGES = ['enrollment', 'day_1', 'day_2', 'day_3', 'minimum_bill', 'level_up', 'two_cc'] as const;
 type StageKey = typeof STAGES[number];
@@ -73,9 +77,50 @@ export function FunnelTracker({ isPro = true }: FunnelTrackerProps) {
   const { totals, loading, totalProspects } = useProspectFunnelStats();
   const { rows, loading: funnelLoading, updateCell, addRow, totals: funnelTotals } = useFunnelTracking();
   const { prospects, loading: prospectsLoading } = useProspects();
+  const { config, loading: configLoading, saveConfig } = useFunnelConfig();
+  
   const [fromStage, setFromStage] = useState<StageKey>('enrollment');
   const [toStage, setToStage] = useState<StageKey>('day_1');
   const [stepConversionOpen, setStepConversionOpen] = useState(true);
+  
+  // Funnel setup state
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [funnelDays, setFunnelDays] = useState<string>('3');
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+
+  // Initialize from saved config
+  useEffect(() => {
+    if (config) {
+      setSelectedDate(new Date(config.day_1_start));
+      setFunnelDays(config.funnel_length.toString());
+    }
+  }, [config]);
+
+  // Save config when values change
+  const handleDateSelect = async (date: Date | undefined) => {
+    if (!date) return;
+    setSelectedDate(date);
+    setDatePickerOpen(false);
+    await saveConfig({
+      funnel_name: 'Default Funnel',
+      funnel_length: parseInt(funnelDays),
+      day_1_start: format(date, 'yyyy-MM-dd'),
+    });
+  };
+
+  const handleFunnelDaysChange = async (value: string) => {
+    setFunnelDays(value);
+    if (selectedDate) {
+      await saveConfig({
+        funnel_name: 'Default Funnel',
+        funnel_length: parseInt(value),
+        day_1_start: format(selectedDate, 'yyyy-MM-dd'),
+      });
+    }
+  };
+
+  // Get visible stages based on funnel length
+  const visibleDayStages = parseInt(funnelDays) || 3;
 
   const fromValue = totals[fromStage] || 0;
   const toValue = totals[toStage] || 0;
@@ -88,7 +133,7 @@ export function FunnelTracker({ isPro = true }: FunnelTrackerProps) {
     return { from: fromVal, to: toVal, percentage };
   };
 
-  if (loading || funnelLoading || prospectsLoading) {
+  if (loading || funnelLoading || prospectsLoading || configLoading) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-64 w-full rounded-2xl" />
@@ -120,9 +165,51 @@ export function FunnelTracker({ isPro = true }: FunnelTrackerProps) {
       {/* Funnel-wise Tracking Table */}
       <div className="glass-card rounded-2xl overflow-hidden">
         <div className="p-4 border-b border-border/50">
-          <div className="flex items-center gap-2">
-            <Grid3X3 className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold">Funnel Tracker</h3>
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-2">
+              <Grid3X3 className="h-5 w-5 text-primary" />
+              <h3 className="font-semibold">Funnel Tracker</h3>
+            </div>
+            
+            {/* Inline Funnel Setup */}
+            <div className="flex items-center gap-2 bg-muted/40 rounded-xl px-3 py-1.5">
+              <Settings2 className="h-4 w-4 text-muted-foreground" />
+              
+              {/* Day 1 Date Picker */}
+              <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-7 px-2 text-xs font-medium bg-background/60 hover:bg-background gap-1.5"
+                  >
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    {selectedDate ? format(selectedDate, 'MMM d') : 'Day 1'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 z-50" align="end">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={handleDateSelect}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+              
+              {/* Funnel Days Dropdown */}
+              <Select value={funnelDays} onValueChange={handleFunnelDaysChange}>
+                <SelectTrigger className="h-7 w-20 text-xs bg-background/60 border-0">
+                  <SelectValue placeholder="Days" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border border-border z-50">
+                  <SelectItem value="2" className="text-xs">2 days</SelectItem>
+                  <SelectItem value="3" className="text-xs">3 days</SelectItem>
+                  <SelectItem value="5" className="text-xs">5 days</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <p className="text-xs text-muted-foreground mt-1">Click any cell to edit. Changes save automatically.</p>
         </div>
@@ -134,6 +221,15 @@ export function FunnelTracker({ isPro = true }: FunnelTrackerProps) {
                 <th className="px-3 py-3 text-left font-medium text-muted-foreground w-20">Funnel</th>
                 <th className="px-3 py-3 text-center font-medium text-muted-foreground">Day 1</th>
                 <th className="px-3 py-3 text-center font-medium text-muted-foreground">Day 2</th>
+                {visibleDayStages >= 3 && (
+                  <th className="px-3 py-3 text-center font-medium text-muted-foreground">Day 3</th>
+                )}
+                {visibleDayStages >= 4 && (
+                  <th className="px-3 py-3 text-center font-medium text-muted-foreground">Day 4</th>
+                )}
+                {visibleDayStages >= 5 && (
+                  <th className="px-3 py-3 text-center font-medium text-muted-foreground">Day 5</th>
+                )}
                 <th className="px-3 py-3 text-center font-medium text-muted-foreground">Min Billing</th>
                 <th className="px-3 py-3 text-center font-medium text-muted-foreground">Level Up</th>
                 <th className="px-3 py-3 text-center font-medium text-muted-foreground">2CC</th>
@@ -159,6 +255,15 @@ export function FunnelTracker({ isPro = true }: FunnelTrackerProps) {
                       placeholder="–"
                     />
                   </td>
+                  {visibleDayStages >= 3 && (
+                    <td className="px-2 py-1 text-center text-muted-foreground">–</td>
+                  )}
+                  {visibleDayStages >= 4 && (
+                    <td className="px-2 py-1 text-center text-muted-foreground">–</td>
+                  )}
+                  {visibleDayStages >= 5 && (
+                    <td className="px-2 py-1 text-center text-muted-foreground">–</td>
+                  )}
                   <td className="px-2 py-1">
                     <EditableCell
                       value={isPro ? row.minimum_billing : null}
@@ -199,12 +304,21 @@ export function FunnelTracker({ isPro = true }: FunnelTrackerProps) {
                     Add row
                   </Button>
                 </td>
-                <td colSpan={5}></td>
+                <td colSpan={5 + Math.max(visibleDayStages - 2, 0)}></td>
               </tr>
               <tr className="bg-muted/40 font-semibold">
                 <td className="px-3 py-3 text-muted-foreground">TOTAL</td>
                 <td className="px-3 py-3 text-center">{isPro ? funnelTotals.day_1 : '–'}</td>
                 <td className="px-3 py-3 text-center">{isPro ? funnelTotals.day_2 : '–'}</td>
+                {visibleDayStages >= 3 && (
+                  <td className="px-3 py-3 text-center">{isPro ? totals.day_3 : '–'}</td>
+                )}
+                {visibleDayStages >= 4 && (
+                  <td className="px-3 py-3 text-center text-muted-foreground">–</td>
+                )}
+                {visibleDayStages >= 5 && (
+                  <td className="px-3 py-3 text-center text-muted-foreground">–</td>
+                )}
                 <td className="px-3 py-3 text-center">{isPro ? funnelTotals.minimum_billing : '–'}</td>
                 <td className="px-3 py-3 text-center">{isPro ? funnelTotals.level_up : '–'}</td>
                 <td className="px-3 py-3 text-center">{isPro ? funnelTotals.two_cc : '–'}</td>
