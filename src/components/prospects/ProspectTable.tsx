@@ -634,56 +634,47 @@ export function ProspectTable({
         </div>
       )}
 
-      {/* Content */}
-      {prospects.length === 0 ? (
-        <div className="bg-card rounded-xl border border-border p-12 text-center">
-          <Users className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-          <h3 className="text-lg font-medium mb-2">No prospects yet</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Click "+ Add Prospect" or "Import Excel" to get started
-          </p>
-          <div className="flex justify-center gap-2">
-            <ImportExcelDialog onImport={handleImportProspects} />
-            <AddProspectDialog onAdd={handleAddProspect} />
+      {/* Content - Always show table structure with sheet tabs */}
+      {viewMode === 'card' && filteredProspects.length > 0 ? (
+        // Card Layout (only when there are prospects)
+        <>
+          {/* Sheet tabs for card view */}
+          <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+            <SheetTabs
+              sheets={sheets}
+              selectedSheetId={selectedSheetId}
+              onSelectSheet={onSelectSheet}
+              onAddSheet={onAddSheet}
+              onUpdateSheet={handleUpdateSheetWithUndo}
+              onDeleteSheet={onDeleteSheet}
+              onEnterSelectMode={handleEnterSelectMode}
+              onDeleteAllInSheet={handleDeleteAllInSheet}
+            />
           </div>
-        </div>
-      ) : filteredProspects.length === 0 ? (
-        <div className="bg-card rounded-xl border border-border p-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            No prospects match your filters.{' '}
-            <button
-              onClick={() => setFilters({ search: '', stages: [], qualities: [], actions: [], incompleteOnly: false })}
-              className="text-accent hover:underline"
-            >
-              Clear filters
-            </button>
-          </p>
-        </div>
-      ) : viewMode === 'card' ? (
-        // Card Layout
-        <div className={cn("grid gap-3", isMobile ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3")}>
-          {filteredProspects.map((prospect, index) => (
-            <div key={prospect.id} className="relative">
-              {selectionMode.active && selectionProspects.some(p => p.id === prospect.id) && (
-                <div className="absolute top-2 left-2 z-10">
-                  <Checkbox
-                    checked={selectedIds.has(prospect.id)}
-                    onCheckedChange={() => handleToggleSelect(prospect.id)}
-                  />
-                </div>
-              )}
-              <MobileProspectCard
-                prospect={prospect}
-                index={index + 1}
-                isCalling={isCalling}
-                onUpdate={handleUpdateWithUndo}
-                onDelete={handleDeleteWithUndo}
-              />
-            </div>
-          ))}
-        </div>
+          <div className={cn("grid gap-3", isMobile ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3")}>
+            {filteredProspects.map((prospect, index) => (
+              <div key={prospect.id} className="relative">
+                {selectionMode.active && selectionProspects.some(p => p.id === prospect.id) && (
+                  <div className="absolute top-2 left-2 z-10">
+                    <Checkbox
+                      checked={selectedIds.has(prospect.id)}
+                      onCheckedChange={() => handleToggleSelect(prospect.id)}
+                    />
+                  </div>
+                )}
+                <MobileProspectCard
+                  prospect={prospect}
+                  index={index + 1}
+                  isCalling={isCalling}
+                  onUpdate={handleUpdateWithUndo}
+                  onDelete={handleDeleteWithUndo}
+                />
+              </div>
+            ))}
+          </div>
+        </>
       ) : (
-        // Table Layout - unified horizontal scroll for header + body
+        // Table Layout - ALWAYS show sheet tabs + header, even when empty
         <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
           <div 
             className="overflow-x-auto"
@@ -695,26 +686,24 @@ export function ProspectTable({
             >
               {/* Sticky header block: Sheet tabs + column headers */}
               <thead className="sticky top-0 z-30">
-                {/* Sheet tabs row */}
-                {subFilter === 'all' && (
-                  <tr>
-                    <th 
-                      colSpan={COLUMN_ORDER.length + (selectionMode.active ? 2 : 1) + 1} 
-                      className="p-0 bg-card border-b border-border/50"
-                    >
-                      <SheetTabs
-                        sheets={sheets}
-                        selectedSheetId={selectedSheetId}
-                        onSelectSheet={onSelectSheet}
-                        onAddSheet={onAddSheet}
-                        onUpdateSheet={handleUpdateSheetWithUndo}
-                        onDeleteSheet={onDeleteSheet}
-                        onEnterSelectMode={handleEnterSelectMode}
-                        onDeleteAllInSheet={handleDeleteAllInSheet}
-                      />
-                    </th>
-                  </tr>
-                )}
+                {/* Sheet tabs row - ALWAYS visible */}
+                <tr>
+                  <th 
+                    colSpan={COLUMN_ORDER.length + (selectionMode.active ? 2 : 1) + 1} 
+                    className="p-0 bg-card border-b border-border/50"
+                  >
+                    <SheetTabs
+                      sheets={sheets}
+                      selectedSheetId={selectedSheetId}
+                      onSelectSheet={onSelectSheet}
+                      onAddSheet={onAddSheet}
+                      onUpdateSheet={handleUpdateSheetWithUndo}
+                      onDeleteSheet={onDeleteSheet}
+                      onEnterSelectMode={handleEnterSelectMode}
+                      onDeleteAllInSheet={handleDeleteAllInSheet}
+                    />
+                  </th>
+                </tr>
                 {/* Column header row */}
                 <tr className="bg-muted/95 backdrop-blur-sm text-xs font-semibold text-muted-foreground border-b border-border">
                   {/* Selection checkbox header */}
@@ -764,25 +753,58 @@ export function ProspectTable({
                   strategy={verticalListSortingStrategy}
                 >
                   <tbody>
-                    {filteredProspects.map((prospect, index) => (
-                      <SortableProspectRow
-                        key={prospect.id}
-                        prospect={prospect}
-                        index={index + 1}
-                        isCalling={isCalling}
-                        isExpanded={expandedRowId === prospect.id}
-                        onToggleExpand={() => handleToggleExpand(prospect.id)}
-                        onUpdate={handleUpdateWithUndo}
-                        onDelete={handleDeleteWithUndo}
-                        isEven={index % 2 === 0}
-                        columnOrder={COLUMN_ORDER}
-                        columnWidths={columnWidths}
-                        isMobileTable={isMobile}
-                        showSelection={selectionMode.active && selectionProspects.some(p => p.id === prospect.id)}
-                        isSelected={selectedIds.has(prospect.id)}
-                        onToggleSelect={() => handleToggleSelect(prospect.id)}
-                      />
-                    ))}
+                    {filteredProspects.length === 0 ? (
+                      // Empty state row - keeps table structure intact
+                      <tr>
+                        <td 
+                          colSpan={COLUMN_ORDER.length + (selectionMode.active ? 2 : 1) + 1}
+                          className="py-12 text-center"
+                        >
+                          <Users className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
+                          <p className="text-sm font-medium text-muted-foreground mb-1">
+                            {prospects.length === 0 
+                              ? "No prospects yet" 
+                              : selectedSheetId 
+                                ? "No prospects in this sheet"
+                                : "No prospects match your filters"
+                            }
+                          </p>
+                          <p className="text-xs text-muted-foreground/70 mb-3">
+                            {prospects.length === 0 || (selectedSheetId && sheetFilteredProspects.length === 0)
+                              ? "Import Excel or Add Prospect to get started"
+                              : (
+                                <button
+                                  onClick={() => setFilters({ search: '', stages: [], qualities: [], actions: [], incompleteOnly: false })}
+                                  className="text-accent hover:underline"
+                                >
+                                  Clear filters
+                                </button>
+                              )
+                            }
+                          </p>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredProspects.map((prospect, index) => (
+                        <SortableProspectRow
+                          key={prospect.id}
+                          prospect={prospect}
+                          index={index + 1}
+                          isCalling={isCalling}
+                          isExpanded={expandedRowId === prospect.id}
+                          onToggleExpand={() => handleToggleExpand(prospect.id)}
+                          onUpdate={handleUpdateWithUndo}
+                          onDelete={handleDeleteWithUndo}
+                          isEven={index % 2 === 0}
+                          columnOrder={COLUMN_ORDER}
+                          columnWidths={columnWidths}
+                          isMobileTable={isMobile}
+                          showSelection={selectionMode.active && selectionProspects.some(p => p.id === prospect.id)}
+                          isSelected={selectedIds.has(prospect.id)}
+                          onToggleSelect={() => handleToggleSelect(prospect.id)}
+                        />
+                      ))
+                    )}
                   </tbody>
                 </SortableContext>
               </DndContext>
