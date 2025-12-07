@@ -16,7 +16,7 @@ export interface Prospect {
   email?: string | null;
   notes?: string | null;
   funnel_stage?: FunnelStage | null;
-  action_taken?: ActionTaken | null;
+  action_taken?: ExtendedActionTaken | null;
   prospect_status?: ProspectStatus | null;
   priority?: PriorityLevel | null;
   date_added: string;
