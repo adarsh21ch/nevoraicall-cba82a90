@@ -3,6 +3,7 @@ import { APP_VERSION, VERSION_STORAGE_KEY } from "@/config/appVersion";
 
 export function useVersionCheck() {
   const [showUpdateBanner, setShowUpdateBanner] = useState(false);
+  const [swUpdateAvailable, setSwUpdateAvailable] = useState(false);
 
   useEffect(() => {
     const lastSeenVersion = localStorage.getItem(VERSION_STORAGE_KEY);
@@ -17,6 +18,61 @@ export function useVersionCheck() {
       // New version available
       setShowUpdateBanner(true);
     }
+  }, []);
+
+  // Check for service worker updates
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+
+    const checkForUpdates = async () => {
+      try {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+          // Check for updates
+          await registration.update();
+          
+          // Listen for new service worker
+          registration.addEventListener("updatefound", () => {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.addEventListener("statechange", () => {
+                if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+                  // New content available
+                  setSwUpdateAvailable(true);
+                  setShowUpdateBanner(true);
+                }
+              });
+            }
+          });
+
+          // Check if there's already a waiting worker
+          if (registration.waiting) {
+            setSwUpdateAvailable(true);
+            setShowUpdateBanner(true);
+          }
+        }
+      } catch (error) {
+        console.error("Service worker update check failed:", error);
+      }
+    };
+
+    checkForUpdates();
+
+    // Check for updates periodically (every 5 minutes)
+    const interval = setInterval(checkForUpdates, 5 * 60 * 1000);
+
+    // Also check when the app becomes visible
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        checkForUpdates();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, []);
 
   const dismissBanner = useCallback(() => {
@@ -37,19 +93,19 @@ export function useVersionCheck() {
           registration.waiting.postMessage({ type: "SKIP_WAITING" });
           
           // Wait a moment for the new SW to take over
-          await new Promise((resolve) => setTimeout(resolve, 100));
+          await new Promise((resolve) => setTimeout(resolve, 200));
         }
       } catch (error) {
         console.error("Service worker update failed:", error);
       }
     }
 
-    // Hard reload the page
+    // Hard reload the page to get fresh content
     window.location.reload();
   }, []);
 
   return {
-    showUpdateBanner,
+    showUpdateBanner: showUpdateBanner || swUpdateAvailable,
     dismissBanner,
     refreshApp,
     currentVersion: APP_VERSION,
