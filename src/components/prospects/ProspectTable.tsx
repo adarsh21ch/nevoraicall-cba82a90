@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Prospect, FunnelStage, ProspectQuality, Sheet, ExtendedActionTaken } from '@/types/prospect';
 import { SortableProspectRow } from './SortableProspectRow';
 import { MobileProspectCard } from './MobileProspectCard';
@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Users, GripVertical, LayoutGrid, Table2, Undo2, Redo2, X, Trash2 } from 'lucide-react';
+import { Users, LayoutGrid, Table2, Undo2, Redo2, X, Trash2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -65,20 +65,20 @@ interface ProspectTableProps {
   subFilter: 'all' | 'hot' | 'scheduled' | 'day1' | 'progress';
 }
 
-// Column configuration - Response before Funnel
+// Column configuration - fixed order, no drag/resize
 const COLUMNS = [
-  { id: 'index', label: '#', defaultWidth: 50, minWidth: 40, mobileWidth: 36, resizable: false },
-  { id: 'name', label: 'Name', defaultWidth: 180, minWidth: 140, mobileWidth: 130, resizable: true },
-  { id: 'phone', label: 'Phone', defaultWidth: 140, minWidth: 120, mobileWidth: 100, resizable: true },
-  { id: 'contact', label: 'Call', defaultWidth: 70, minWidth: 60, mobileWidth: 60, resizable: false },
-  { id: 'action', label: 'Response', defaultWidth: 130, minWidth: 100, mobileWidth: 85, resizable: true },
-  { id: 'stage', label: 'Funnel', defaultWidth: 130, minWidth: 110, mobileWidth: 85, resizable: true },
-  { id: 'quality', label: 'Quality', defaultWidth: 100, minWidth: 85, mobileWidth: 75, resizable: true },
-  { id: 'actions', label: '', defaultWidth: 80, minWidth: 70, mobileWidth: 50, resizable: false },
+  { id: 'index', label: '#', width: 50, mobileWidth: 36 },
+  { id: 'name', label: 'Name', width: 180, mobileWidth: 130 },
+  { id: 'phone', label: 'Phone', width: 140, mobileWidth: 100 },
+  { id: 'contact', label: 'Call', width: 70, mobileWidth: 60 },
+  { id: 'action', label: 'Response', width: 130, mobileWidth: 85 },
+  { id: 'stage', label: 'Funnel', width: 130, mobileWidth: 85 },
+  { id: 'quality', label: 'Quality', width: 100, mobileWidth: 75 },
+  { id: 'actions', label: '', width: 80, mobileWidth: 50 },
 ];
 
-// Mobile column order - Response before Funnel
-const MOBILE_COLUMN_ORDER = ['index', 'name', 'phone', 'contact', 'action', 'stage', 'quality', 'actions'];
+// Fixed column order
+const COLUMN_ORDER = ['index', 'name', 'phone', 'contact', 'action', 'stage', 'quality', 'actions'];
 
 export function ProspectTable({
   prospects,
@@ -120,30 +120,11 @@ export function ProspectTable({
   // Undo/Redo
   const { pushAction, popUndo, popRedo, canUndo, canRedo } = useUndoRedo();
 
-  // Column state for reordering and resizing - load from localStorage
-  const [columnOrder, setColumnOrder] = useState<string[]>(() => {
-    const saved = localStorage.getItem('prospectColumnOrder');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // Validate that all columns exist
-        if (Array.isArray(parsed) && parsed.every(id => COLUMNS.some(c => c.id === id))) {
-          return parsed;
-        }
-      } catch {}
-    }
-    return COLUMNS.map(c => c.id);
-  });
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(
-    Object.fromEntries(COLUMNS.map(c => [c.id, c.defaultWidth]))
+  // Fixed column widths based on device
+  const columnWidths = useMemo(() => 
+    Object.fromEntries(COLUMNS.map(c => [c.id, isMobile ? c.mobileWidth : c.width])),
+    [isMobile]
   );
-  const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
-  const [resizingColumn, setResizingColumn] = useState<string | null>(null);
-
-  // Save column order to localStorage
-  useEffect(() => {
-    localStorage.setItem('prospectColumnOrder', JSON.stringify(columnOrder));
-  }, [columnOrder]);
 
   // Row drag-and-drop sensors
   const sensors = useSensors(
@@ -331,54 +312,6 @@ export function ProspectTable({
       setExpandedRowId(prev => prev === prospectId ? null : prospectId);
     }
   }, [expandedRowId]);
-
-  // Column drag handlers
-  const handleDragStart = (columnId: string) => {
-    setDraggedColumn(columnId);
-  };
-
-  const handleDragOver = (e: React.DragEvent, targetColumnId: string) => {
-    e.preventDefault();
-    if (!draggedColumn || draggedColumn === targetColumnId) return;
-    
-    const newOrder = [...columnOrder];
-    const draggedIdx = newOrder.indexOf(draggedColumn);
-    const targetIdx = newOrder.indexOf(targetColumnId);
-    
-    newOrder.splice(draggedIdx, 1);
-    newOrder.splice(targetIdx, 0, draggedColumn);
-    setColumnOrder(newOrder);
-  };
-
-  const handleDragEnd = () => {
-    setDraggedColumn(null);
-  };
-
-  // Column resize handlers
-  const handleResizeStart = (e: React.MouseEvent, columnId: string) => {
-    e.preventDefault();
-    setResizingColumn(columnId);
-    
-    const startX = e.clientX;
-    const startWidth = columnWidths[columnId];
-    const column = COLUMNS.find(c => c.id === columnId);
-    const minWidth = column?.minWidth || 60;
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const delta = moveEvent.clientX - startX;
-      const newWidth = Math.max(minWidth, startWidth + delta);
-      setColumnWidths(prev => ({ ...prev, [columnId]: newWidth }));
-    };
-
-    const handleMouseUp = () => {
-      setResizingColumn(null);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  };
 
   // Selection mode handlers
   const handleEnterSelectMode = (sheetId: string | null) => {
@@ -595,23 +528,6 @@ export function ProspectTable({
 
   const isCalling = filterMode === 'calling';
 
-  // Sheet tabs component to render inline above table header
-  const renderSheetTabs = () => {
-    if (subFilter !== 'all') return null;
-    return (
-      <SheetTabs
-        sheets={sheets}
-        selectedSheetId={selectedSheetId}
-        onSelectSheet={onSelectSheet}
-        onAddSheet={onAddSheet}
-        onUpdateSheet={handleUpdateSheetWithUndo}
-        onDeleteSheet={onDeleteSheet}
-        onEnterSelectMode={handleEnterSelectMode}
-        onDeleteAllInSheet={handleDeleteAllInSheet}
-      />
-    );
-  };
-
   return (
     <div className="space-y-4">
       
@@ -767,83 +683,77 @@ export function ProspectTable({
           ))}
         </div>
       ) : (
-        // Table Layout
+        // Table Layout - unified horizontal scroll for header + body
         <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
           <div 
             className="overflow-x-auto"
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
-            {/* Sheet tabs + Header as one compact sticky block */}
-            <div className="sticky top-0 z-30 bg-card" style={{ minWidth: isMobile ? '580px' : '880px' }}>
-              {/* Sheet tabs directly above header - no gap */}
-              {renderSheetTabs()}
-              {/* Table header row */}
-              <div className="bg-muted/95 backdrop-blur-sm text-xs font-semibold text-muted-foreground border-b border-border">
-                <div className="flex">
+            <table 
+              className="text-sm border-collapse w-full"
+              style={{ minWidth: isMobile ? '580px' : '880px' }}
+            >
+              {/* Sticky header block: Sheet tabs + column headers */}
+              <thead className="sticky top-0 z-30">
+                {/* Sheet tabs row */}
+                {subFilter === 'all' && (
+                  <tr>
+                    <th 
+                      colSpan={COLUMN_ORDER.length + (selectionMode.active ? 2 : 1) + 1} 
+                      className="p-0 bg-card border-b border-border/50"
+                    >
+                      <SheetTabs
+                        sheets={sheets}
+                        selectedSheetId={selectedSheetId}
+                        onSelectSheet={onSelectSheet}
+                        onAddSheet={onAddSheet}
+                        onUpdateSheet={handleUpdateSheetWithUndo}
+                        onDeleteSheet={onDeleteSheet}
+                        onEnterSelectMode={handleEnterSelectMode}
+                        onDeleteAllInSheet={handleDeleteAllInSheet}
+                      />
+                    </th>
+                  </tr>
+                )}
+                {/* Column header row */}
+                <tr className="bg-muted/95 backdrop-blur-sm text-xs font-semibold text-muted-foreground border-b border-border">
                   {/* Selection checkbox header */}
                   {selectionMode.active && (
-                    <div className="px-2 py-2.5 w-10 min-w-10 flex items-center justify-center">
+                    <th className="px-2 py-2.5 w-10 min-w-[40px]">
                       <Checkbox
                         checked={selectedIds.size === selectionProspects.length && selectionProspects.length > 0}
                         onCheckedChange={handleSelectAll}
                       />
-                    </div>
+                    </th>
                   )}
                   {/* Drag handle header */}
-                  <div className="px-1 py-2.5 w-8 min-w-8"></div>
-                  {(isMobile ? MOBILE_COLUMN_ORDER : columnOrder).map((columnId) => {
+                  <th className="px-1 py-2.5 w-8 min-w-[32px]"></th>
+                  {COLUMN_ORDER.map((columnId) => {
                     const col = COLUMNS.find(c => c.id === columnId);
                     if (!col) return null;
-                    const width = isMobile ? col.mobileWidth : columnWidths[columnId];
-                    const isDragging = draggedColumn === columnId;
-                    const isResizing = resizingColumn === columnId;
+                    const width = columnWidths[columnId];
                     const isNameColumn = columnId === 'name';
                     const isIndexColumn = columnId === 'index';
                     
                     return (
-                      <div
+                      <th
                         key={columnId}
-                        draggable={col.resizable !== false}
-                        onDragStart={() => col.resizable !== false && handleDragStart(columnId)}
-                        onDragOver={(e) => handleDragOver(e, columnId)}
-                        onDragEnd={() => handleDragEnd()}
-                        onTouchStart={() => col.resizable !== false && handleDragStart(columnId)}
-                        onTouchEnd={() => handleDragEnd()}
                         className={cn(
-                          "px-2 py-2.5 text-left whitespace-nowrap flex-shrink-0",
-                          isDragging && "opacity-50 bg-primary/10",
+                          "px-2 py-2.5 text-left whitespace-nowrap",
                           columnId === 'index' && "text-center",
-                          "hover:bg-muted/50 cursor-grab active:cursor-grabbing px-3 py-3 relative select-none group",
-                          isMobile && "text-[11px]",
+                          isMobile && "text-[11px] px-1.5",
                           isMobile && isNameColumn && "sticky left-[68px] z-20 bg-muted/95 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)]",
                           isMobile && isIndexColumn && "sticky left-[32px] z-20 bg-muted/95"
                         )}
                         style={{ width: `${width}px`, minWidth: `${width}px` }}
                       >
-                        <div className="flex items-center gap-1">
-                          <GripVertical className="h-3 w-3 text-muted-foreground/50" />
-                          <span>{col?.label || columnId}</span>
-                        </div>
-                        {!isMobile && col.resizable && (
-                          <div
-                            className={cn(
-                              "absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize opacity-0 group-hover:opacity-100 hover:bg-primary/50 transition-all",
-                              isResizing && "bg-primary opacity-100"
-                            )}
-                            onMouseDown={(e) => handleResizeStart(e, columnId)}
-                          />
-                        )}
-                      </div>
+                        {col.label}
+                      </th>
                     );
                   })}
-                </div>
-              </div>
-            </div>
-            {/* Table body */}
-            <table 
-              className="text-sm border-collapse w-full"
-              style={{ minWidth: isMobile ? '580px' : '880px' }}
-            >
+                </tr>
+              </thead>
+              {/* Table body */}
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
@@ -865,8 +775,8 @@ export function ProspectTable({
                         onUpdate={handleUpdateWithUndo}
                         onDelete={handleDeleteWithUndo}
                         isEven={index % 2 === 0}
-                        columnOrder={isMobile ? MOBILE_COLUMN_ORDER : columnOrder}
-                        columnWidths={isMobile ? Object.fromEntries(COLUMNS.map(c => [c.id, c.mobileWidth])) : columnWidths}
+                        columnOrder={COLUMN_ORDER}
+                        columnWidths={columnWidths}
                         isMobileTable={isMobile}
                         showSelection={selectionMode.active && selectionProspects.some(p => p.id === prospect.id)}
                         isSelected={selectedIds.has(prospect.id)}
