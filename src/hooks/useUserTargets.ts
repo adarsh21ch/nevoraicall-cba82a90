@@ -12,7 +12,8 @@ interface UserTarget {
 }
 
 // Default targets if user hasn't set any
-const DEFAULT_TARGETS: Record<FunnelStage, number> = {
+const DEFAULT_TARGETS: Record<string, number> = {
+  'Enrollment': 100,
   'Day 1': 80,
   'Day 2': 60,
   'Day 3': 50,
@@ -44,11 +45,9 @@ export function useUserTargets() {
       if (error) throw error;
 
       // Merge fetched targets with defaults
-      const mergedTargets = { ...DEFAULT_TARGETS };
+      const mergedTargets: Record<string, number> = { ...DEFAULT_TARGETS };
       data?.forEach((target: UserTarget) => {
-        if (target.target_type in mergedTargets) {
-          mergedTargets[target.target_type as FunnelStage] = target.target_value;
-        }
+        mergedTargets[target.target_type] = target.target_value;
       });
 
       setTargets(mergedTargets);
