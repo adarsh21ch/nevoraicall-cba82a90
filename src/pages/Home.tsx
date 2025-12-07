@@ -13,12 +13,14 @@ import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { 
   Loader2, Users, CheckCircle, TrendingUp, Target,
-  Settings2, ChevronDown, Clock
+  Settings2, ChevronDown, Clock, CalendarIcon
 } from 'lucide-react';
-import { parseISO, formatDistanceToNow } from 'date-fns';
+import { parseISO, format, isToday, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
 import { FUNNEL_STAGES, FunnelStage } from '@/types/prospect';
@@ -78,6 +80,7 @@ export default function Home() {
   const [editTargetsOpen, setEditTargetsOpen] = useState(false);
   const [editingTargets, setEditingTargets] = useState<Record<string, number>>({});
   const [targetsExpanded, setTargetsExpanded] = useState(false);
+  const [activityDate, setActivityDate] = useState<Date>(new Date());
 
   // Pull-to-refresh
   const handleRefresh = useCallback(async () => {
@@ -210,6 +213,20 @@ export default function Home() {
                     <DialogTitle>Edit Monthly Targets</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+                    {/* Enrollment target first */}
+                    <div className="flex items-center justify-between gap-4">
+                      <Label className="text-sm font-medium flex-1">Enrollment</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={editingTargets['Enrollment'] || 0}
+                        onChange={(e) => setEditingTargets(prev => ({
+                          ...prev,
+                          Enrollment: parseInt(e.target.value) || 0
+                        }))}
+                        className="w-24 text-right"
+                      />
+                    </div>
                     {FUNNEL_STAGES.map(stage => (
                       <div key={stage} className="flex items-center justify-between gap-4">
                         <Label className="text-sm font-medium flex-1">{stage}</Label>
@@ -231,6 +248,11 @@ export default function Home() {
                       Cancel
                     </Button>
                     <Button onClick={async () => {
+                      // Save Enrollment target
+                      if (editingTargets['Enrollment'] !== targets['Enrollment']) {
+                        await updateTarget('Enrollment', editingTargets['Enrollment']);
+                      }
+                      // Save funnel stage targets
                       for (const stage of FUNNEL_STAGES) {
                         if (editingTargets[stage] !== targets[stage]) {
                           await updateTarget(stage, editingTargets[stage]);
@@ -249,10 +271,10 @@ export default function Home() {
             <div className="space-y-1.5 pb-3 border-b border-border/50">
               <div className="flex items-center justify-between text-sm">
                 <span className="font-medium text-foreground">Enrollment</span>
-                <span className="font-semibold">{kpis.stageCounts['Enrollment']} / {targets['Enrollment'] || 0}</span>
+                <span className="font-semibold">{kpis.totalEnrolled} / {targets['Enrollment'] || 0}</span>
               </div>
               <Progress 
-                value={targets['Enrollment'] ? Math.min((kpis.stageCounts['Enrollment'] / targets['Enrollment']) * 100, 100) : 0} 
+                value={targets['Enrollment'] ? Math.min((kpis.totalEnrolled / targets['Enrollment']) * 100, 100) : 0} 
                 className="h-2.5" 
               />
             </div>
@@ -285,20 +307,50 @@ export default function Home() {
             </Collapsible>
           </div>
 
-          {/* Recent Activity - from prospects */}
+          {/* Today's Follow-Ups (Recent Activity) - date-based */}
           <div className="bg-card rounded-2xl p-4 border border-border/50">
-            <div className="flex items-center gap-2 mb-4">
-              <Clock className="h-5 w-5 text-primary" />
-              <h3 className="font-semibold">Recent Activity</h3>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-primary" />
+                <div>
+                  <h3 className="font-semibold">Today's Follow-Ups</h3>
+                  <p className="text-xs text-muted-foreground">Recent Activity</p>
+                </div>
+              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
+                    <CalendarIcon className="h-3.5 w-3.5" />
+                    {isToday(activityDate) ? 'Today' : format(activityDate, 'dd MMM')}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="single"
+                    selected={activityDate}
+                    onSelect={(date) => date && setActivityDate(date)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
-            {prospects.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">No recent activity</p>
-            ) : (
-              <div className="space-y-2">
-                {[...prospects]
-                  .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-                  .slice(0, 8)
-                  .map((prospect) => (
+            {(() => {
+              // Filter prospects by selected date
+              const filteredActivities = prospects
+                .filter(p => isSameDay(parseISO(p.updated_at), activityDate))
+                .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+
+              if (filteredActivities.length === 0) {
+                return (
+                  <p className="text-sm text-muted-foreground text-center py-6">
+                    No activity for this date
+                  </p>
+                );
+              }
+
+              return (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {filteredActivities.map((prospect) => (
                     <div
                       key={prospect.id}
                       className="flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors"
@@ -310,13 +362,14 @@ export default function Home() {
                           {prospect.prospect_status && <StatusBadge status={prospect.prospect_status} />}
                         </div>
                       </div>
-                      <p className="text-xs text-muted-foreground shrink-0 ml-2">
-                        {formatDistanceToNow(parseISO(prospect.updated_at), { addSuffix: true })}
+                      <p className="text-xs text-muted-foreground shrink-0 ml-2 font-medium">
+                        {format(parseISO(prospect.updated_at), 'h:mm a')}
                       </p>
                     </div>
                   ))}
-              </div>
-            )}
+                </div>
+              );
+            })()}
           </div>
         </div>
       </main>
