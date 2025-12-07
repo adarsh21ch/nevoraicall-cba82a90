@@ -49,6 +49,7 @@ interface StageBadgeProps {
 
 export function StageBadge({ stage }: StageBadgeProps) {
   const colorClasses: Record<FunnelStage, string> = {
+    'Enrollment': 'bg-purple-500/15 text-purple-600 border-purple-500/30',
     'Day 1': 'bg-blue-500/15 text-blue-600 border-blue-500/30',
     'Day 2': 'bg-cyan-500/15 text-cyan-600 border-cyan-500/30',
     'Day 3': 'bg-teal-500/15 text-teal-600 border-teal-500/30',
