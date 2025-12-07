@@ -130,8 +130,15 @@ export function useProspects() {
     if (updates.batch_date !== undefined) dbUpdates.batch_date = updates.batch_date;
     
     // Also save funnel_stage, action_taken, prospect_status, priority to database
-    if (updates.funnel_stage !== undefined) dbUpdates.funnel_stage = updates.funnel_stage;
-    if (updates.action_taken !== undefined) dbUpdates.action_taken = updates.action_taken;
+    // Track timestamp changes for 5-minute protection
+    if (updates.funnel_stage !== undefined) {
+      dbUpdates.funnel_stage = updates.funnel_stage;
+      dbUpdates.funnel_stage_at = new Date().toISOString();
+    }
+    if (updates.action_taken !== undefined) {
+      dbUpdates.action_taken = updates.action_taken;
+      dbUpdates.action_taken_at = new Date().toISOString();
+    }
     if (updates.prospect_status !== undefined) dbUpdates.prospect_status = updates.prospect_status;
     if (updates.priority !== undefined) dbUpdates.priority = updates.priority;
 

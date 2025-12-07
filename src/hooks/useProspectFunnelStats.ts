@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -23,6 +23,8 @@ const STAGE_MAP: Record<string, keyof FunnelStats> = {
   '2CC': 'two_cc',
 };
 
+const FIVE_MINUTES_MS = 5 * 60 * 1000;
+
 export function useProspectFunnelStats() {
   const [loading, setLoading] = useState(true);
   const [totalProspects, setTotalProspects] = useState(0);
@@ -42,10 +44,10 @@ export function useProspectFunnelStats() {
     
     setLoading(true);
     try {
-      // Fetch all prospects with their funnel_stage
+      // Fetch all prospects with their funnel_stage and timestamp
       const { data, error } = await supabase
         .from('prospects')
-        .select('funnel_stage')
+        .select('funnel_stage, funnel_stage_at')
         .eq('user_id', user.id);
 
       if (error) {
@@ -56,8 +58,9 @@ export function useProspectFunnelStats() {
 
       const prospects = data || [];
       setTotalProspects(prospects.length);
+      const now = new Date();
 
-      // Count prospects per funnel stage
+      // Count prospects per funnel stage (only if confirmed after 5 minutes)
       const stats: FunnelStats = {
         enrollment: 0,
         day_1: 0,
@@ -71,7 +74,13 @@ export function useProspectFunnelStats() {
       prospects.forEach((p) => {
         const stage = p.funnel_stage;
         if (stage && STAGE_MAP[stage]) {
-          stats[STAGE_MAP[stage]]++;
+          // Apply 5-minute confirmation rule
+          const stageAt = p.funnel_stage_at ? new Date(p.funnel_stage_at) : null;
+          const isConfirmed = !stageAt || (now.getTime() - stageAt.getTime() >= FIVE_MINUTES_MS);
+          
+          if (isConfirmed) {
+            stats[STAGE_MAP[stage]]++;
+          }
         }
       });
 

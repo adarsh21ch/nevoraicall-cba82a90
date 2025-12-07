@@ -1,20 +1,26 @@
-import { useDailyLeads, DailyLeadRow } from '@/hooks/useDailyLeads';
-import { EditableCell } from './EditableCell';
+import { useLeadsFromProspects } from '@/hooks/useLeadsFromProspects';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronLeft, ChevronRight, Users, Phone, Video, UserPlus, Calendar, Target } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Users, MessageSquare, Video, UserPlus, Calendar, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, parse } from 'date-fns';
 
-const METRICS = ['leads', 'calls', 'videos', 'enrolls'] as const;
+const METRICS = ['leads', 'responses', 'videoSent', 'enrollments'] as const;
 
-const GOALS = { leads: 100, calls: 50, videos: 30, enrolls: 10 };
+const GOALS = { leads: 100, responses: 50, videoSent: 30, enrollments: 10 };
 
 const METRIC_CONFIG = {
-  leads: { icon: Users, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-500/20 to-blue-500/5', label: 'Leads' },
-  calls: { icon: Phone, gradient: 'from-emerald-500 to-emerald-600', bgGradient: 'from-emerald-500/20 to-emerald-500/5', label: 'Calls' },
-  videos: { icon: Video, gradient: 'from-violet-500 to-violet-600', bgGradient: 'from-violet-500/20 to-violet-500/5', label: 'Videos' },
-  enrolls: { icon: UserPlus, gradient: 'from-orange-500 to-orange-600', bgGradient: 'from-orange-500/20 to-orange-500/5', label: 'Enrolls' },
+  leads: { icon: Users, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-500/20 to-blue-500/5', label: 'Total Leads' },
+  responses: { icon: MessageSquare, gradient: 'from-emerald-500 to-emerald-600', bgGradient: 'from-emerald-500/20 to-emerald-500/5', label: 'Total Responses' },
+  videoSent: { icon: Video, gradient: 'from-violet-500 to-violet-600', bgGradient: 'from-violet-500/20 to-violet-500/5', label: 'Total Video Sent' },
+  enrollments: { icon: UserPlus, gradient: 'from-orange-500 to-orange-600', bgGradient: 'from-orange-500/20 to-orange-500/5', label: 'Total Enrollments' },
+};
+
+const TABLE_LABELS = {
+  leads: 'Leads',
+  responses: 'Responses',
+  videoSent: 'Video Sent',
+  enrollments: 'Enrollments',
 };
 
 function getProgressColor(current: number, goal: number) {
@@ -29,11 +35,7 @@ interface LeadsTrackerProps {
 }
 
 export function LeadsTracker({ isPro = true }: LeadsTrackerProps) {
-  const { rows, loading, updateCell, totals, monthYear, changeMonth, daysInMonth, daysRemaining } = useDailyLeads();
-
-  const handleCellChange = (dayNumber: number, field: keyof DailyLeadRow, value: number) => {
-    updateCell(dayNumber, field, value);
-  };
+  const { dailyMetrics, totals, loading, monthYear, changeMonth, daysInMonth, daysRemaining } = useLeadsFromProspects();
 
   const formattedMonth = format(parse(monthYear, 'yyyy-MM', new Date()), 'MMMM yyyy');
 
@@ -101,7 +103,7 @@ export function LeadsTracker({ isPro = true }: LeadsTrackerProps) {
             <Calendar className="h-5 w-5 text-primary" />
             <h3 className="font-semibold">Daily Leads Metrics</h3>
           </div>
-          <p className="text-xs text-muted-foreground">Click any cell to edit. Changes save automatically.</p>
+          <p className="text-xs text-muted-foreground">Data synced from Follow Up list. 5-minute confirmation applied.</p>
         </div>
 
         {/* Month Selector */}
@@ -126,29 +128,26 @@ export function LeadsTracker({ isPro = true }: LeadsTrackerProps) {
           <table className="w-full">
             <thead className="sticky top-0 z-10">
               <tr className="bg-card">
-                <th className="py-3 px-3 text-left text-xs font-semibold text-muted-foreground w-20 bg-card">Date</th>
+                <th className="py-3 px-3 text-left text-xs font-semibold text-muted-foreground w-28 bg-card">Date</th>
                 {METRICS.map(metric => {
                   const config = METRIC_CONFIG[metric];
                   return (
                     <th key={metric} className={cn("py-3 px-2 text-center text-xs font-semibold bg-gradient-to-b", config.bgGradient)}>
-                      {config.label}
+                      {TABLE_LABELS[metric]}
                     </th>
                   );
                 })}
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, idx) => (
-                <tr key={row.day_number} className={cn("border-b border-border/30", idx % 2 === 0 ? "bg-background" : "bg-muted/20")}>
-                  <td className="py-2 px-3 text-sm font-medium text-muted-foreground">Day {row.day_number}</td>
+              {dailyMetrics.map((row, idx) => (
+                <tr key={row.dayNumber} className={cn("border-b border-border/30", idx % 2 === 0 ? "bg-background" : "bg-muted/20")}>
+                  <td className="py-2 px-3 text-sm font-medium text-muted-foreground">{row.date}</td>
                   {METRICS.map(metric => (
                     <td key={metric} className="py-2 px-2">
-                      <EditableCell
-                        value={isPro ? row[metric] : null}
-                        onChange={(value) => handleCellChange(row.day_number, metric, value)}
-                        disabled={!isPro}
-                        placeholder="–"
-                      />
+                      <div className="h-9 flex items-center justify-center text-sm font-medium rounded-lg bg-background/50">
+                        {isPro ? row[metric] : '–'}
+                      </div>
                     </td>
                   ))}
                 </tr>
