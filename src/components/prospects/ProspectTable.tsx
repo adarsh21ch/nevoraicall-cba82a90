@@ -101,7 +101,6 @@ export function ProspectTable({
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'card' | 'table'>('table');
   const [exporting, setExporting] = useState(false);
-  const [selectedProspectIds, setSelectedProspectIds] = useState<string[]>([]);
   const isMobile = useIsMobile();
 
   // Column state for reordering and resizing - load from localStorage
@@ -419,31 +418,6 @@ export function ProspectTable({
   const isCalling = filterMode === 'calling';
 
   // Sheet tabs component to render at bottom (sticky)
-  const handleSelectAllInSheet = useCallback((sheetId: string) => {
-    const sheetProspects = filteredProspects.filter(p => p.sheet_id === sheetId);
-    if (sheetProspects.length === 0) {
-      toast.info('No prospects in this sheet');
-      return;
-    }
-    // Set all prospects in this sheet as selected
-    setSelectedProspectIds(sheetProspects.map(p => p.id));
-    toast.success(`Selected ${sheetProspects.length} prospects`);
-  }, [filteredProspects]);
-
-  const handleDeleteAllInSheet = useCallback(async (sheetId: string) => {
-    const sheetProspects = prospects.filter(p => p.sheet_id === sheetId);
-    if (sheetProspects.length === 0) {
-      toast.info('No prospects in this sheet');
-      return;
-    }
-    let deleted = 0;
-    for (const prospect of sheetProspects) {
-      const success = await onDelete(prospect.id);
-      if (success) deleted++;
-    }
-    toast.success(`Deleted ${deleted} prospects`);
-  }, [prospects, onDelete]);
-
   const renderSheetTabs = () => {
     if (subFilter !== 'all') return null;
     return (
@@ -455,8 +429,6 @@ export function ProspectTable({
           onAddSheet={onAddSheet}
           onUpdateSheet={onUpdateSheet}
           onDeleteSheet={onDeleteSheet}
-          onSelectAllInSheet={handleSelectAllInSheet}
-          onDeleteAllInSheet={handleDeleteAllInSheet}
         />
       </div>
     );
