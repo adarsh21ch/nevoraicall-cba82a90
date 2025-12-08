@@ -1,19 +1,19 @@
-import { Crown, Sparkles, Check, Calendar } from 'lucide-react';
+import { Crown, Sparkles, Check, Calendar, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
-import { useToast } from '@/hooks/use-toast';
+import { useRazorpay } from '@/hooks/useRazorpay';
 import { format } from 'date-fns';
 
 export function UpgradeCard() {
-  const { isPro, isAdminOverride, daysRemaining, subscription, loading } = useSubscription();
-  const { toast } = useToast();
+  const { isPro, isAdminOverride, daysRemaining, subscription, loading, refetch } = useSubscription();
+  const { initiatePayment, loading: paymentLoading } = useRazorpay();
 
   const handleSubscribe = () => {
-    toast({
-      title: "Opening Payment Gateway",
-      description: "Redirecting to Razorpay for Pro access...",
+    initiatePayment({
+      onSuccess: () => {
+        refetch();
+      },
     });
-    window.open('https://rzp.io/rzp/iQIz9kH', '_blank');
   };
 
   if (loading) return null;
@@ -84,10 +84,20 @@ export function UpgradeCard() {
 
       <Button 
         onClick={handleSubscribe}
+        disabled={paymentLoading}
         className="w-full h-12 text-base font-semibold shadow-lg shadow-primary/30"
       >
-        <Crown className="h-5 w-5 mr-2" />
-        Unlock Pro – ₹249 / 30 days
+        {paymentLoading ? (
+          <>
+            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+            Processing...
+          </>
+        ) : (
+          <>
+            <Crown className="h-5 w-5 mr-2" />
+            Unlock Pro – ₹249 / 30 days
+          </>
+        )}
       </Button>
     </div>
   );
