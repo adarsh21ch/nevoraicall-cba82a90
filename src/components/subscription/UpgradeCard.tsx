@@ -25,14 +25,26 @@ export function UpgradeCard() {
     }
   };
 
+  // Static Razorpay Payment Links for yearly plans
+  const YEARLY_PAYMENT_LINK_NORMAL = 'https://rzp.io/rzp/xWC5fUK8';
+  const YEARLY_PAYMENT_LINK_ACHIEVERS = 'https://rzp.io/rzp/5s1VsH26';
+
   const handleSubscribe = (plan: PlanType) => {
-    initiatePayment({
-      planType: plan,
-      couponCode: plan === 'yearly' && couponApplied && isValidCoupon ? 'ACHIEVERS1000' : undefined,
-      onSuccess: () => {
-        refetch();
-      },
-    });
+    if (plan === 'yearly') {
+      // Use static payment links for yearly plans
+      const paymentLink = couponApplied && isValidCoupon 
+        ? YEARLY_PAYMENT_LINK_ACHIEVERS 
+        : YEARLY_PAYMENT_LINK_NORMAL;
+      window.open(paymentLink, '_blank');
+    } else {
+      // Use existing dynamic flow for monthly plan
+      initiatePayment({
+        planType: plan,
+        onSuccess: () => {
+          refetch();
+        },
+      });
+    }
   };
 
   if (loading) return null;
