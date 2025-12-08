@@ -27,7 +27,7 @@ export function UpgradeCard() {
 
   // Static Razorpay Payment Links for yearly plans
   const YEARLY_PAYMENT_LINK_NORMAL = 'https://rzp.io/rzp/PUPxlHdU';
-  const YEARLY_PAYMENT_LINK_ACHIEVERS = 'https://rzp.io/rzp/5s1VsH26';
+  const YEARLY_PAYMENT_LINK_ACHIEVERS = 'https://rzp.io/rzp/vCeu7H42';
 
   const handleSubscribe = (plan: PlanType) => {
     if (plan === 'yearly') {
