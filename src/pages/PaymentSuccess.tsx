@@ -30,26 +30,27 @@ export default function PaymentSuccess() {
 
   const verifyAndActivate = async () => {
     try {
-      // Get payment_id from query params (static payment links use this)
       const razorpayPaymentId = searchParams.get('razorpay_payment_id');
-      const planType = searchParams.get('plan_type') || 'monthly';
+      const razorpayOrderId = searchParams.get('razorpay_order_id');
+      const razorpaySignature = searchParams.get('razorpay_signature');
 
-      // Check if we have the payment ID
-      if (!razorpayPaymentId) {
-        console.error('Missing payment ID');
+      // Check if we have all required parameters
+      if (!razorpayPaymentId || !razorpayOrderId || !razorpaySignature) {
+        console.error('Missing payment parameters');
         setStatus('missing_params');
         setErrorMessage('Payment information is incomplete. If you completed payment, please contact support.');
         return;
       }
 
-      console.log('Verifying payment...', { razorpayPaymentId, planType });
+      console.log('Verifying payment...', { razorpayPaymentId, razorpayOrderId });
 
-      // Verify payment on server using Razorpay API directly
+      // Verify payment on server
       const { data, error } = await supabase.functions.invoke('verify-razorpay-payment', {
         body: {
+          razorpay_order_id: razorpayOrderId,
           razorpay_payment_id: razorpayPaymentId,
+          razorpay_signature: razorpaySignature,
           user_id: user!.id,
-          plan_type: planType,
         },
       });
 
@@ -65,7 +66,7 @@ export default function PaymentSuccess() {
       
       toast({
         title: "Pro Plan Activated!",
-        description: `Welcome to NevorAI Pro. Enjoy all premium features for ${data.duration_days} days!`,
+        description: "Welcome to NevorAI Pro. Enjoy all premium features for 30 days!",
       });
     } catch (err: any) {
       console.error('Activation error:', err);
@@ -108,8 +109,8 @@ export default function PaymentSuccess() {
             <div className="p-6 rounded-full bg-green-500/10 inline-block">
               <CheckCircle className="h-12 w-12 text-green-500" />
             </div>
-            <h1 className="text-2xl font-bold text-green-600">Pro Unlocked!</h1>
-            <p className="text-muted-foreground">Your Pro plan is now active.</p>
+            <h1 className="text-2xl font-bold text-green-600">Payment Successful!</h1>
+            <p className="text-muted-foreground">Your Pro plan is now active for 30 days.</p>
             
             <div className="bg-card border border-border/50 rounded-2xl p-4 mt-6">
               <div className="flex items-center justify-center gap-2 mb-2">
@@ -117,8 +118,8 @@ export default function PaymentSuccess() {
                 <span className="font-semibold">Pro Features Unlocked</span>
               </div>
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li>✓ Track Up - Funnel & Leads Tracker</li>
-                <li>✓ Todo Up - Activity Center</li>
+                <li>✓ TrackUp - Funnel & Leads Tracker</li>
+                <li>✓ ActionUp - Activity Center</li>
                 <li>✓ Advanced Analytics</li>
               </ul>
             </div>
