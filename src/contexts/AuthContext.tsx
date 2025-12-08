@@ -32,21 +32,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+    let initialSessionChecked = false;
+
+    // Check for existing session FIRST (from localStorage)
+    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
+      if (!initialSessionChecked) {
+        setSession(existingSession);
+        setUser(existingSession?.user ?? null);
+        initialSessionChecked = true;
         setLoading(false);
       }
-    );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
     });
+
+    // Set up auth state listener for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, currentSession) => {
+        // Always update on explicit auth events
+        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
+          setLoading(false);
+          initialSessionChecked = true;
+        } else if (initialSessionChecked) {
+          // Only update for other events after initial check
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
+        }
+      }
+    );
 
     return () => subscription.unsubscribe();
   }, []);
