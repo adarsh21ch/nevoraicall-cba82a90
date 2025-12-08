@@ -187,7 +187,7 @@ export function UpgradeCard() {
           ) : (
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-emerald-600">
-                ✓ ACHIEVERS1000 applied – ₹1,000 OFF!
+                ✓ Coupon applied – ₹1,000 OFF!
               </span>
               <button 
                 type="button"
