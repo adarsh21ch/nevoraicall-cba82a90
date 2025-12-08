@@ -1,28 +1,40 @@
-import { useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
-export type PlanType = 'monthly' | 'yearly';
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
 
 interface RazorpayOptions {
-  planType?: PlanType;
-  couponCode?: string;
   onSuccess?: () => void;
   onError?: (error: string) => void;
 }
 
-// Static payment links for each plan
-const PAYMENT_LINKS = {
-  monthly: 'https://rzp.io/rzp/XgaOULf',           // ₹249
-  yearly: 'https://rzp.io/rzp/uRssDrE',            // ₹2999
-  yearlyDiscounted: 'https://rzp.io/rzp/RTVSZpno', // ₹1999 (Achievers Club)
-};
-
 export function useRazorpay() {
+  const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const initiatePayment = useCallback((options?: RazorpayOptions) => {
+  const loadRazorpayScript = useCallback((): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (window.Razorpay) {
+        resolve(true);
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  }, []);
+
+  const initiatePayment = useCallback(async (options?: RazorpayOptions) => {
     if (!user) {
       toast({
         title: "Login Required",
@@ -32,30 +44,81 @@ export function useRazorpay() {
       return;
     }
 
-    const planType = options?.planType || 'monthly';
-    const couponCode = options?.couponCode;
-    const hasCoupon = planType === 'yearly' && couponCode === 'ACHIEVERS1000';
+    setLoading(true);
 
-    // Determine which link to use
-    let paymentUrl: string;
-    if (planType === 'monthly') {
-      paymentUrl = PAYMENT_LINKS.monthly;
-    } else if (hasCoupon) {
-      paymentUrl = PAYMENT_LINKS.yearlyDiscounted;
-    } else {
-      paymentUrl = PAYMENT_LINKS.yearly;
+    try {
+      // Load Razorpay script
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        throw new Error('Failed to load payment gateway');
+      }
+
+      // Create order via edge function
+      const { data, error } = await supabase.functions.invoke('create-razorpay-order', {
+        body: {
+          user_id: user.id,
+          user_email: user.email,
+        },
+      });
+
+      if (error || !data) {
+        console.error('Order creation error:', error);
+        throw new Error(error?.message || 'Failed to create payment order');
+      }
+
+      const { order_id, amount, currency, key_id } = data;
+
+      // Build callback URL for redirect after payment
+      const callbackUrl = `${window.location.origin}/payment-success`;
+
+      // Open Razorpay checkout with redirect
+      const razorpayOptions = {
+        key: key_id,
+        amount: amount,
+        currency: currency,
+        name: 'NevorAI',
+        description: 'Pro Plan - 30 Days',
+        order_id: order_id,
+        prefill: {
+          email: user.email,
+        },
+        theme: {
+          color: '#3b82f6',
+        },
+        callback_url: callbackUrl,
+        redirect: true,
+        modal: {
+          ondismiss: () => {
+            setLoading(false);
+          },
+        },
+      };
+
+      const razorpay = new window.Razorpay(razorpayOptions);
+      razorpay.on('payment.failed', (response: any) => {
+        console.error('Payment failed:', response.error);
+        toast({
+          title: "Payment Failed",
+          description: response.error?.description || "Something went wrong. Please try again.",
+          variant: "destructive",
+        });
+        options?.onError?.(response.error?.description);
+        setLoading(false);
+      });
+
+      razorpay.open();
+    } catch (err: any) {
+      console.error('Payment initiation error:', err);
+      toast({
+        title: "Payment Error",
+        description: err.message || "Could not initiate payment. Please try again.",
+        variant: "destructive",
+      });
+      options?.onError?.(err.message);
+    } finally {
+      setLoading(false);
     }
+  }, [user, loadRazorpayScript, toast]);
 
-    // Append user email as prefill parameter so webhook can identify the user
-    const userEmail = user.email;
-    if (userEmail) {
-      const separator = paymentUrl.includes('?') ? '&' : '?';
-      paymentUrl = `${paymentUrl}${separator}prefill[email]=${encodeURIComponent(userEmail)}`;
-    }
-
-    // Open payment link in new tab
-    window.open(paymentUrl, '_blank');
-  }, [user, toast]);
-
-  return { initiatePayment, loading: false };
+  return { initiatePayment, loading };
 }

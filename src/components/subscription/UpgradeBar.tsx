@@ -13,7 +13,6 @@ export function UpgradeBar({ onUpgrade }: UpgradeBarProps) {
 
   const handleSubscribe = () => {
     initiatePayment({
-      planType: 'monthly',
       onSuccess: () => {
         if (onUpgrade) onUpgrade();
       },
@@ -35,7 +34,7 @@ export function UpgradeBar({ onUpgrade }: UpgradeBarProps) {
                 🔒 Upgrade to unlock this feature
               </p>
               <p className="text-xs text-primary-foreground/80">
-                Monthly ₹249 (non-refundable) | Yearly ₹2,999 (7-day refund)
+                ₹249 for 30 days
               </p>
             </div>
           </div>
