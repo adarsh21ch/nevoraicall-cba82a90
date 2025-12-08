@@ -9,7 +9,7 @@ export function useEncryption() {
   const encryptFields = async (data: { phone?: string; email?: string }) => {
     try {
       const session = await getSession();
-      if (!session) {
+      if (!session?.access_token) {
         console.warn('No active session for encryption, returning original data');
         return data;
       }
@@ -20,20 +20,20 @@ export function useEncryption() {
 
       if (error) {
         console.error('Encryption error:', error);
-        return data;
+        return data; // Gracefully return original data on error
       }
 
-      return result.encrypted;
+      return result?.encrypted ?? data;
     } catch (err) {
       console.error('Encryption failed:', err);
-      return data;
+      return data; // Gracefully return original data on failure
     }
   };
 
   const decryptFields = async (data: { phone?: string; email?: string }) => {
     try {
       const session = await getSession();
-      if (!session) {
+      if (!session?.access_token) {
         console.warn('No active session for decryption, returning original data');
         return data;
       }
@@ -47,7 +47,7 @@ export function useEncryption() {
         return data;
       }
 
-      return result.decrypted;
+      return result?.decrypted ?? data;
     } catch (err) {
       console.error('Decryption failed:', err);
       return data;
@@ -59,7 +59,7 @@ export function useEncryption() {
 
     try {
       const session = await getSession();
-      if (!session) {
+      if (!session?.access_token) {
         console.warn('No active session for batch decryption, returning original data');
         return records;
       }
@@ -73,7 +73,7 @@ export function useEncryption() {
         return records;
       }
 
-      return result.decrypted;
+      return result?.decrypted ?? records;
     } catch (err) {
       console.error('Batch decryption failed:', err);
       return records;
@@ -85,7 +85,7 @@ export function useEncryption() {
 
     try {
       const session = await getSession();
-      if (!session) {
+      if (!session?.access_token) {
         console.warn('No active session for batch encryption, returning original data');
         return records;
       }
@@ -99,7 +99,7 @@ export function useEncryption() {
         return records;
       }
 
-      return result.encrypted;
+      return result?.encrypted ?? records;
     } catch (err) {
       console.error('Batch encryption failed:', err);
       return records;
