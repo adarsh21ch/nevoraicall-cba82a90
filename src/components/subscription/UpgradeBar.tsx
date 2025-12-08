@@ -1,7 +1,7 @@
-import { Lock, Sparkles } from 'lucide-react';
+import { Lock, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
-import { useToast } from '@/hooks/use-toast';
+import { useRazorpay } from '@/hooks/useRazorpay';
 
 interface UpgradeBarProps {
   onUpgrade?: () => void;
@@ -9,15 +9,14 @@ interface UpgradeBarProps {
 
 export function UpgradeBar({ onUpgrade }: UpgradeBarProps) {
   const { isPro, loading } = useSubscription();
-  const { toast } = useToast();
+  const { initiatePayment, loading: paymentLoading } = useRazorpay();
 
   const handleSubscribe = () => {
-    toast({
-      title: "Opening Payment Gateway",
-      description: "Redirecting to Razorpay for Pro access...",
+    initiatePayment({
+      onSuccess: () => {
+        if (onUpgrade) onUpgrade();
+      },
     });
-    window.open('https://rzp.io/rzp/iQIz9kH', '_blank');
-    if (onUpgrade) onUpgrade();
   };
 
   if (loading || isPro) return null;
@@ -41,12 +40,19 @@ export function UpgradeBar({ onUpgrade }: UpgradeBarProps) {
           </div>
           <Button 
             onClick={handleSubscribe}
+            disabled={paymentLoading}
             variant="secondary"
             size="sm"
             className="shrink-0 font-semibold"
           >
-            <Sparkles className="h-4 w-4 mr-1" />
-            Unlock Pro
+            {paymentLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 mr-1" />
+                Unlock Pro
+              </>
+            )}
           </Button>
         </div>
       </div>

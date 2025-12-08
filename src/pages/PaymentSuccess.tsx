@@ -14,7 +14,7 @@ export default function PaymentSuccess() {
   const { user, loading: authLoading } = useAuth();
   const { refetch } = useSubscription();
   const { toast } = useToast();
-  const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
+  const [status, setStatus] = useState<'processing' | 'success' | 'error' | 'missing_params'>('processing');
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
@@ -24,32 +24,39 @@ export default function PaymentSuccess() {
     }
 
     if (user) {
-      activateProSubscription();
+      verifyAndActivate();
     }
   }, [user, authLoading]);
 
-  const activateProSubscription = async () => {
+  const verifyAndActivate = async () => {
     try {
-      const paymentId = searchParams.get('razorpay_payment_id') || searchParams.get('payment_id') || `manual_${Date.now()}`;
-      
-      const now = new Date();
-      const expiresAt = new Date(now);
-      expiresAt.setDate(expiresAt.getDate() + 30); // 30 days from now
+      const razorpayPaymentId = searchParams.get('razorpay_payment_id');
+      const razorpayOrderId = searchParams.get('razorpay_order_id');
+      const razorpaySignature = searchParams.get('razorpay_signature');
 
-      const { error } = await supabase
-        .from('user_subscriptions')
-        .update({
-          plan: 'pro',
-          status: 'active',
-          subscribed_at: now.toISOString(),
-          expires_at: expiresAt.toISOString(),
-          payment_id: paymentId,
-        })
-        .eq('user_id', user!.id);
+      // Check if we have all required parameters
+      if (!razorpayPaymentId || !razorpayOrderId || !razorpaySignature) {
+        console.error('Missing payment parameters');
+        setStatus('missing_params');
+        setErrorMessage('Payment information is incomplete. If you completed payment, please contact support.');
+        return;
+      }
 
-      if (error) {
-        console.error('Error activating subscription:', error);
-        setErrorMessage(error.message);
+      console.log('Verifying payment...', { razorpayPaymentId, razorpayOrderId });
+
+      // Verify payment on server
+      const { data, error } = await supabase.functions.invoke('verify-razorpay-payment', {
+        body: {
+          razorpay_order_id: razorpayOrderId,
+          razorpay_payment_id: razorpayPaymentId,
+          razorpay_signature: razorpaySignature,
+          user_id: user!.id,
+        },
+      });
+
+      if (error || !data?.success) {
+        console.error('Verification failed:', error || data);
+        setErrorMessage(error?.message || data?.error || 'Payment verification failed');
         setStatus('error');
         return;
       }
@@ -92,8 +99,8 @@ export default function PaymentSuccess() {
             <div className="p-6 rounded-full bg-primary/10 inline-block">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
             </div>
-            <h1 className="text-2xl font-bold">Activating Pro Plan...</h1>
-            <p className="text-muted-foreground">Please wait while we process your subscription.</p>
+            <h1 className="text-2xl font-bold">Verifying Payment...</h1>
+            <p className="text-muted-foreground">Please wait while we confirm your payment.</p>
           </div>
         )}
 
@@ -126,17 +133,40 @@ export default function PaymentSuccess() {
           </div>
         )}
 
+        {status === 'missing_params' && (
+          <div className="text-center space-y-4">
+            <div className="p-6 rounded-full bg-amber-500/10 inline-block">
+              <XCircle className="h-12 w-12 text-amber-500" />
+            </div>
+            <h1 className="text-2xl font-bold text-amber-600">Payment Incomplete</h1>
+            <p className="text-muted-foreground">{errorMessage}</p>
+            
+            <div className="space-y-2 mt-6">
+              <Button 
+                onClick={() => navigate('/profile')} 
+                className="w-full h-12"
+              >
+                Go to Profile
+              </Button>
+            </div>
+            
+            <p className="text-xs text-muted-foreground mt-4">
+              If you've completed payment, please contact teamnevorai@gmail.com with your payment details.
+            </p>
+          </div>
+        )}
+
         {status === 'error' && (
           <div className="text-center space-y-4">
             <div className="p-6 rounded-full bg-destructive/10 inline-block">
               <XCircle className="h-12 w-12 text-destructive" />
             </div>
-            <h1 className="text-2xl font-bold text-destructive">Activation Failed</h1>
+            <h1 className="text-2xl font-bold text-destructive">Verification Failed</h1>
             <p className="text-muted-foreground">{errorMessage || 'Something went wrong. Please contact support.'}</p>
             
             <div className="space-y-2 mt-6">
               <Button 
-                onClick={activateProSubscription} 
+                onClick={verifyAndActivate} 
                 className="w-full h-12"
               >
                 Try Again
