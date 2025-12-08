@@ -1,30 +1,19 @@
-import { Crown, Sparkles, Check, Calendar, Loader2, Star, Tag, RefreshCw } from 'lucide-react';
+import { Crown, Sparkles, Check, Calendar, Star, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useSubscription } from '@/hooks/useSubscription';
-import { useRazorpay } from '@/hooks/useRazorpay';
 import { format } from 'date-fns';
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 type PlanType = 'monthly' | 'yearly';
 
 export function UpgradeCard() {
-  const { isPro, isAdminOverride, daysRemaining, subscription, loading, refetch } = useSubscription();
-  const { initiatePayment, loading: paymentLoading } = useRazorpay();
+  const { isPro, isAdminOverride, daysRemaining, subscription, loading } = useSubscription();
   const [selectedPlan, setSelectedPlan] = useState<PlanType>('yearly');
   const [couponCode, setCouponCode] = useState('');
   const [couponApplied, setCouponApplied] = useState(false);
-  const [isCheckingPayment, setIsCheckingPayment] = useState(false);
-  const [showPaymentPending, setShowPaymentPending] = useState(false);
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
-
-  // Reset payment pending state when component mounts (fresh start)
-  useEffect(() => {
-    setShowPaymentPending(false);
-    setIsCheckingPayment(false);
-  }, []);
 
   const isValidCoupon = couponCode.trim().toUpperCase() === 'ACHIEVERS1000';
   const yearlyPrice = couponApplied && isValidCoupon ? 1999 : 2999;
@@ -36,94 +25,12 @@ export function UpgradeCard() {
     }
   };
 
-  // Static Razorpay Payment Links for yearly plans
-  const YEARLY_PAYMENT_LINK_NORMAL = 'https://rzp.io/rzp/OkNwt2i1';
-  const YEARLY_PAYMENT_LINK_ACHIEVERS = 'https://rzp.io/rzp/NOWnMIP';
-
-  // Stop polling when component unmounts or user becomes Pro
-  useEffect(() => {
-    return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-      }
-    };
-  }, []);
-
-  // Stop polling and show success when user becomes Pro
-  useEffect(() => {
-    if (isPro && pollIntervalRef.current) {
-      clearInterval(pollIntervalRef.current);
-      pollIntervalRef.current = null;
-      setIsCheckingPayment(false);
-      setShowPaymentPending(false);
-      toast({
-        title: "Pro Activated!",
-        description: "Your Pro subscription is now active. Enjoy all premium features!",
-      });
-    }
-  }, [isPro, toast]);
-
-  // Start polling for subscription updates after payment link is opened
-  const startPollingForPayment = () => {
-    setShowPaymentPending(true);
-    // Poll every 5 seconds for 3 minutes
-    let pollCount = 0;
-    const maxPolls = 36; // 36 * 5 seconds = 3 minutes
-    
-    pollIntervalRef.current = setInterval(async () => {
-      pollCount++;
-      await refetch();
-      
-      if (pollCount >= maxPolls) {
-        if (pollIntervalRef.current) {
-          clearInterval(pollIntervalRef.current);
-          pollIntervalRef.current = null;
-        }
-      }
-    }, 5000);
-  };
-
-  const handleManualCheck = async () => {
-    setIsCheckingPayment(true);
-    await refetch();
-    setTimeout(() => setIsCheckingPayment(false), 1000);
-    
-    if (!isPro) {
-      toast({
-        title: "Payment Not Yet Confirmed",
-        description: "If you completed payment, please wait a moment and try again. Contact support if the issue persists.",
-        variant: "destructive",
-      });
-    }
-  };
-
+  // Payment links temporarily disabled - show coming soon message
   const handleSubscribe = (plan: PlanType) => {
-    // ALWAYS open payment - never skip based on any cached state
-    if (plan === 'yearly') {
-      // Use static payment links for yearly plans
-      const paymentLink = couponApplied && isValidCoupon 
-        ? YEARLY_PAYMENT_LINK_ACHIEVERS 
-        : YEARLY_PAYMENT_LINK_NORMAL;
-      
-      // Force open the payment link in new tab
-      const newWindow = window.open(paymentLink, '_blank');
-      if (!newWindow) {
-        // Fallback if popup blocked - navigate directly
-        window.location.href = paymentLink;
-        return;
-      }
-      
-      // Start polling for payment confirmation
-      startPollingForPayment();
-    } else {
-      // Use existing dynamic flow for monthly plan
-      initiatePayment({
-        planType: plan,
-        onSuccess: () => {
-          refetch();
-        },
-      });
-    }
+    toast({
+      title: "Coming Soon",
+      description: "Payment integration is being updated. Please check back later.",
+    });
   };
 
   if (loading) return null;
@@ -296,58 +203,14 @@ export function UpgradeCard() {
 
       <Button 
         onClick={() => handleSubscribe(selectedPlan)}
-        disabled={paymentLoading || isCheckingPayment}
         className="w-full h-12 text-base font-semibold shadow-lg shadow-primary/30"
       >
-        {paymentLoading ? (
-          <>
-            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-            Processing...
-          </>
-        ) : (
-          <>
-            <Crown className="h-5 w-5 mr-2" />
-            {selectedPlan === 'yearly' 
-              ? `Unlock Pro Yearly – ₹${yearlyPrice.toLocaleString()}` 
-              : 'Unlock Pro Monthly – ₹249'
-            }
-          </>
-        )}
+        <Crown className="h-5 w-5 mr-2" />
+        {selectedPlan === 'yearly' 
+          ? `Unlock Pro Yearly – ₹${yearlyPrice.toLocaleString()}` 
+          : 'Unlock Pro Monthly – ₹249'
+        }
       </Button>
-
-      {/* Payment Pending Section - Shows after clicking yearly payment link */}
-      {showPaymentPending && !isPro && (
-        <div className="mt-4 p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
-          <div className="flex items-center gap-2 mb-3">
-            <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
-            <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
-              Waiting for payment confirmation...
-            </span>
-          </div>
-          <p className="text-xs text-muted-foreground mb-3">
-            Complete your payment in the Razorpay window. Your Pro access will be activated automatically within a few moments after payment.
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleManualCheck}
-            disabled={isCheckingPayment}
-            className="w-full"
-          >
-            {isCheckingPayment ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Checking...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Check Payment Status
-              </>
-            )}
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
