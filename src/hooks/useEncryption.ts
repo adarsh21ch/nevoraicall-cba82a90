@@ -48,8 +48,17 @@ export function useEncryption() {
       });
 
       if (error) {
-        // If it's an auth error and we have retries left, refresh and retry
-        if (retries > 0 && (error.message?.includes('401') || error.message?.includes('token') || error.message?.includes('Unauthorized') || error.message?.includes('Invalid'))) {
+        // Check for auth errors - look in message, status, and context
+        const isAuthError = 
+          error.message?.includes('401') || 
+          error.message?.includes('token') || 
+          error.message?.includes('Unauthorized') || 
+          error.message?.includes('Invalid') ||
+          error.message?.includes('non-2xx') ||
+          (error as any).status === 401 ||
+          (error as any).context?.status === 401;
+
+        if (retries > 0 && isAuthError) {
           console.log(`Auth error on ${action}, refreshing session and retrying... (${retries} retries left)`);
           const { error: refreshError } = await supabase.auth.refreshSession();
           if (refreshError) {
