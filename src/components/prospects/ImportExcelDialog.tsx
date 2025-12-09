@@ -141,13 +141,9 @@ export function ImportExcelDialog({ onImport, availableSlots = Infinity, isAtLim
         return;
       }
 
-      // Generate column names as "Column A", "Column B", etc.
+      // Generate column names as "Column 1", "Column 2", etc. (easier for mobile users)
       const maxCols = Math.max(...rawData.map(row => row.length));
-      const cols = Array.from({ length: maxCols }, (_, i) => {
-        const letter = String.fromCharCode(65 + (i % 26));
-        const prefix = i >= 26 ? String.fromCharCode(65 + Math.floor(i / 26) - 1) : '';
-        return `Column ${prefix}${letter}`;
-      });
+      const cols = Array.from({ length: maxCols }, (_, i) => `Column ${i + 1}`);
       
       // Convert raw array data to objects with column keys
       const jsonData: Record<string, string>[] = rawData
@@ -316,69 +312,83 @@ export function ImportExcelDialog({ onImport, availableSlots = Infinity, isAtLim
 
           {step === 'mapping' && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                {(Object.keys(mapping) as (keyof ColumnMapping)[]).map((field) => (
-                  <div key={field} className="space-y-1.5">
-                    <Label className="text-xs">{FIELD_LABELS[field]}</Label>
-                    <Select
-                      value={mapping[field] || '__none__'}
-                      onValueChange={(value) => setMapping({ ...mapping, [field]: value === '__none__' ? null : value })}
-                    >
-                      <SelectTrigger className="h-9 text-xs">
-                        <SelectValue placeholder="Select column..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border-border z-50">
-                        <SelectItem value="__none__">None</SelectItem>
-                        {columns.map((col) => (
-                          <SelectItem key={col} value={col} className="text-xs">
-                            {col}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
+              {/* Column Mapping Section - Fixed at top */}
+              <div className="bg-muted/30 rounded-lg p-3 border border-border">
+                <p className="text-xs text-muted-foreground mb-3">
+                  Select which column contains each field. Scroll preview below to see your data.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {(Object.keys(mapping) as (keyof ColumnMapping)[]).map((field) => (
+                    <div key={field} className="flex items-center gap-2">
+                      <Label className="text-xs min-w-[80px] shrink-0">{FIELD_LABELS[field]}</Label>
+                      <Select
+                        value={mapping[field] || '__none__'}
+                        onValueChange={(value) => setMapping({ ...mapping, [field]: value === '__none__' ? null : value })}
+                      >
+                        <SelectTrigger className="h-8 text-xs flex-1">
+                          <SelectValue placeholder="Select..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border-border z-50">
+                          <SelectItem value="__none__">None</SelectItem>
+                          {columns.map((col) => (
+                            <SelectItem key={col} value={col} className="text-xs">
+                              {col}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
+                </div>
               </div>
 
+              {/* Preview Section - Scrollable */}
               <div className="space-y-2">
-                <Label className="text-xs">Preview (first 5 rows) - Scroll horizontally to see all columns →</Label>
-                <div className="border border-border rounded-lg overflow-x-auto max-h-[200px] overflow-y-auto relative">
-                  <table className="text-xs min-w-max">
-                    <thead className="bg-muted sticky top-0">
-                      <tr>
-                        {columns.map((col) => (
-                          <th key={col} className="px-3 py-1.5 text-left font-medium whitespace-nowrap min-w-[100px]">
-                            {col}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {previewData.map((row, i) => (
-                        <tr key={i} className="border-t border-border">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Data Preview (scroll to see all columns →)</Label>
+                  <span className="text-xs text-muted-foreground">{columns.length} columns</span>
+                </div>
+                <div className="border border-border rounded-lg overflow-hidden">
+                  <div className="overflow-x-auto overflow-y-auto max-h-[180px]">
+                    <table className="text-xs w-max">
+                      <thead className="bg-muted sticky top-0 z-10">
+                        <tr>
                           {columns.map((col) => (
-                            <td key={col} className="px-3 py-1.5 whitespace-nowrap min-w-[100px] max-w-[200px] truncate">
-                              {row[col]}
-                            </td>
+                            <th key={col} className="px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[80px] border-r border-border last:border-r-0">
+                              {col}
+                            </th>
                           ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {previewData.map((row, i) => (
+                          <tr key={i} className="border-t border-border">
+                            {columns.map((col) => (
+                              <td key={col} className="px-2 py-1.5 whitespace-nowrap min-w-[80px] max-w-[150px] truncate border-r border-border last:border-r-0">
+                                {row[col] || '–'}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Total: {fullData.length} rows
+                  Showing first 5 of {fullData.length} rows
                   {availableSlots < Infinity && availableSlots < fullData.length && (
-                    <span className="text-amber-600"> (Only {importableCount} will be imported due to free limit)</span>
+                    <span className="text-amber-600"> • Only {importableCount} will be imported (free limit)</span>
                   )}
                 </p>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={resetState}>
+              {/* Action Buttons */}
+              <div className="flex justify-between gap-2 pt-2 border-t border-border">
+                <Button variant="outline" size="sm" onClick={resetState}>
                   Back
                 </Button>
                 <Button
+                  size="sm"
                   onClick={handleImport}
                   disabled={isImporting || !mapping.name || !mapping.phone}
                 >
