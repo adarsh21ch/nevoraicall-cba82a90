@@ -24,6 +24,47 @@ async function verifySignature(payload: string, signature: string, secret: strin
   return expectedSignature === signature;
 }
 
+// Get plan duration based on amount
+function getPlanDuration(amountInPaise: number): number {
+  // ₹249 (24900 paise) = monthly (30 days)
+  // ₹1999 (199900 paise) = yearly discounted (365 days)
+  // ₹2999 (299900 paise) = yearly (365 days)
+  if (amountInPaise >= 199900) {
+    return 365; // yearly
+  }
+  return 30; // monthly
+}
+
+// Log payment to database
+async function logPayment(
+  supabase: any, 
+  eventType: string, 
+  userEmail: string | null, 
+  paymentId: string | null, 
+  amount: number | null, 
+  status: string, 
+  actionTaken: string,
+  userId: string | null = null,
+  foundUser: boolean = false,
+  rawPayload: any = null
+) {
+  try {
+    await supabase.from('payments_log').insert({
+      event_type: eventType,
+      user_email: userEmail,
+      razorpay_payment_id: paymentId,
+      amount: amount,
+      status: status,
+      action_taken: actionTaken,
+      user_id: userId,
+      found_user: foundUser,
+      raw_payload: rawPayload,
+    });
+  } catch (err) {
+    console.error('Failed to log payment:', err);
+  }
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -36,6 +77,11 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
+
+  // Initialize Supabase client with service role
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
     const webhookSecret = Deno.env.get('RAZORPAY_WEBHOOK_SECRET');
@@ -89,30 +135,33 @@ Deno.serve(async (req) => {
         });
       }
 
-      const email = payment.email;
       const paymentId = payment.id;
       const amount = payment.amount; // in paise
+      const notes = payment.notes || {};
 
-      console.log(`Payment captured: ${paymentId}, email: ${email}, amount: ${amount}`);
+      // Try to get email from multiple sources:
+      // 1. payment.notes.user_email (from our dynamic order)
+      // 2. payment.email (from Razorpay)
+      const email = notes.user_email || payment.email;
+
+      console.log(`Payment captured: ${paymentId}, email: ${email}, amount: ${amount}, notes:`, JSON.stringify(notes));
 
       if (!email) {
-        console.error('No email in payment entity');
-        return new Response(JSON.stringify({ error: 'No email in payment' }), {
-          status: 400,
+        console.error('No email in payment entity or notes');
+        await logPayment(supabase, 'payment.captured', null, paymentId, amount, 'error', 'No email found', null, false, payload);
+        // Return 200 to prevent Razorpay from retrying
+        return new Response(JSON.stringify({ error: 'No email in payment - cannot identify user' }), {
+          status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
-
-      // Initialize Supabase client with service role
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
       // Find the user by email
       const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
       
       if (userError) {
         console.error('Error fetching users:', userError);
+        await logPayment(supabase, 'payment.captured', email, paymentId, amount, 'error', 'Failed to fetch users', null, false, payload);
         return new Response(JSON.stringify({ error: 'Failed to fetch users' }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -123,21 +172,24 @@ Deno.serve(async (req) => {
       
       if (!user) {
         console.error(`User not found for email: ${email}`);
+        await logPayment(supabase, 'payment.captured', email, paymentId, amount, 'error', 'User not found', null, false, payload);
+        // Return 200 to prevent retries
         return new Response(JSON.stringify({ error: 'User not found' }), {
-          status: 404,
+          status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
       console.log(`Found user: ${user.id} for email: ${email}`);
 
-      // Calculate expiration (30 days from now)
+      // Calculate expiration based on plan duration
+      const durationDays = notes.duration_days ? parseInt(notes.duration_days) : getPlanDuration(amount);
       const now = new Date();
       const expiresAt = new Date(now);
-      expiresAt.setDate(expiresAt.getDate() + 30);
+      expiresAt.setDate(expiresAt.getDate() + durationDays);
 
-      // Hash the payment ID for security (store only last 4 chars as reference)
-      const paymentReference = paymentId.slice(-4);
+      // Store payment reference (last 4 chars for support)
+      const paymentReference = paymentId;
 
       // Update or insert subscription
       const { data: existingSub } = await supabase
@@ -145,6 +197,8 @@ Deno.serve(async (req) => {
         .select('id')
         .eq('user_id', user.id)
         .maybeSingle();
+
+      const planLabel = durationDays > 30 ? 'yearly' : 'monthly';
 
       if (existingSub) {
         // Update existing subscription
@@ -162,13 +216,15 @@ Deno.serve(async (req) => {
 
         if (updateError) {
           console.error('Error updating subscription:', updateError);
+          await logPayment(supabase, 'payment.captured', email, paymentId, amount, 'error', 'Failed to update subscription', user.id, true, null);
           return new Response(JSON.stringify({ error: 'Failed to update subscription' }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
         }
 
-        console.log(`Updated subscription to Pro for user: ${user.id}`);
+        console.log(`Updated subscription to Pro (${durationDays} days) for user: ${user.id}`);
+        await logPayment(supabase, 'payment.captured', email, paymentId, amount, 'success', `Updated to Pro (${durationDays} days)`, user.id, true, null);
       } else {
         // Insert new subscription
         const { error: insertError } = await supabase
@@ -184,19 +240,22 @@ Deno.serve(async (req) => {
 
         if (insertError) {
           console.error('Error inserting subscription:', insertError);
+          await logPayment(supabase, 'payment.captured', email, paymentId, amount, 'error', 'Failed to create subscription', user.id, true, null);
           return new Response(JSON.stringify({ error: 'Failed to create subscription' }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
         }
 
-        console.log(`Created Pro subscription for user: ${user.id}`);
+        console.log(`Created Pro subscription (${durationDays} days) for user: ${user.id}`);
+        await logPayment(supabase, 'payment.captured', email, paymentId, amount, 'success', `Created Pro (${durationDays} days)`, user.id, true, null);
       }
 
       return new Response(JSON.stringify({ 
         success: true, 
         message: 'User marked as Pro',
         user_id: user.id,
+        plan: planLabel,
         expires_at: expiresAt.toISOString()
       }), {
         status: 200,
