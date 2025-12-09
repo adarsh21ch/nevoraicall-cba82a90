@@ -10,7 +10,8 @@ import { UpgradeCard } from '@/components/subscription/UpgradeCard';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User, LogOut, ChevronRight, Crown, Phone, Building2, MapPin, Loader2, FileText, Shield, Receipt, Mail, Settings, CheckCircle } from 'lucide-react';
+import { User, LogOut, ChevronRight, Crown, Phone, Building2, MapPin, Loader2, FileText, Shield, Receipt, Mail, Settings, CheckCircle, Copy, Check, Users } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
 
@@ -68,6 +69,16 @@ export default function Profile() {
   const { isAdmin } = useAdmin();
   const { isPro, isAdminOverride, daysRemaining, subscription, loading: subLoading } = useSubscription();
   const [editOpen, setEditOpen] = useState(false);
+  const [copiedId, setCopiedId] = useState(false);
+
+  const handleCopyNeveraiId = async () => {
+    if (profile?.neverai_id) {
+      await navigator.clipboard.writeText(profile.neverai_id);
+      setCopiedId(true);
+      toast.success('NeverAI ID copied');
+      setTimeout(() => setCopiedId(false), 2000);
+    }
+  };
 
   // Pull-to-refresh
   const handleRefresh = useCallback(async () => {
@@ -163,6 +174,34 @@ export default function Profile() {
             <div className="absolute -right-8 -bottom-8 w-32 h-32 rounded-full bg-primary/5" />
             <div className="absolute -right-4 -top-4 w-16 h-16 rounded-full bg-primary/5" />
           </div>
+
+          {/* NeverAI ID Card */}
+          {profile?.neverai_id && (
+            <div className="rounded-2xl p-4 bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/20">
+                    <Users className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Your NeverAI ID</p>
+                    <p className="text-sm font-mono font-semibold">{profile.neverai_id}</p>
+                  </div>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={handleCopyNeveraiId}
+                  className="h-9 w-9"
+                >
+                  {copiedId ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Share this ID in ListUp → Team to let others view your Follow Up data
+              </p>
+            </div>
+          )}
 
           {/* Upgrade Card */}
           <UpgradeCard />
