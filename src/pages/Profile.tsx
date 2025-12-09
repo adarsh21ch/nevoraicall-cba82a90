@@ -132,6 +132,7 @@ export default function Profile() {
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-lg truncate">{displayName}</p>
                 <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+                {/* V1 LAUNCH: Plan status hidden - code preserved for future restoration
                 <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                   {isPro ? (
                     <>
@@ -155,6 +156,7 @@ export default function Profile() {
                     </div>
                   )}
                 </div>
+                */}
               </div>
             </div>
             {/* Decorative elements */}
