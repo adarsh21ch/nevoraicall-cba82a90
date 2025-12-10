@@ -213,14 +213,16 @@ export default function Home() {
                   
                   {activities.map((activity, index) => <div key={`${activity.type}-${activity.id}`} className="relative flex gap-3 pb-4 last:pb-0">
                       {/* Time label - left aligned */}
-                      <div className="shrink-0 w-12 pt-0.5 rounded-none opacity-100 shadow-none">
+                      <div className="shrink-0 w-12 pt-0.5">
                         <span className="text-[10px] text-muted-foreground/80 font-medium block text-right px-0 my-[20px]">
                           {format(activity.time, 'h:mm a')}
                         </span>
                       </div>
                       
                       {/* Timeline connector with dot */}
-                      
+                      <div className="relative shrink-0 w-4 justify-center flex flex-row my-[20px]">
+                        <div className="w-2 h-2 rounded-full bg-primary/60 mt-1.5 z-10 ring-2 ring-card" />
+                      </div>
                       
                       {/* Activity content */}
                       <div className="flex-1 min-w-0">
