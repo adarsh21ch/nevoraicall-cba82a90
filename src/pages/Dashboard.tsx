@@ -3,14 +3,12 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProspects } from '@/hooks/useProspects';
-import { useSharedProspects } from '@/hooks/useSharedProspects';
 import { useSheets } from '@/hooks/useSheets';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { ProspectTable } from '@/components/prospects/ProspectTable';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { BottomViewToggle } from '@/components/ui/BottomViewToggle';
 import { FilterTagSetupDialog, useFilterTagSetup } from '@/components/prospects/FilterTagSetupDialog';
-import { TeamBar } from '@/components/team/TeamBar';
 import { Loader2, Phone, GitBranch } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
@@ -91,24 +89,8 @@ function usePullToRefresh(onRefresh: () => Promise<void>, threshold = 100) {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { prospects: myProspects, loading, addProspect, updateProspect, deleteProspect, bulkDeleteProspects, restoreProspect, restoreProspects, importProspects, reorderProspects, refetch } = useProspects();
+  const { prospects, loading, addProspect, updateProspect, deleteProspect, bulkDeleteProspects, restoreProspect, restoreProspects, importProspects, reorderProspects, refetch } = useProspects();
   const { sheets, selectedSheetId, setSelectedSheetId, addSheet, updateSheet, deleteSheet, refetch: refetchSheets } = useSheets();
-  
-  // Team data
-  const { 
-    sharedOwners, 
-    selectedOwnerIds, 
-    toggleOwnerSelection, 
-    clearSelection, 
-    selectAllOwners,
-    prospects: sharedProspects, 
-    loading: sharedLoading, 
-    refetchProspects 
-  } = useSharedProspects();
-  
-  // Determine which prospects to show
-  const isViewingTeam = selectedOwnerIds.length > 0;
-  const prospects = isViewingTeam ? sharedProspects : myProspects;
   
   // Main tab state - Calling is default
   const [mainTab, setMainTab] = useState<'leads' | 'funnel'>('leads');
@@ -127,12 +109,8 @@ export default function Dashboard() {
 
   // Pull-to-refresh
   const handleRefresh = useCallback(async () => {
-    if (isViewingTeam) {
-      await refetchProspects?.();
-    } else {
-      await Promise.all([refetch?.(), refetchSheets?.()]);
-    }
-  }, [refetch, refetchSheets, refetchProspects, isViewingTeam]);
+    await Promise.all([refetch?.(), refetchSheets?.()]);
+  }, [refetch, refetchSheets]);
   const { containerRef, isRefreshing, pullDistance, showIndicator } = usePullToRefresh(handleRefresh);
 
   useEffect(() => {
@@ -141,9 +119,7 @@ export default function Dashboard() {
     }
   }, [user, authLoading, navigate]);
 
-  const isLoading = authLoading || loading || (isViewingTeam && sharedLoading);
-  
-  if (isLoading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -172,21 +148,9 @@ export default function Dashboard() {
               />
               <div>
                 <h1 className="text-xl font-bold tracking-tight">Calling</h1>
-                <p className="text-xs text-muted-foreground font-medium">
-                  {isViewingTeam ? 'Viewing team data' : 'Manage your prospects'}
-                </p>
+                <p className="text-xs text-muted-foreground font-medium">Manage your prospects</p>
               </div>
             </div>
-            {/* Team Selector */}
-            <TeamBar
-              sharedOwners={sharedOwners}
-              selectedOwnerIds={selectedOwnerIds}
-              onToggle={toggleOwnerSelection}
-              onClear={clearSelection}
-              onSelectAll={selectAllOwners}
-              prospectsCount={sharedProspects.length}
-              currentTab="calling"
-            />
           </div>
         </header>
 

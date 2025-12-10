@@ -3,13 +3,12 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTodos } from '@/hooks/useTodos';
-import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { Loader2, CheckCircle, Trash2, Edit2, Send, X, Check, Plus, Mic, MicOff } from 'lucide-react';
+import { Loader2, CheckCircle, Trash2, Edit2, Send, X, Check, Plus } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
@@ -69,25 +68,6 @@ export default function TodoUp() {
   const [newTodoInput, setNewTodoInput] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
-  
-  // Speech recognition for voice input
-  const { isListening, isSupported, transcript, startListening, stopListening, resetTranscript } = useSpeechRecognition();
-  
-  // Update input when transcript changes
-  useEffect(() => {
-    if (transcript) {
-      setNewTodoInput(prev => prev + transcript);
-      resetTranscript();
-    }
-  }, [transcript, resetTranscript]);
-  
-  const handleMicClick = () => {
-    if (isListening) {
-      stopListening();
-    } else {
-      startListening();
-    }
-  };
 
   // Pull-to-refresh
   const handleRefresh = useCallback(async () => {
@@ -330,7 +310,7 @@ export default function TodoUp() {
             <input
               id="todo-input"
               type="text"
-              placeholder={isListening ? "Listening..." : "Add a to-do task or reminder..."}
+              placeholder="Add a to-do task or reminder..."
               value={newTodoInput}
               onChange={(e) => setNewTodoInput(e.target.value)}
               onKeyDown={(e) => {
@@ -338,24 +318,6 @@ export default function TodoUp() {
               }}
               className="flex-1 bg-transparent border-0 outline-none text-sm placeholder:text-muted-foreground/60"
             />
-            {/* Mic button - only show if supported */}
-            {isSupported && (
-              <Button
-                onClick={handleMicClick}
-                variant={isListening ? "default" : "ghost"}
-                size="icon"
-                className={cn(
-                  "h-8 w-8 rounded-full shrink-0 transition-all",
-                  isListening && "bg-red-500 hover:bg-red-600 animate-pulse"
-                )}
-              >
-                {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-              </Button>
-            )}
-            {/* Show small message if not supported */}
-            {!isSupported && (
-              <span className="text-[10px] text-muted-foreground/50 hidden sm:inline">No mic</span>
-            )}
             <Button
               onClick={handleAddTodo}
               disabled={!newTodoInput.trim()}
