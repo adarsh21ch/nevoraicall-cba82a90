@@ -244,10 +244,18 @@ export function useSharedProspects() {
     }
   }, [user, fetchSharedOwners, initialLoadDone]);
 
-  // Update prospects when selection changes
+  // Update prospects when selection changes - use selectedOwnerIds as dependency directly
   useEffect(() => {
+    // Only update if we have selections or need to clear
+    if (selectedOwnerIds.length === 0) {
+      setProspects([]);
+      setLoading(false);
+      return;
+    }
+    
     updateCombinedProspects();
-  }, [updateCombinedProspects]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedOwnerIds]);
 
   // Toggle a single owner selection - debounced to prevent rapid switches
   const toggleOwnerSelection = useCallback((ownerId: string) => {

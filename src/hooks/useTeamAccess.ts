@@ -33,6 +33,7 @@ interface PendingRequest {
   owner_display_name: string | null;
   owner_nevorid: string | null;
   created_at: string;
+  allowed_tabs: TabPermission[] | null;
 }
 
 export function useTeamAccess() {
@@ -131,7 +132,7 @@ export function useTeamAccess() {
     
     const { data: accessRecords } = await supabase
       .from('team_access')
-      .select('id, owner_user_id, created_at')
+      .select('id, owner_user_id, created_at, allowed_tabs')
       .eq('shared_with_user_id', user.id)
       .eq('status', 'pending');
     
@@ -148,7 +149,8 @@ export function useTeamAccess() {
           owner_user_id: r.owner_user_id,
           owner_display_name: profiles.find(p => p.user_id === r.owner_user_id)?.display_name || 'Unknown',
           owner_nevorid: profiles.find(p => p.user_id === r.owner_user_id)?.neverai_id || null,
-          created_at: r.created_at
+          created_at: r.created_at,
+          allowed_tabs: r.allowed_tabs as TabPermission[] | null
         })));
       }
     } else {
@@ -172,7 +174,7 @@ export function useTeamAccess() {
   }, [refetch]);
 
   // Member initiates sharing with a leader by entering leader's NevorID
-  const shareWithLeader = async (leaderNevorId: string) => {
+  const shareWithLeader = async (leaderNevorId: string, allowedTabs?: TabPermission[] | null) => {
     if (!user) return { success: false, error: 'Not authenticated' };
     
     // Look up leader by NevorID
@@ -205,11 +207,14 @@ export function useTeamAccess() {
       if (existing.status === 'pending') {
         return { success: false, error: 'Share request already pending' };
       }
-      // If revoked, update back to pending
+      // If revoked, update back to pending with new tab permissions
       if (existing.status === 'revoked') {
         const { error } = await supabase
           .from('team_access')
-          .update({ status: 'pending' })
+          .update({ 
+            status: 'pending',
+            allowed_tabs: allowedTabs === undefined ? null : allowedTabs
+          })
           .eq('id', existing.id);
         
         if (error) {
@@ -222,13 +227,14 @@ export function useTeamAccess() {
       }
     }
 
-    // Create new share request
+    // Create new share request with allowed_tabs (null means all tabs)
     const { error } = await supabase
       .from('team_access')
       .insert({
         owner_user_id: user.id,
         shared_with_user_id: leaderUserId,
-        status: 'pending'
+        status: 'pending',
+        allowed_tabs: allowedTabs === undefined ? null : allowedTabs
       });
 
     if (error) {
@@ -236,7 +242,7 @@ export function useTeamAccess() {
     }
 
     await fetchTeamMembers();
-    toast.success(`Share request sent to ${leaderName}. They must accept before they can view your Follow Up list.`);
+    toast.success(`Share request sent to ${leaderName}. They must accept before they can view your data.`);
     return { success: true };
   };
 

@@ -6,8 +6,7 @@ import { useProspects } from '@/hooks/useProspects';
 import { useSharedProspects } from '@/hooks/useSharedProspects';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
-import { TeamAccessDialog } from '@/components/team/TeamAccessDialog';
-import { TeamMemberMultiSelect } from '@/components/team/TeamMemberMultiSelect';
+import { TeamBar } from '@/components/team/TeamBar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -300,7 +299,15 @@ export default function ListUp() {
                 Clear
               </Button>
             )}
-            <TeamAccessDialog />
+            <TeamBar
+              sharedOwners={sharedOwners}
+              selectedOwnerIds={selectedOwnerIds}
+              onToggle={toggleOwnerSelection}
+              onClear={clearSelection}
+              onSelectAll={selectAllOwners}
+              prospectsCount={sharedProspects.length}
+              currentTab="follow_up"
+            />
           </div>
         </div>
       </header>
@@ -308,32 +315,12 @@ export default function ListUp() {
       <main ref={containerRef} className="scrollable-content relative pb-20">
         <PullToRefreshIndicator isRefreshing={isRefreshing} pullDistance={pullDistance} showIndicator={showIndicator} />
         <div className="container py-3 px-4 space-y-4">
-          {/* Team Data Selector - Multi-select */}
-          {sharedOwners.length > 0 && (
-            <div className="bg-card rounded-xl p-3 border border-border/50 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-xs font-medium text-muted-foreground">View Team Data</span>
-                </div>
-                {isViewingTeam && (
-                  <Badge variant="secondary" className="text-xs">
-                    {sharedProspects.length} prospects
-                  </Badge>
-                )}
-              </div>
-              <TeamMemberMultiSelect
-                teamMembers={sharedOwners}
-                selectedIds={selectedOwnerIds}
-                onToggle={toggleOwnerSelection}
-                onClear={clearSelection}
-                onSelectAll={selectAllOwners}
-              />
-              {isViewingTeam && (
-                <p className="text-xs text-muted-foreground">
-                  Viewing {selectedTeamNames}'s follow-ups (separate from your list)
-                </p>
-              )}
+          {/* Team viewing indicator */}
+          {isViewingTeam && (
+            <div className="bg-primary/10 border border-primary/30 rounded-xl p-3">
+              <p className="text-sm text-primary font-medium">
+                Viewing {selectedTeamNames}'s follow-ups (read-only)
+              </p>
             </div>
           )}
 

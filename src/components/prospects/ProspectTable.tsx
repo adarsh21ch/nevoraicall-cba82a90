@@ -664,12 +664,21 @@ export function ProspectTable({
         </> :
     // Table Layout - ALWAYS show sheet tabs + header, even when empty
     <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
-          <div className="overflow-x-auto bg-card" style={{
-        WebkitOverflowScrolling: 'touch'
-      }}>
-            <table className="text-sm border-collapse w-full bg-card" style={{
-          minWidth: isMobile ? '580px' : '880px'
-        }}>
+          {/* Fixed-width horizontal scroll container - scrolls header + body together */}
+          <div 
+            className="overflow-x-auto overflow-y-visible bg-card" 
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              overscrollBehaviorX: 'contain'
+            }}
+          >
+            <table 
+              className="text-sm border-collapse w-full bg-card" 
+              style={{
+                minWidth: isMobile ? '480px' : '780px',
+                tableLayout: 'fixed'
+              }}
+            >
               {/* Sticky header block: Sheet tabs + column headers */}
               <thead className="sticky top-0 z-30 bg-card">
                 {/* Sheet tabs row - ALWAYS visible */}
@@ -678,7 +687,7 @@ export function ProspectTable({
                     <SheetTabs sheets={sheets} selectedSheetId={selectedSheetId} onSelectSheet={onSelectSheet} onAddSheet={onAddSheet} onUpdateSheet={handleUpdateSheetWithUndo} onDeleteSheet={onDeleteSheet} onEnterSelectMode={handleEnterSelectMode} onDeleteAllInSheet={handleDeleteAllInSheet} />
                   </th>
                 </tr>
-                {/* Column header row */}
+                {/* Column header row - NO resize behavior, fixed widths */}
                 <tr className="bg-muted/95 backdrop-blur-sm text-xs font-semibold text-muted-foreground border-b border-border">
                   {/* Selection checkbox header */}
                   {selectionMode.active && <th className="px-2 py-2.5 w-10 min-w-[40px] bg-muted/95">
@@ -696,10 +705,14 @@ export function ProspectTable({
                     "px-2 py-2.5 text-left whitespace-nowrap bg-muted/95 select-none",
                     columnId === 'index' && "text-center",
                     isMobile && "text-[11px] px-1.5",
-                    isMobile && isNameColumn && "sticky left-[36px] z-30 border-r border-border/30",
+                    isMobile && isNameColumn && "sticky left-[32px] z-30 border-r border-border/30",
                     isMobile && isIndexColumn && "sticky left-0 z-30"
                   )}
-                  style={{ width: `${width}px`, minWidth: `${width}px` }}
+                  style={{ 
+                    width: `${width}px`, 
+                    minWidth: `${width}px`,
+                    maxWidth: `${width}px`
+                  }}
                 >
                         <div className="flex items-center gap-0.5">
                           <span>{col.label}</span>
