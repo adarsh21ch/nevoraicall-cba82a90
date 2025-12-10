@@ -155,9 +155,15 @@ export function ProspectRow({
           </td>
         );
       case 'name':
+        // Build compact info line: "Age, Location" without labels
+        const ageValue = (prospect as any).age_or_dob || '';
+        const locationValue = prospect.address || '';
+        const infoParts = [ageValue, locationValue].filter(Boolean);
+        const infoLine = infoParts.length > 0 ? infoParts.join(', ') : '–';
+        
         return (
           <td key={columnId} className={cellClass} style={style}>
-            <div className="flex flex-col" style={{ maxWidth: isMobileTable ? '120px' : '180px' }}>
+            <div className="flex flex-col overflow-hidden" style={{ maxWidth: isMobileTable ? '140px' : '180px' }}>
               <div className="flex items-center gap-1">
                 {/* Call button next to name */}
                 <CallIconButton onClick={openCall} className={isMobileTable ? "p-0.5" : undefined} />
@@ -169,15 +175,18 @@ export function ProspectRow({
                     isExpanded && "text-primary bg-primary/10"
                   )}
                 >
-                  <span className="truncate" style={{ maxWidth: isMobileTable ? '80px' : '130px' }} title={prospect.name}>{prospect.name}</span>
+                  <span className="truncate" style={{ maxWidth: isMobileTable ? '90px' : '130px' }} title={prospect.name}>{prospect.name}</span>
                   <span className={cn("transition-transform duration-200 text-muted-foreground group-hover:text-primary shrink-0", isExpanded && "rotate-180")}>
                     <ChevronDown className={cn("h-3 w-3", isMobileTable && "h-2.5 w-2.5")} />
                   </span>
                 </button>
               </div>
-              <div className={cn("flex items-center gap-2 text-muted-foreground ml-6", isMobileTable ? "text-[9px] ml-5" : "text-[10px]")}>
-                <span>Age: {(prospect as any).age_or_dob || '–'}</span>
-                <span>Gender: {(prospect as any).gender || '–'}</span>
+              {/* Compact info: Age, Location - truncated to stay within column */}
+              <div className={cn(
+                "text-muted-foreground ml-6 truncate",
+                isMobileTable ? "text-[9px] ml-5 max-w-[100px]" : "text-[10px] max-w-[140px]"
+              )} title={infoLine}>
+                {infoLine}
               </div>
             </div>
           </td>

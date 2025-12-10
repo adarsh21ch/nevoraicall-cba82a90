@@ -66,20 +66,19 @@ interface ProspectTableProps {
 }
 
 // Column configuration - fixed order, no drag/resize
-// Column configuration - Call moved to Name column, contact column now WhatsApp only
+// Phone column removed from visible table (data still available in Report Card)
 const COLUMNS = [
   { id: 'index', label: '#', width: 50, mobileWidth: 36 },
-  { id: 'name', label: 'Name', width: 180, mobileWidth: 130 },
-  { id: 'phone', label: 'Phone', width: 140, mobileWidth: 100 },
-  { id: 'contact', label: 'WhatsApp', width: 70, mobileWidth: 60 },
+  { id: 'name', label: 'Name', width: 200, mobileWidth: 150 },
+  { id: 'contact', label: 'WhatsApp', width: 60, mobileWidth: 50 },
   { id: 'action', label: 'Response', width: 130, mobileWidth: 85 },
   { id: 'stage', label: 'Stages', width: 130, mobileWidth: 85 },
   { id: 'quality', label: 'Quality', width: 100, mobileWidth: 75 },
   { id: 'actions', label: '', width: 80, mobileWidth: 50 },
 ];
 
-// Fixed column order
-const COLUMN_ORDER = ['index', 'name', 'phone', 'contact', 'action', 'stage', 'quality', 'actions'];
+// Fixed column order (phone removed from visible columns)
+const COLUMN_ORDER = ['index', 'name', 'contact', 'action', 'stage', 'quality', 'actions'];
 
 export function ProspectTable({
   prospects,
