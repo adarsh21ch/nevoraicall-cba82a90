@@ -66,11 +66,12 @@ interface ProspectTableProps {
 }
 
 // Column configuration - fixed order, no drag/resize
+// Column configuration - Call moved to Name column, contact column now WhatsApp only
 const COLUMNS = [
   { id: 'index', label: '#', width: 50, mobileWidth: 36 },
   { id: 'name', label: 'Name', width: 180, mobileWidth: 130 },
   { id: 'phone', label: 'Phone', width: 140, mobileWidth: 100 },
-  { id: 'contact', label: 'Call', width: 70, mobileWidth: 60 },
+  { id: 'contact', label: 'WhatsApp', width: 70, mobileWidth: 60 },
   { id: 'action', label: 'Response', width: 130, mobileWidth: 85 },
   { id: 'stage', label: 'Stages', width: 130, mobileWidth: 85 },
   { id: 'quality', label: 'Quality', width: 100, mobileWidth: 75 },

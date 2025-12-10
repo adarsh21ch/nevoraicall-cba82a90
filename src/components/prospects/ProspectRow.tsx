@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { MessageCircle, Phone, Trash2, ChevronDown, GripVertical } from 'lucide-react';
+import { CallIconButton, WhatsAppIconButton } from '@/components/ui/ActionIcons';
+import { Trash2, ChevronDown, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCustomOptionsContext } from '@/contexts/CustomOptionsContext';
 
@@ -156,20 +157,24 @@ export function ProspectRow({
         return (
           <td key={columnId} className={cellClass} style={style}>
             <div className="flex flex-col" style={{ maxWidth: isMobileTable ? '120px' : '180px' }}>
-              <button
-                onClick={onToggleExpand}
-                className={cn(
-                  "group flex items-center gap-1 text-left font-semibold text-foreground hover:text-primary transition-all duration-200 cursor-pointer bg-transparent border-0 py-1 px-1.5 -ml-1.5 rounded-md hover:bg-primary/5 active:scale-[0.98]",
-                  isMobileTable && "text-xs py-0.5",
-                  isExpanded && "text-primary bg-primary/10"
-                )}
-              >
-                <span className="truncate" style={{ maxWidth: isMobileTable ? '100px' : '150px' }} title={prospect.name}>{prospect.name}</span>
-                <span className={cn("transition-transform duration-200 text-muted-foreground group-hover:text-primary shrink-0", isExpanded && "rotate-180")}>
-                  <ChevronDown className={cn("h-3 w-3", isMobileTable && "h-2.5 w-2.5")} />
-                </span>
-              </button>
-              <div className={cn("flex items-center gap-2 text-muted-foreground ml-1.5", isMobileTable ? "text-[9px]" : "text-[10px]")}>
+              <div className="flex items-center gap-1">
+                {/* Call button next to name */}
+                <CallIconButton onClick={openCall} className={isMobileTable ? "p-0.5" : undefined} />
+                <button
+                  onClick={onToggleExpand}
+                  className={cn(
+                    "group flex items-center gap-1 text-left font-semibold text-foreground hover:text-primary transition-all duration-200 cursor-pointer bg-transparent border-0 py-1 px-1.5 rounded-md hover:bg-primary/5 active:scale-[0.98]",
+                    isMobileTable && "text-xs py-0.5",
+                    isExpanded && "text-primary bg-primary/10"
+                  )}
+                >
+                  <span className="truncate" style={{ maxWidth: isMobileTable ? '80px' : '130px' }} title={prospect.name}>{prospect.name}</span>
+                  <span className={cn("transition-transform duration-200 text-muted-foreground group-hover:text-primary shrink-0", isExpanded && "rotate-180")}>
+                    <ChevronDown className={cn("h-3 w-3", isMobileTable && "h-2.5 w-2.5")} />
+                  </span>
+                </button>
+              </div>
+              <div className={cn("flex items-center gap-2 text-muted-foreground ml-6", isMobileTable ? "text-[9px] ml-5" : "text-[10px]")}>
                 <span>Age: {(prospect as any).age_or_dob || '–'}</span>
                 <span>Gender: {(prospect as any).gender || '–'}</span>
               </div>
@@ -187,11 +192,11 @@ export function ProspectRow({
           </td>
         );
       case 'contact':
+        // Now shows only WhatsApp button
         return (
           <td key={columnId} className={cellClass} style={style}>
-            <div className="flex items-center gap-0.5">
-              <Button variant="ghost" size="icon" className={cn("hover:bg-accent/10", isMobileTable ? "h-6 w-6" : "h-7 w-7")} onClick={openCall}><Phone className={cn("text-accent", isMobileTable ? "h-3 w-3" : "h-3.5 w-3.5")} /></Button>
-              <Button variant="ghost" size="icon" className={cn("text-green-500 hover:text-green-600 hover:bg-green-500/10", isMobileTable ? "h-6 w-6" : "h-7 w-7")} onClick={openWhatsApp}><MessageCircle className={cn(isMobileTable ? "h-3 w-3" : "h-3.5 w-3.5")} /></Button>
+            <div className="flex items-center justify-center">
+              <WhatsAppIconButton onClick={openWhatsApp} className={isMobileTable ? "p-0.5" : undefined} />
             </div>
           </td>
         );
