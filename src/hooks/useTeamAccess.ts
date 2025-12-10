@@ -3,12 +3,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
+// Available tabs for permissions
+export const AVAILABLE_TABS = ['calling', 'follow_up', 'activity', 'todo'] as const;
+export type TabPermission = typeof AVAILABLE_TABS[number];
+
 interface TeamMember {
   id: string;
   user_id: string;
   display_name: string | null;
   nevorid: string | null;
   status: string;
+  allowed_tabs: TabPermission[] | null; // null means all tabs
 }
 
 interface SharedAccess {
@@ -19,6 +24,7 @@ interface SharedAccess {
   status: string;
   owner_display_name?: string;
   owner_nevorid?: string;
+  allowed_tabs: TabPermission[] | null; // null means all tabs
 }
 
 interface PendingRequest {
@@ -59,7 +65,7 @@ export function useTeamAccess() {
     
     const { data: accessRecords } = await supabase
       .from('team_access')
-      .select('id, shared_with_user_id, status')
+      .select('id, shared_with_user_id, status, allowed_tabs')
       .eq('owner_user_id', user.id)
       .in('status', ['pending', 'active']);
     
@@ -78,7 +84,8 @@ export function useTeamAccess() {
             user_id: p.user_id,
             display_name: p.display_name,
             nevorid: p.neverai_id,
-            status: record?.status || 'pending'
+            status: record?.status || 'pending',
+            allowed_tabs: record?.allowed_tabs as TabPermission[] | null
           };
         }));
       }
@@ -93,7 +100,7 @@ export function useTeamAccess() {
     
     const { data: accessRecords } = await supabase
       .from('team_access')
-      .select('id, owner_user_id, created_at, status')
+      .select('id, owner_user_id, created_at, status, allowed_tabs')
       .eq('shared_with_user_id', user.id)
       .eq('status', 'active');
     
@@ -109,7 +116,8 @@ export function useTeamAccess() {
           ...r,
           shared_with_user_id: user.id,
           owner_display_name: profiles.find(p => p.user_id === r.owner_user_id)?.display_name || 'Unknown',
-          owner_nevorid: profiles.find(p => p.user_id === r.owner_user_id)?.neverai_id || ''
+          owner_nevorid: profiles.find(p => p.user_id === r.owner_user_id)?.neverai_id || '',
+          allowed_tabs: r.allowed_tabs as TabPermission[] | null
         })));
       }
     } else {
@@ -309,6 +317,23 @@ export function useTeamAccess() {
     return stopSharingWithLeader(accessId);
   };
 
+  // Update tab permissions for a team member (owner can control what viewer sees)
+  const updateTabPermissions = async (accessId: string, allowedTabs: TabPermission[] | null) => {
+    const { error } = await supabase
+      .from('team_access')
+      .update({ allowed_tabs: allowedTabs })
+      .eq('id', accessId);
+
+    if (error) {
+      toast.error('Failed to update permissions');
+      return false;
+    }
+
+    await fetchTeamMembers();
+    toast.success('Permissions updated');
+    return true;
+  };
+
   return {
     myNevorId,
     myDisplayName,
@@ -323,6 +348,7 @@ export function useTeamAccess() {
     removeFromTeam,
     addTeamMember,
     removeTeamMember,
+    updateTabPermissions,
     refetch
   };
 }

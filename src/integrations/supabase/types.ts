@@ -386,6 +386,7 @@ export type Database = {
       }
       team_access: {
         Row: {
+          allowed_tabs: string[] | null
           created_at: string
           id: string
           owner_user_id: string
@@ -394,6 +395,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          allowed_tabs?: string[] | null
           created_at?: string
           id?: string
           owner_user_id: string
@@ -402,6 +404,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          allowed_tabs?: string[] | null
           created_at?: string
           id?: string
           owner_user_id?: string

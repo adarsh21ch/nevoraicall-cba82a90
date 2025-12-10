@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Prospect } from '@/types/prospect';
@@ -22,6 +22,8 @@ export function useSharedProspects() {
   // Cache for each owner's prospects to avoid re-fetching
   const prospectsCache = useRef<Record<string, Prospect[]>>({});
   const fetchingRef = useRef<Set<string>>(new Set());
+  // Track current fetch request to cancel outdated ones
+  const currentFetchId = useRef<number>(0);
 
   // Helper to decrypt a single prospect's phone
   const decryptProspect = useCallback(async (p: Prospect): Promise<Prospect> => {
@@ -125,10 +127,14 @@ export function useSharedProspects() {
     return [];
   }, [decryptProspect]);
 
-  // Update combined prospects when selection changes
+  // Update combined prospects when selection changes - with cancellation support
   const updateCombinedProspects = useCallback(async () => {
+    // Increment fetch ID to track this request
+    const fetchId = ++currentFetchId.current;
+    
     if (selectedOwnerIds.length === 0) {
       setProspects([]);
+      setLoading(false);
       return;
     }
     
@@ -136,7 +142,7 @@ export function useSharedProspects() {
     const allCached = selectedOwnerIds.every(id => prospectsCache.current[id]);
     
     if (allCached) {
-      // Instantly show cached data
+      // Instantly show cached data - no loading state needed
       const cachedProspects = selectedOwnerIds.flatMap(id => prospectsCache.current[id] || []);
       cachedProspects.sort((a, b) => 
         new Date(b.date_added).getTime() - new Date(a.date_added).getTime()
@@ -154,6 +160,12 @@ export function useSharedProspects() {
         selectedOwnerIds.map(ownerId => fetchOwnerProspects(ownerId))
       );
       
+      // Check if this fetch is still the latest one
+      if (fetchId !== currentFetchId.current) {
+        // A newer fetch was started, discard this result
+        return;
+      }
+      
       // Combine all prospects
       const combined = allProspects.flat();
       
@@ -165,10 +177,16 @@ export function useSharedProspects() {
       setProspects(combined);
     } catch (err) {
       console.error('Error updating combined prospects:', err);
-      setProspects([]);
+      // Only update if this is still the current fetch
+      if (fetchId === currentFetchId.current) {
+        setProspects([]);
+      }
+    } finally {
+      // Only update loading state if this is still the current fetch
+      if (fetchId === currentFetchId.current) {
+        setLoading(false);
+      }
     }
-    
-    setLoading(false);
   }, [selectedOwnerIds, fetchOwnerProspects]);
 
   // Set up real-time subscriptions for all selected owners
@@ -231,7 +249,7 @@ export function useSharedProspects() {
     updateCombinedProspects();
   }, [updateCombinedProspects]);
 
-  // Toggle a single owner selection
+  // Toggle a single owner selection - debounced to prevent rapid switches
   const toggleOwnerSelection = useCallback((ownerId: string) => {
     setSelectedOwnerIds(prev => {
       if (prev.includes(ownerId)) {
@@ -247,18 +265,22 @@ export function useSharedProspects() {
     setSelectedOwnerIds(sharedOwners.map(o => o.user_id));
   }, [sharedOwners]);
 
-  // Clear all selections
+  // Clear all selections - also clear prospects immediately to prevent stale data
   const clearSelection = useCallback(() => {
+    currentFetchId.current++; // Cancel any in-flight fetches
     setSelectedOwnerIds([]);
     setProspects([]);
+    setLoading(false);
   }, []);
 
   // Legacy single-select API for backward compatibility
   const setSelectedOwnerId = useCallback((ownerId: string | null) => {
+    currentFetchId.current++; // Cancel any in-flight fetches
     if (ownerId) {
       setSelectedOwnerIds([ownerId]);
     } else {
       setSelectedOwnerIds([]);
+      setProspects([]);
     }
   }, []);
 

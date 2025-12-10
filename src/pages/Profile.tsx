@@ -6,6 +6,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { useSubscription } from '@/hooks/useSubscription';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { EditProfileDialog } from '@/components/profile/EditProfileDialog';
+import { ShareProfileDialog } from '@/components/profile/ShareProfileDialog';
 import { UpgradeCard } from '@/components/subscription/UpgradeCard';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { Button } from '@/components/ui/button';
@@ -177,6 +178,9 @@ export default function Profile() {
               </p>
             </div>
           )}
+
+          {/* Share Profile Button - Prominent */}
+          <ShareProfileDialog />
 
           {/* Upgrade Card */}
           <UpgradeCard />
