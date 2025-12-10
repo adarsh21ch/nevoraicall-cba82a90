@@ -83,7 +83,7 @@ export default function ListUp() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { prospects: myProspects, loading: prospectsLoading, refetch } = useProspects();
-  const { sharedOwners, selectedOwnerId, setSelectedOwnerId, prospects: sharedProspects, loading: sharedLoading, refetch: refetchShared } = useSharedProspects();
+  const { sharedOwners, selectedOwnerId, setSelectedOwnerId, prospects: sharedProspects, loading: sharedLoading, refetchOwners, refetchProspects } = useSharedProspects();
   
   // Separate state for each tag category
   const [selectedResponses, setSelectedResponses] = useState<string[]>([]);
@@ -98,11 +98,11 @@ export default function ListUp() {
   // Pull-to-refresh
   const handleRefresh = useCallback(async () => {
     if (selectedOwnerId) {
-      await refetchShared?.();
+      await refetchProspects?.();
     } else {
       await refetch?.();
     }
-  }, [refetch, refetchShared, selectedOwnerId]);
+  }, [refetch, refetchProspects, selectedOwnerId]);
   const { containerRef, isRefreshing, pullDistance, showIndicator } = usePullToRefresh(handleRefresh);
 
   useEffect(() => {
