@@ -7,36 +7,39 @@ import { useEncryption } from '@/hooks/useEncryption';
 interface SharedOwner {
   user_id: string;
   display_name: string;
+  nevorid: string | null;
 }
 
 export function useSharedProspects() {
   const { user } = useAuth();
-  const { decryptBatch } = useEncryption();
+  const { decryptFields } = useEncryption();
   const [sharedOwners, setSharedOwners] = useState<SharedOwner[]>([]);
   const [selectedOwnerId, setSelectedOwnerId] = useState<string | null>(null);
   const [prospects, setProspects] = useState<Prospect[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  // Fetch owners who have shared data with me
+  // Fetch list of users who have shared their data with me (ACTIVE only)
   const fetchSharedOwners = useCallback(async () => {
     if (!user) return;
-
+    
     const { data: accessRecords } = await supabase
       .from('team_access')
       .select('owner_user_id')
-      .eq('shared_with_user_id', user.id);
-
+      .eq('shared_with_user_id', user.id)
+      .eq('status', 'active');
+    
     if (accessRecords && accessRecords.length > 0) {
       const ownerIds = accessRecords.map(r => r.owner_user_id);
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('user_id, display_name')
+        .select('user_id, display_name, neverai_id')
         .in('user_id', ownerIds);
-
+      
       if (profiles) {
         setSharedOwners(profiles.map(p => ({
           user_id: p.user_id,
-          display_name: p.display_name || 'Unknown'
+          display_name: p.display_name || 'Unknown',
+          nevorid: p.neverai_id
         })));
       }
     } else {
@@ -44,36 +47,42 @@ export function useSharedProspects() {
     }
   }, [user]);
 
-  // Fetch prospects for selected owner
+  // Fetch prospects belonging to the selected owner
   const fetchSharedProspects = useCallback(async () => {
     if (!selectedOwnerId) {
       setProspects([]);
       return;
     }
-
-    setLoading(true);
     
+    setLoading(true);
     const { data, error } = await supabase
       .from('prospects')
       .select('*')
       .eq('user_id', selectedOwnerId)
-      .order('updated_at', { ascending: false });
-
-    if (!error && data) {
-      try {
-        const decrypted = await decryptBatch(data);
-        setProspects(decrypted as Prospect[]);
-      } catch {
-        setProspects(data as Prospect[]);
-      }
-    } else {
-      setProspects([]);
-    }
+      .order('date_added', { ascending: false });
     
+    if (error) {
+      console.error('Error fetching shared prospects:', error);
+      setProspects([]);
+    } else if (data) {
+      // Attempt to decrypt phone numbers
+      const decrypted = await Promise.all(data.map(async (p) => {
+        try {
+          if (p.phone && p.phone.includes(':')) {
+            const result = await decryptFields({ phone: p.phone });
+            return { ...p, phone: result?.phone || p.phone };
+          }
+        } catch {
+          // Keep original if decryption fails
+        }
+        return p;
+      }));
+      setProspects(decrypted as Prospect[]);
+    }
     setLoading(false);
-  }, [selectedOwnerId, decryptBatch]);
+  }, [selectedOwnerId, decryptFields]);
 
-  // Set up realtime subscription for shared prospect updates
+  // Set up real-time subscription for the selected owner's prospects
   useEffect(() => {
     if (!selectedOwnerId) return;
 
@@ -88,31 +97,34 @@ export function useSharedProspects() {
           filter: `user_id=eq.${selectedOwnerId}`
         },
         async (payload) => {
-          console.log('Realtime update for shared prospects:', payload);
-          
           if (payload.eventType === 'INSERT') {
             const newProspect = payload.new as Prospect;
-            try {
-              const [decrypted] = await decryptBatch([newProspect]);
-              setProspects(prev => [decrypted as Prospect, ...prev]);
-            } catch {
-              setProspects(prev => [newProspect, ...prev]);
+            // Decrypt if needed
+            if (newProspect.phone && newProspect.phone.includes(':')) {
+              try {
+                const result = await decryptFields({ phone: newProspect.phone });
+                newProspect.phone = result?.phone || newProspect.phone;
+              } catch {
+                // Keep original
+              }
             }
+            setProspects(prev => [newProspect, ...prev]);
           } else if (payload.eventType === 'UPDATE') {
             const updatedProspect = payload.new as Prospect;
-            try {
-              const [decrypted] = await decryptBatch([updatedProspect]);
-              setProspects(prev => 
-                prev.map(p => p.id === updatedProspect.id ? decrypted as Prospect : p)
-              );
-            } catch {
-              setProspects(prev => 
-                prev.map(p => p.id === updatedProspect.id ? updatedProspect : p)
-              );
+            if (updatedProspect.phone && updatedProspect.phone.includes(':')) {
+              try {
+                const result = await decryptFields({ phone: updatedProspect.phone });
+                updatedProspect.phone = result?.phone || updatedProspect.phone;
+              } catch {
+                // Keep original
+              }
             }
+            setProspects(prev => 
+              prev.map(p => p.id === updatedProspect.id ? updatedProspect : p)
+            );
           } else if (payload.eventType === 'DELETE') {
-            const deletedId = payload.old.id;
-            setProspects(prev => prev.filter(p => p.id !== deletedId));
+            const deletedProspect = payload.old as Prospect;
+            setProspects(prev => prev.filter(p => p.id !== deletedProspect.id));
           }
         }
       )
@@ -121,20 +133,15 @@ export function useSharedProspects() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [selectedOwnerId, decryptBatch]);
+  }, [selectedOwnerId, decryptFields]);
 
   useEffect(() => {
     fetchSharedOwners();
   }, [fetchSharedOwners]);
 
   useEffect(() => {
-    if (selectedOwnerId) {
-      fetchSharedProspects();
-    } else {
-      setProspects([]);
-      setLoading(false);
-    }
-  }, [selectedOwnerId, fetchSharedProspects]);
+    fetchSharedProspects();
+  }, [fetchSharedProspects]);
 
   return {
     sharedOwners,
@@ -142,7 +149,7 @@ export function useSharedProspects() {
     setSelectedOwnerId,
     prospects,
     loading,
-    refetch: fetchSharedProspects,
-    refetchOwners: fetchSharedOwners
+    refetchOwners: fetchSharedOwners,
+    refetchProspects: fetchSharedProspects
   };
 }
