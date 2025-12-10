@@ -78,14 +78,14 @@ const COLUMNS = [{
   minWidth: 100,
 }, {
   id: 'stage',
-  label: 'Funnel',
+  label: 'Stage',
   width: '35%',
   minWidth: 100,
 }];
 
 // Column order for Calling tab: #, Name, Response
 const CALLING_COLUMN_ORDER = ['index', 'name', 'action'];
-// Column order for Filter tab: #, Name, Funnel
+// Column order for Stages tab: #, Name, Stage
 const FILTER_COLUMN_ORDER = ['index', 'name', 'stage'];
 
 // TableContent component
@@ -194,7 +194,7 @@ function TableContent({
                   <div className="flex items-center gap-0.5">
                     <span>{col.label}</span>
                     {columnId === 'action' && <ColumnOptionsSheet columnType="action_taken" columnLabel="Response" defaultOptions={EXTENDED_ACTIONS} />}
-                    {columnId === 'stage' && <ColumnOptionsSheet columnType="funnel_stage" columnLabel="Funnel" defaultOptions={FUNNEL_STAGES} />}
+                    {columnId === 'stage' && <ColumnOptionsSheet columnType="funnel_stage" columnLabel="Stage" defaultOptions={FUNNEL_STAGES} />}
                   </div>
                 </th>
               );
@@ -410,7 +410,7 @@ export function ProspectTable({
     if (filters.actions.length > 0) return filters.actions.join('_').replace(/\s+/g, '');
     if (filters.qualities.length > 0) return filters.qualities.join('_');
     if (filters.incompleteOnly) return 'Incomplete';
-    return filterMode === 'calling' ? 'Calling' : 'Funnel';
+    return filterMode === 'calling' ? 'Calling' : 'Stages';
   };
 
   const exportToExcel = async () => {
