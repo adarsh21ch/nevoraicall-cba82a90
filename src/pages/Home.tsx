@@ -262,6 +262,6 @@ export default function Home() {
         </div>
       </main>
 
-      <BottomNav />
+      <BottomNav className="px-0 my-0 border-0 py-[10px]" />
     </div>;
 }
