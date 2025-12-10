@@ -125,13 +125,13 @@ export default function TodoUp() {
 
   if (!user) return null;
 
-  // Separate completed and pending todos, sort ascending by created_at (earliest at top)
+  // Separate completed and pending todos, sort descending by created_at (most recent at top)
   const pendingTodos = todos
     .filter(t => !t.completed)
-    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   const completedTodos = todos
     .filter(t => t.completed)
-    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
 
   return (
     <div className="app-layout bg-gradient-to-b from-background via-background to-muted/20">
@@ -190,7 +190,7 @@ export default function TodoUp() {
               </div>
             ) : (
               <div className="divide-y divide-border/20">
-                {/* Pending todos first - sorted ascending (earliest at top) */}
+                {/* Pending todos first - sorted descending (most recent at top) */}
                 {pendingTodos.map((todo, index) => (
                   <div
                     key={todo.id}
