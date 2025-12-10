@@ -8,7 +8,6 @@ import { Upload, FileSpreadsheet, AlertCircle } from 'lucide-react';
 import { Prospect } from '@/types/prospect';
 import { toast } from 'sonner';
 import { sanitizeImportString, validateImportedProspect } from '@/lib/validations';
-import { cn } from '@/lib/utils';
 
 interface ImportExcelDialogProps {
   onImport: (prospects: Partial<Prospect>[]) => Promise<{ imported: number; skipped: number }>;
@@ -110,18 +109,9 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
         return;
       }
 
-      // Generate column names using first row sample data for better readability
+      // Generate column names as "Column 1", "Column 2", etc. (easier for mobile users)
       const maxCols = Math.max(...rawData.map(row => row.length));
-      const firstRowData = rawData[0] || [];
-      const cols = Array.from({ length: maxCols }, (_, i) => {
-        const sampleValue = firstRowData[i];
-        const sampleText = sampleValue !== null && sampleValue !== undefined ? String(sampleValue).trim() : '';
-        // Use truncated sample data as label, fallback to generic if empty
-        if (sampleText.length > 0) {
-          return sampleText.length > 20 ? sampleText.substring(0, 20) + '...' : sampleText;
-        }
-        return `Col ${i + 1}`;
-      });
+      const cols = Array.from({ length: maxCols }, (_, i) => `Column ${i + 1}`);
       
       // Convert raw array data to objects with column keys
       const jsonData: Record<string, string>[] = rawData
@@ -222,9 +212,9 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8 gap-1 text-xs px-2">
-          <FileSpreadsheet className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Import</span>
+        <Button variant="outline" size="sm" className="gap-1.5">
+          <FileSpreadsheet className="h-4 w-4" />
+          Import Excel
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-2xl bg-card border-border max-h-[90vh] overflow-y-auto">
@@ -265,31 +255,77 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
 
         {step === 'mapping' && (
           <div className="flex flex-col h-[70vh] max-h-[600px]">
-            {/* Data Preview Section - Top, scrollable */}
-            <div className="flex-1 flex flex-col min-h-0 space-y-2 mb-3">
+            {/* Fixed Column Mapping Section - Single column layout for all screens */}
+            <div className="flex-shrink-0 bg-muted/30 rounded-lg p-3 border border-border mb-3">
+              <p className="text-xs text-muted-foreground mb-3">
+                Scroll the preview table below to find your data columns, then select them here.
+              </p>
+              <div className="flex flex-col gap-2">
+                {(Object.keys(mapping) as (keyof ColumnMapping)[]).map((field) => (
+                  <div key={field} className="flex items-center gap-2 h-8">
+                    <Label className="text-xs w-[80px] shrink-0">{FIELD_LABELS[field]}</Label>
+                    <Select
+                      value={mapping[field] || '__none__'}
+                      onValueChange={(value) => setMapping({ ...mapping, [field]: value === '__none__' ? null : value })}
+                    >
+                      <SelectTrigger className="h-8 text-xs flex-1 bg-background">
+                        <SelectValue placeholder={FIELD_PLACEHOLDERS[field]} />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border-border z-50">
+                        <SelectItem value="__none__" className="text-muted-foreground">
+                          {field === 'address' ? 'City and State' : 'None'}
+                        </SelectItem>
+                        {columns.map((col) => (
+                          <SelectItem key={col} value={col} className="text-xs">
+                            {col}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Scrollable Preview Section - Only this scrolls horizontally */}
+            <div className="flex-1 flex flex-col min-h-0 space-y-2">
               <div className="flex items-center justify-between flex-shrink-0">
-                <Label className="text-xs font-medium">Data Preview (first 3 rows)</Label>
+                <Label className="text-xs">Data Preview (scroll right →)</Label>
                 <span className="text-xs text-muted-foreground">{columns.length} columns</span>
               </div>
               
-              {/* Preview table container - scrollable both ways */}
-              <div className="flex-1 border border-border rounded-lg overflow-hidden min-h-[100px]">
+              {/* Preview table container - horizontal scroll only here */}
+              <div className="flex-1 border border-border rounded-lg overflow-hidden min-h-[120px] sm:min-h-[150px]">
                 <div className="h-full overflow-x-auto overflow-y-auto">
                   <table className="text-xs border-collapse w-max">
                     <thead className="bg-muted sticky top-0 z-10">
                       <tr>
-                        {columns.map((col, idx) => (
-                          <th key={idx} className="px-3 py-2 text-left font-medium whitespace-nowrap min-w-[100px] max-w-[140px] border-r border-border last:border-r-0 bg-muted">
-                            <span className="truncate block" title={col}>{col}</span>
+                        {/* Frozen Column 1 - sticky left */}
+                        {columns.length > 0 && (
+                          <th className="px-3 py-2 text-left font-medium whitespace-nowrap min-w-[100px] max-w-[120px] border-r-2 border-primary/30 bg-muted sticky left-0 z-20">
+                            {columns[0]}
+                          </th>
+                        )}
+                        {/* Scrollable columns 2+ */}
+                        {columns.slice(1).map((col) => (
+                          <th key={col} className="px-3 py-2 text-left font-medium whitespace-nowrap min-w-[100px] border-r border-border last:border-r-0 bg-muted">
+                            {col}
                           </th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {previewData.slice(0, 3).map((row, i) => (
-                        <tr key={i} className={cn("border-t border-border", i % 2 === 1 && "bg-muted/30")}>
-                          {columns.map((col, idx) => (
-                            <td key={idx} className="px-3 py-2 whitespace-nowrap min-w-[100px] max-w-[140px] truncate border-r border-border last:border-r-0">
+                      {previewData.map((row, i) => (
+                        <tr key={i} className="border-t border-border">
+                          {/* Frozen Column 1 data - sticky left */}
+                          {columns.length > 0 && (
+                            <td className="px-3 py-2 whitespace-nowrap min-w-[100px] max-w-[120px] truncate border-r-2 border-primary/30 bg-card sticky left-0 z-10">
+                              {row[columns[0]] || '–'}
+                            </td>
+                          )}
+                          {/* Scrollable columns 2+ data */}
+                          {columns.slice(1).map((col) => (
+                            <td key={col} className="px-3 py-2 whitespace-nowrap min-w-[100px] max-w-[150px] truncate border-r border-border last:border-r-0">
                               {row[col] || '–'}
                             </td>
                           ))}
@@ -301,44 +337,12 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
               </div>
               
               <p className="text-xs text-muted-foreground flex-shrink-0">
-                Total: {fullData.length} rows to import
+                Showing first 5 of {fullData.length} rows
               </p>
             </div>
 
-            {/* Fixed Column Mapping Section - Bottom, always visible - Single column layout for both mobile and desktop */}
-            <div className="flex-shrink-0 bg-muted/30 rounded-lg p-3 border border-border">
-              <p className="text-xs text-muted-foreground mb-2 font-medium">
-                Map Columns
-              </p>
-              <div className="grid grid-cols-1 gap-2">
-                {(Object.keys(mapping) as (keyof ColumnMapping)[]).map((field) => (
-                  <div key={field} className="flex items-center gap-2 h-8">
-                    <Label className="text-xs w-[80px] shrink-0">{FIELD_LABELS[field]}</Label>
-                    <Select
-                      value={mapping[field] || '__none__'}
-                      onValueChange={(value) => setMapping({ ...mapping, [field]: value === '__none__' ? null : value })}
-                    >
-                      <SelectTrigger className="h-8 text-xs flex-1 bg-background">
-                        <SelectValue placeholder={FIELD_PLACEHOLDERS[field]} />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border-border z-50 max-h-[200px]">
-                        <SelectItem value="__none__" className="text-muted-foreground">
-                          {field === 'address' ? 'City and State' : 'None'}
-                        </SelectItem>
-                        {columns.map((col, idx) => (
-                          <SelectItem key={idx} value={col} className="text-xs">
-                            {col}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Fixed Action Buttons at bottom - sticky */}
-            <div className="flex-shrink-0 flex justify-between gap-2 pt-3 mt-3 border-t border-border sticky bottom-0 bg-card pb-1">
+            {/* Fixed Action Buttons at bottom */}
+            <div className="flex-shrink-0 flex justify-between gap-2 pt-3 mt-3 border-t border-border">
               <Button variant="outline" size="sm" onClick={resetState}>
                 Back
               </Button>

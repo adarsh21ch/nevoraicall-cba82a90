@@ -11,8 +11,7 @@ const Index = () => {
   useEffect(() => {
     if (!loading) {
       if (user) {
-        // Default tab is now Calling (/dashboard)
-        navigate('/dashboard', { replace: true });
+        navigate('/home', { replace: true });
       } else {
         navigate('/auth', { replace: true });
       }

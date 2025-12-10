@@ -65,8 +65,7 @@ export function getContrastTextColor(bgColor: string): string {
 }
 
 // CSS style object for a colored tag
-// isFilter=true means this is for the Follow Up filter chips (neutral when unselected)
-export function getTagStyle(tagValue: string, tagType: 'response' | 'stage' | 'quality' | 'default', customColor?: string | null, isSelected?: boolean, isFilter?: boolean) {
+export function getTagStyle(tagValue: string, tagType: 'response' | 'stage' | 'quality' | 'default', customColor?: string | null, isSelected?: boolean) {
   const bgColor = getTagColor(tagValue, tagType, customColor);
   const textColor = getContrastTextColor(bgColor);
   
@@ -78,16 +77,6 @@ export function getTagStyle(tagValue: string, tagType: 'response' | 'stage' | 'q
     };
   }
   
-  // For filter chips that are not selected, show neutral style
-  if (isFilter) {
-    return {
-      backgroundColor: 'transparent',
-      color: 'hsl(var(--muted-foreground))',
-      borderColor: 'hsl(var(--border))',
-    };
-  }
-  
-  // Default colored style for non-filter tags
   return {
     backgroundColor: `${bgColor}15`,
     color: bgColor,

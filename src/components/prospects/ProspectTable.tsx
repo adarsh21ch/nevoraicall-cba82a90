@@ -1,12 +1,11 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Prospect, FunnelStage, ProspectQuality, Sheet, ExtendedActionTaken, FUNNEL_STAGES, EXTENDED_ACTIONS } from '@/types/prospect';
+import { Prospect, FunnelStage, ProspectQuality, Sheet, ExtendedActionTaken } from '@/types/prospect';
 import { SortableProspectRow } from './SortableProspectRow';
 import { MobileProspectCard } from './MobileProspectCard';
 import { ProspectFilters } from './ProspectFilters';
 import { AddProspectDialog } from './AddProspectDialog';
 import { ImportExcelDialog } from './ImportExcelDialog';
 import { SheetTabs } from './SheetTabs';
-import { ColumnOptionsSheet } from './ColumnOptionsSheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -67,19 +66,19 @@ interface ProspectTableProps {
 }
 
 // Column configuration - fixed order, no drag/resize
-// Phone column removed from visible table (data still available in Report Card)
-// Quality column removed per user request
-// WhatsApp/Call moved into Name column
 const COLUMNS = [
-  { id: 'index', label: '#', width: 45, mobileWidth: 32 },
-  { id: 'name', label: 'Name', width: 180, mobileWidth: 140 },
-  { id: 'action', label: 'Response', width: 150, mobileWidth: 110 },
-  { id: 'stage', label: 'Funnel', width: 150, mobileWidth: 110 },
-  { id: 'actions', label: '', width: 70, mobileWidth: 45 },
+  { id: 'index', label: '#', width: 50, mobileWidth: 36 },
+  { id: 'name', label: 'Name', width: 180, mobileWidth: 130 },
+  { id: 'phone', label: 'Phone', width: 140, mobileWidth: 100 },
+  { id: 'contact', label: 'Call', width: 70, mobileWidth: 60 },
+  { id: 'action', label: 'Response', width: 130, mobileWidth: 85 },
+  { id: 'stage', label: 'Stages', width: 130, mobileWidth: 85 },
+  { id: 'quality', label: 'Quality', width: 100, mobileWidth: 75 },
+  { id: 'actions', label: '', width: 80, mobileWidth: 50 },
 ];
 
-// Fixed column order (phone, contact, and quality removed from visible columns - Call/WhatsApp now in Name)
-const COLUMN_ORDER = ['index', 'name', 'action', 'stage', 'actions'];
+// Fixed column order
+const COLUMN_ORDER = ['index', 'name', 'phone', 'contact', 'action', 'stage', 'quality', 'actions'];
 
 export function ProspectTable({
   prospects,
@@ -543,6 +542,29 @@ export function ProspectTable({
               exporting={exporting}
               filteredCount={filteredProspects.length}
             />
+            {/* Undo/Redo buttons - compact icons */}
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleUndo}
+                disabled={!canUndo}
+                title="Undo"
+              >
+                <Undo2 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleRedo}
+                disabled={!canRedo}
+                title="Redo"
+              >
+                <Redo2 className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
           <div className="flex gap-2 items-center justify-between">
             {/* View Toggle */}
@@ -566,31 +588,7 @@ export function ProspectTable({
                 <span className="text-xs hidden sm:inline">Cards</span>
               </Button>
             </div>
-            {/* Undo/Redo + Import/Add - grouped together */}
-            <div className="flex items-center gap-1.5">
-              {/* Undo/Redo buttons - compact icons with tight spacing */}
-              <div className="flex items-center gap-0.5 mr-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={handleUndo}
-                  disabled={!canUndo}
-                  title="Undo"
-                >
-                  <Undo2 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={handleRedo}
-                  disabled={!canRedo}
-                  title="Redo"
-                >
-                  <Redo2 className="h-4 w-4" />
-                </Button>
-              </div>
+            <div className="flex gap-2">
               <ImportExcelDialog 
                 onImport={handleImportProspects} 
               />
@@ -695,7 +693,7 @@ export function ProspectTable({
                 {/* Sheet tabs row - ALWAYS visible */}
                 <tr>
                   <th 
-                    colSpan={COLUMN_ORDER.length + (selectionMode.active ? 1 : 0)} 
+                    colSpan={COLUMN_ORDER.length + (selectionMode.active ? 2 : 1) + 1} 
                     className="p-0 bg-card border-b border-border/50"
                   >
                     <SheetTabs
@@ -721,13 +719,14 @@ export function ProspectTable({
                       />
                     </th>
                   )}
+                  {/* Drag handle header */}
+                  <th className="px-1 py-2.5 w-8 min-w-[32px]"></th>
                   {COLUMN_ORDER.map((columnId) => {
                     const col = COLUMNS.find(c => c.id === columnId);
                     if (!col) return null;
                     const width = columnWidths[columnId];
                     const isNameColumn = columnId === 'name';
                     const isIndexColumn = columnId === 'index';
-                    const showOptionsButton = columnId === 'action' || columnId === 'stage';
                     
                     return (
                       <th
@@ -736,28 +735,12 @@ export function ProspectTable({
                           "px-2 py-2.5 text-left whitespace-nowrap",
                           columnId === 'index' && "text-center",
                           isMobile && "text-[11px] px-1.5",
-                          isMobile && isNameColumn && "sticky left-[36px] z-20 bg-muted/95 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)]",
-                          isMobile && isIndexColumn && "sticky left-0 z-20 bg-muted/95"
+                          isMobile && isNameColumn && "sticky left-[68px] z-20 bg-muted/95 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)]",
+                          isMobile && isIndexColumn && "sticky left-[32px] z-20 bg-muted/95"
                         )}
                         style={{ width: `${width}px`, minWidth: `${width}px` }}
                       >
-                        <div className="flex items-center gap-0.5">
-                          <span>{col.label}</span>
-                          {columnId === 'action' && (
-                            <ColumnOptionsSheet 
-                              columnType="action_taken" 
-                              columnLabel="Response" 
-                              defaultOptions={EXTENDED_ACTIONS}
-                            />
-                          )}
-                          {columnId === 'stage' && (
-                            <ColumnOptionsSheet 
-                              columnType="funnel_stage" 
-                              columnLabel="Funnel" 
-                              defaultOptions={FUNNEL_STAGES}
-                            />
-                          )}
-                        </div>
+                        {col.label}
                       </th>
                     );
                   })}
@@ -778,7 +761,7 @@ export function ProspectTable({
                       // Empty state row - keeps table structure intact
                       <tr>
                         <td 
-                          colSpan={COLUMN_ORDER.length + (selectionMode.active ? 1 : 0)}
+                          colSpan={COLUMN_ORDER.length + (selectionMode.active ? 2 : 1) + 1}
                           className="py-12 text-center"
                         >
                           <Users className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />

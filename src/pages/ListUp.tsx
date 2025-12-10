@@ -83,35 +83,13 @@ export default function ListUp() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { prospects: myProspects, loading: prospectsLoading, refetch } = useProspects();
-  const { sharedOwners, selectedOwnerId, setSelectedOwnerId, prospects: sharedProspects, loading: sharedLoading, refetchOwners, refetchProspects } = useSharedProspects();
+  const { sharedOwners, selectedOwnerId, setSelectedOwnerId, prospects: sharedProspects, loading: sharedLoading, refetch: refetchShared } = useSharedProspects();
   
-  // Persist filters in sessionStorage so they survive tab switches
-  const [selectedResponses, setSelectedResponses] = useState<string[]>(() => {
-    const saved = sessionStorage.getItem('listup-responses');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [selectedStages, setSelectedStages] = useState<string[]>(() => {
-    const saved = sessionStorage.getItem('listup-stages');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [selectedQualities, setSelectedQualities] = useState<string[]>(() => {
-    const saved = sessionStorage.getItem('listup-qualities');
-    return saved ? JSON.parse(saved) : [];
-  });
+  // Separate state for each tag category
+  const [selectedResponses, setSelectedResponses] = useState<string[]>([]);
+  const [selectedStages, setSelectedStages] = useState<string[]>([]);
+  const [selectedQualities, setSelectedQualities] = useState<string[]>([]);
   const [expandedProspectId, setExpandedProspectId] = useState<string | null>(null);
-
-  // Persist filter selections to sessionStorage
-  useEffect(() => {
-    sessionStorage.setItem('listup-responses', JSON.stringify(selectedResponses));
-  }, [selectedResponses]);
-  
-  useEffect(() => {
-    sessionStorage.setItem('listup-stages', JSON.stringify(selectedStages));
-  }, [selectedStages]);
-  
-  useEffect(() => {
-    sessionStorage.setItem('listup-qualities', JSON.stringify(selectedQualities));
-  }, [selectedQualities]);
 
   // Determine which prospects to show
   const prospects = selectedOwnerId ? sharedProspects : myProspects;
@@ -120,11 +98,11 @@ export default function ListUp() {
   // Pull-to-refresh
   const handleRefresh = useCallback(async () => {
     if (selectedOwnerId) {
-      await refetchProspects?.();
+      await refetchShared?.();
     } else {
       await refetch?.();
     }
-  }, [refetch, refetchProspects, selectedOwnerId]);
+  }, [refetch, refetchShared, selectedOwnerId]);
   const { containerRef, isRefreshing, pullDistance, showIndicator } = usePullToRefresh(handleRefresh);
 
   useEffect(() => {
@@ -330,7 +308,7 @@ export default function ListUp() {
                 <div className="flex flex-wrap gap-1.5">
                   {responseTags.map(tag => {
                     const isSelected = selectedResponses.includes(tag);
-                    const style = getTagStyle(tag, 'response', null, isSelected, true);
+                    const style = getTagStyle(tag, 'response', null, isSelected);
                     return (
                       <Badge
                         key={`response-${tag}`}
@@ -356,7 +334,7 @@ export default function ListUp() {
                 <div className="flex flex-wrap gap-1.5">
                   {stageTags.map(tag => {
                     const isSelected = selectedStages.includes(tag);
-                    const style = getTagStyle(tag, 'stage', null, isSelected, true);
+                    const style = getTagStyle(tag, 'stage', null, isSelected);
                     return (
                       <Badge
                         key={`stage-${tag}`}
@@ -382,7 +360,7 @@ export default function ListUp() {
                 <div className="flex flex-wrap gap-1.5">
                   {qualityTags.map(tag => {
                     const isSelected = selectedQualities.includes(tag);
-                    const style = getTagStyle(tag, 'quality', null, isSelected, true);
+                    const style = getTagStyle(tag, 'quality', null, isSelected);
                     return (
                       <Badge
                         key={`quality-${tag}`}

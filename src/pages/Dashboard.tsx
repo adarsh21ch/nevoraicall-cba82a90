@@ -13,68 +13,43 @@ import { cn } from '@/lib/utils';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
 import { CustomOptionsProvider } from '@/contexts/CustomOptionsContext';
 
-// Pull-to-refresh hook - fixed to not interfere with normal scrolling
-function usePullToRefresh(onRefresh: () => Promise<void>, threshold = 100) {
+// Pull-to-refresh hook
+function usePullToRefresh(onRefresh: () => Promise<void>, threshold = 80) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const startY = useRef(0);
-  const startScrollTop = useRef(0);
-  const isPulling = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleTouchStart = useCallback((e: TouchEvent) => {
-    const container = containerRef.current;
-    if (!container) return;
-    
-    startY.current = e.touches[0].clientY;
-    startScrollTop.current = container.scrollTop;
-    isPulling.current = false;
+    if (containerRef.current && containerRef.current.scrollTop === 0) {
+      startY.current = e.touches[0].clientY;
+    }
   }, []);
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
     if (!startY.current || isRefreshing) return;
-    
-    const container = containerRef.current;
-    if (!container) return;
-    
     const currentY = e.touches[0].clientY;
     const diff = currentY - startY.current;
-    
-    // Only activate pull-to-refresh if:
-    // 1. Started at scroll position 0
-    // 2. Currently at scroll position 0 (didn't scroll down first)
-    // 3. User is pulling down (diff > 0)
-    // 4. Diff is significant enough to indicate intent (> 20px)
-    if (startScrollTop.current <= 0 && container.scrollTop <= 0 && diff > 20) {
-      isPulling.current = true;
-      setPullDistance(Math.min((diff - 20) * 0.4, threshold * 1.2));
-    } else {
-      // Allow normal scrolling
-      isPulling.current = false;
-      setPullDistance(0);
+    if (diff > 0 && containerRef.current && containerRef.current.scrollTop === 0) {
+      setPullDistance(Math.min(diff * 0.5, threshold * 1.5));
     }
   }, [isRefreshing, threshold]);
 
   const handleTouchEnd = useCallback(async () => {
-    if (pullDistance >= threshold && !isRefreshing && isPulling.current) {
+    if (pullDistance >= threshold && !isRefreshing) {
       setIsRefreshing(true);
       try { await onRefresh(); } finally { setIsRefreshing(false); }
     }
     setPullDistance(0);
     startY.current = 0;
-    startScrollTop.current = 0;
-    isPulling.current = false;
   }, [pullDistance, threshold, isRefreshing, onRefresh]);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    
-    // Use passive: false for touchmove to allow preventDefault if needed
     container.addEventListener('touchstart', handleTouchStart, { passive: true });
     container.addEventListener('touchmove', handleTouchMove, { passive: true });
-    container.addEventListener('touchend', handleTouchEnd, { passive: true });
-    
+    container.addEventListener('touchend', handleTouchEnd);
     return () => {
       container.removeEventListener('touchstart', handleTouchStart);
       container.removeEventListener('touchmove', handleTouchMove);
@@ -82,7 +57,7 @@ function usePullToRefresh(onRefresh: () => Promise<void>, threshold = 100) {
     };
   }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
 
-  return { containerRef, isRefreshing, pullDistance, showIndicator: pullDistance > 30 || isRefreshing };
+  return { containerRef, isRefreshing, pullDistance, showIndicator: pullDistance > 20 || isRefreshing };
 }
 
 export default function Dashboard() {
@@ -117,7 +92,7 @@ export default function Dashboard() {
 
   const toggleOptions: [{ value: string; label: string; icon: typeof Phone }, { value: string; label: string; icon: typeof GitBranch }] = [
     { value: 'leads', label: 'Calling', icon: Phone },
-    { value: 'funnel', label: 'Funnels', icon: GitBranch },
+    { value: 'funnel', label: 'Stages', icon: GitBranch },
   ];
 
   return (
@@ -140,9 +115,9 @@ export default function Dashboard() {
           </div>
         </header>
 
-        <main ref={containerRef} className="scrollable-content relative" style={{ touchAction: 'pan-x pan-y' }}>
+        <main ref={containerRef} className="scrollable-content relative">
           <PullToRefreshIndicator isRefreshing={isRefreshing} pullDistance={pullDistance} showIndicator={showIndicator} />
-          <div className="py-3 px-4 pb-28">
+          <div className="container py-3 px-4 pb-28">
             {/* Content based on active tab */}
             {mainTab === 'leads' ? (
               <ProspectTable
