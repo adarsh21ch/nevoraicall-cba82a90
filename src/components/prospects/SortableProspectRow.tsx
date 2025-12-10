@@ -5,6 +5,16 @@ import { ProspectRow } from './ProspectRow';
 import { GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+interface ColumnConfig {
+  id: string;
+  label: string;
+  width: number;
+  mobileWidth: number;
+  sticky?: boolean;
+  stickyLeft?: number;
+  stickyLeftMobile?: number;
+}
+
 interface SortableProspectRowProps {
   prospect: Prospect;
   index: number;
@@ -16,6 +26,8 @@ interface SortableProspectRowProps {
   isEven: boolean;
   columnOrder: string[];
   columnWidths: Record<string, number>;
+  columnConfig: ColumnConfig[];
+  selectionModeActive: boolean;
   isMobileTable?: boolean;
   showSelection?: boolean;
   isSelected?: boolean;

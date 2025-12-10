@@ -59,41 +59,41 @@ interface ProspectTableProps {
   subFilter: 'all' | 'hot' | 'scheduled' | 'day1' | 'progress';
 }
 
-// Column configuration with resize constraints
-// Phone column removed from visible table (data still available in Report Card)
-// Quality column removed per user request
-// WhatsApp/Call moved into Name column
-// All columns have fixed widths - no resizing allowed
+// Column configuration with fixed widths for frozen columns
+// # and Name columns are frozen (sticky), others scroll horizontally
 const COLUMNS = [{
   id: 'index',
   label: '#',
-  width: 45,
-  mobileWidth: 32,
-  canResize: false
+  width: 60,
+  mobileWidth: 40,
+  sticky: true,
+  stickyLeft: 0,
 }, {
   id: 'name',
   label: 'Name',
-  width: 180,
-  mobileWidth: 140,
-  canResize: false
+  width: 220,
+  mobileWidth: 160,
+  sticky: true,
+  stickyLeft: 60, // after # column
+  stickyLeftMobile: 40,
 }, {
   id: 'action',
   label: 'Response',
   width: 150,
-  mobileWidth: 110,
-  canResize: false
+  mobileWidth: 120,
+  sticky: false,
 }, {
   id: 'stage',
   label: 'Funnel',
   width: 150,
-  mobileWidth: 110,
-  canResize: false
+  mobileWidth: 120,
+  sticky: false,
 }, {
   id: 'actions',
   label: '',
-  width: 70,
-  mobileWidth: 45,
-  canResize: false
+  width: 80,
+  mobileWidth: 60,
+  sticky: false,
 }];
 
 // Column order for Calling tab (NO Funnel column - clean calling view)
@@ -161,127 +161,161 @@ function TableContent({
   handleToggleSelect,
   enableDragAndDrop,
 }: TableContentProps) {
+  // Calculate total table width
+  const totalWidth = COLUMN_ORDER.reduce((sum, colId) => {
+    const col = COLUMNS.find(c => c.id === colId);
+    return sum + (col ? (isMobile ? col.mobileWidth : col.width) : 100);
+  }, selectionMode.active ? 40 : 0);
+
   return (
-    <table 
-      className="text-sm border-collapse w-full bg-card" 
-      style={{
-        minWidth: isMobile ? '480px' : '780px',
-        tableLayout: 'fixed'
-      }}
-    >
-      {/* Sticky header block: Sheet tabs + column headers */}
-      <thead className="sticky top-0 z-30 bg-card">
-        {/* Sheet tabs row - ALWAYS visible */}
-        <tr>
-          <th colSpan={COLUMN_ORDER.length + (selectionMode.active ? 1 : 0)} className="p-0 bg-card border-b border-border/50">
-            <SheetTabs 
-              sheets={sheets} 
-              selectedSheetId={selectedSheetId} 
-              onSelectSheet={onSelectSheet} 
-              onAddSheet={onAddSheet} 
-              onUpdateSheet={handleUpdateSheetWithUndo} 
-              onDeleteSheet={onDeleteSheet} 
-              onEnterSelectMode={handleEnterSelectMode} 
-              onDeleteAllInSheet={handleDeleteAllInSheet} 
-            />
-          </th>
-        </tr>
-        {/* Column header row - NO resize behavior, fixed widths */}
-        <tr className="bg-muted/95 backdrop-blur-sm text-xs font-semibold text-muted-foreground border-b border-border">
-          {/* Selection checkbox header */}
-          {selectionMode.active && (
-            <th className="px-2 py-2.5 w-10 min-w-[40px] bg-muted/95">
-              <Checkbox 
-                checked={selectedIds.size === selectionProspects.length && selectionProspects.length > 0} 
-                onCheckedChange={handleSelectAll} 
-              />
-            </th>
-          )}
-          {COLUMN_ORDER.map(columnId => {
-            const col = COLUMNS.find(c => c.id === columnId);
-            if (!col) return null;
-            const width = getColumnWidth(columnId);
-            const isNameColumn = columnId === 'name';
-            const isIndexColumn = columnId === 'index';
-            return (
-              <th 
-                key={columnId}
-                className={cn(
-                  "px-2 py-2.5 text-left whitespace-nowrap bg-muted/95 select-none",
-                  columnId === 'index' && "text-center",
-                  isMobile && "text-[11px] px-1.5",
-                  isMobile && isNameColumn && "sticky left-[32px] z-30 border-r border-border/30",
-                  isMobile && isIndexColumn && "sticky left-0 z-30"
-                )}
-                style={{ 
-                  width: `${width}px`, 
-                  minWidth: `${width}px`,
-                  maxWidth: `${width}px`
-                }}
-              >
-                <div className="flex items-center gap-0.5">
-                  <span>{col.label}</span>
-                  {columnId === 'action' && <ColumnOptionsSheet columnType="action_taken" columnLabel="Response" defaultOptions={EXTENDED_ACTIONS} />}
-                  {columnId === 'stage' && <ColumnOptionsSheet columnType="funnel_stage" columnLabel="Funnel" defaultOptions={FUNNEL_STAGES} />}
-                </div>
-              </th>
-            );
-          })}
-        </tr>
-      </thead>
-      {/* Table body - no DndContext wrapper here */}
-      <tbody>
-        {filteredProspects.length === 0 ? (
-          <tr>
-            <td colSpan={COLUMN_ORDER.length + (selectionMode.active ? 1 : 0)} className="py-12 text-center">
-              <Users className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
-              <p className="text-sm font-medium text-muted-foreground mb-1">
-                {prospects.length === 0 ? "No prospects yet" : selectedSheetId ? "No prospects in this sheet" : "No prospects match your filters"}
-              </p>
-              <p className="text-xs text-muted-foreground/70 mb-3">
-                {prospects.length === 0 || (selectedSheetId && sheetFilteredProspects.length === 0) ? (
-                  "Import Excel or Add Prospect to get started"
-                ) : (
-                  <button 
-                    onClick={() => setFilters({
-                      search: '',
-                      stages: [],
-                      qualities: [],
-                      actions: [],
-                      incompleteOnly: false
-                    })} 
-                    className="text-accent hover:underline"
+    <div className="relative">
+      {/* Sheet tabs row - ALWAYS visible, outside scroll container */}
+      <div className="bg-card border-b border-border/50">
+        <SheetTabs 
+          sheets={sheets} 
+          selectedSheetId={selectedSheetId} 
+          onSelectSheet={onSelectSheet} 
+          onAddSheet={onAddSheet} 
+          onUpdateSheet={handleUpdateSheetWithUndo} 
+          onDeleteSheet={onDeleteSheet} 
+          onEnterSelectMode={handleEnterSelectMode} 
+          onDeleteAllInSheet={handleDeleteAllInSheet} 
+        />
+      </div>
+      
+      {/* Single horizontal scroll container */}
+      <div 
+        className="overflow-x-auto overflow-y-hidden"
+        style={{
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
+        <table 
+          className="text-sm border-collapse bg-card" 
+          style={{
+            width: `${totalWidth}px`,
+            minWidth: `${totalWidth}px`,
+            tableLayout: 'fixed',
+          }}
+        >
+          {/* Sticky header row */}
+          <thead>
+            <tr className="bg-muted text-xs font-semibold text-muted-foreground border-b border-border">
+              {/* Selection checkbox header */}
+              {selectionMode.active && (
+                <th 
+                  className="px-2 py-2.5 bg-muted"
+                  style={{ 
+                    width: '40px', 
+                    minWidth: '40px',
+                    position: 'sticky',
+                    left: 0,
+                    zIndex: 12,
+                  }}
+                >
+                  <Checkbox 
+                    checked={selectedIds.size === selectionProspects.length && selectionProspects.length > 0} 
+                    onCheckedChange={handleSelectAll} 
+                  />
+                </th>
+              )}
+              {COLUMN_ORDER.map(columnId => {
+                const col = COLUMNS.find(c => c.id === columnId);
+                if (!col) return null;
+                const width = isMobile ? col.mobileWidth : col.width;
+                const isSticky = col.sticky;
+                const stickyLeft = isMobile ? (col.stickyLeftMobile ?? col.stickyLeft) : col.stickyLeft;
+                
+                // Adjust sticky left position when selection mode is active
+                const adjustedStickyLeft = selectionMode.active && isSticky ? (stickyLeft ?? 0) + 40 : stickyLeft;
+                
+                return (
+                  <th 
+                    key={columnId}
+                    className={cn(
+                      "px-2 py-2.5 text-left whitespace-nowrap bg-muted select-none",
+                      columnId === 'index' && "text-center",
+                      isMobile && "text-[11px] px-1.5",
+                      isSticky && "border-r border-border/30"
+                    )}
+                    style={{ 
+                      width: `${width}px`, 
+                      minWidth: `${width}px`,
+                      maxWidth: `${width}px`,
+                      ...(isSticky && {
+                        position: 'sticky',
+                        left: `${adjustedStickyLeft}px`,
+                        zIndex: 11,
+                      }),
+                    }}
                   >
-                    Clear filters
-                  </button>
-                )}
-              </p>
-            </td>
-          </tr>
-        ) : (
-          filteredProspects.map((prospect, index) => (
-            <SortableProspectRow 
-              key={prospect.id} 
-              prospect={prospect} 
-              index={index + 1} 
-              isCalling={isCalling} 
-              isExpanded={expandedRowId === prospect.id} 
-              onToggleExpand={() => handleToggleExpand(prospect.id)} 
-              onUpdate={handleUpdateWithUndo} 
-              onDelete={handleDeleteWithUndo} 
-              isEven={index % 2 === 0} 
-              columnOrder={COLUMN_ORDER} 
-              columnWidths={columnWidths} 
-              isMobileTable={isMobile} 
-              showSelection={selectionMode.active && selectionProspects.some(p => p.id === prospect.id)} 
-              isSelected={selectedIds.has(prospect.id)} 
-              onToggleSelect={() => handleToggleSelect(prospect.id)}
-              disableDrag={!enableDragAndDrop}
-            />
-          ))
-        )}
-      </tbody>
-    </table>
+                    <div className="flex items-center gap-0.5">
+                      <span>{col.label}</span>
+                      {columnId === 'action' && <ColumnOptionsSheet columnType="action_taken" columnLabel="Response" defaultOptions={EXTENDED_ACTIONS} />}
+                      {columnId === 'stage' && <ColumnOptionsSheet columnType="funnel_stage" columnLabel="Funnel" defaultOptions={FUNNEL_STAGES} />}
+                    </div>
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+          {/* Table body */}
+          <tbody>
+            {filteredProspects.length === 0 ? (
+              <tr>
+                <td colSpan={COLUMN_ORDER.length + (selectionMode.active ? 1 : 0)} className="py-12 text-center bg-card">
+                  <Users className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    {prospects.length === 0 ? "No prospects yet" : selectedSheetId ? "No prospects in this sheet" : "No prospects match your filters"}
+                  </p>
+                  <p className="text-xs text-muted-foreground/70 mb-3">
+                    {prospects.length === 0 || (selectedSheetId && sheetFilteredProspects.length === 0) ? (
+                      "Import Excel or Add Prospect to get started"
+                    ) : (
+                      <button 
+                        onClick={() => setFilters({
+                          search: '',
+                          stages: [],
+                          qualities: [],
+                          actions: [],
+                          incompleteOnly: false
+                        })} 
+                        className="text-accent hover:underline"
+                      >
+                        Clear filters
+                      </button>
+                    )}
+                  </p>
+                </td>
+              </tr>
+            ) : (
+              filteredProspects.map((prospect, index) => (
+                <SortableProspectRow 
+                  key={prospect.id} 
+                  prospect={prospect} 
+                  index={index + 1} 
+                  isCalling={isCalling} 
+                  isExpanded={expandedRowId === prospect.id} 
+                  onToggleExpand={() => handleToggleExpand(prospect.id)} 
+                  onUpdate={handleUpdateWithUndo} 
+                  onDelete={handleDeleteWithUndo} 
+                  isEven={index % 2 === 0} 
+                  columnOrder={COLUMN_ORDER} 
+                  columnWidths={columnWidths} 
+                  isMobileTable={isMobile}
+                  columnConfig={COLUMNS}
+                  selectionModeActive={selectionMode.active}
+                  showSelection={selectionMode.active && selectionProspects.some(p => p.id === prospect.id)} 
+                  isSelected={selectedIds.has(prospect.id)} 
+                  onToggleSelect={() => handleToggleSelect(prospect.id)}
+                  disableDrag={!enableDragAndDrop}
+                />
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
 
@@ -849,82 +883,72 @@ export function ProspectTable({
         </> :
     // Table Layout - ALWAYS show sheet tabs + header, even when empty
     <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
-          {/* Fixed-width horizontal scroll container - scrolls header + body together */}
-          <div 
-            className="overflow-x-auto overflow-y-visible bg-card" 
-            style={{
-              WebkitOverflowScrolling: 'touch',
-              overscrollBehaviorX: 'contain',
-              touchAction: 'pan-x pan-y',
-            }}
-          >
-            {/* Conditionally wrap with DndContext only on desktop */}
-            {enableDragAndDrop ? (
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleRowDragEnd}>
-                <SortableContext items={filteredProspects.map(p => p.id)} strategy={verticalListSortingStrategy}>
-                  <TableContent
-                    isMobile={isMobile}
-                    COLUMN_ORDER={COLUMN_ORDER}
-                    selectionMode={selectionMode}
-                    selectedIds={selectedIds}
-                    selectionProspects={selectionProspects}
-                    handleSelectAll={handleSelectAll}
-                    getColumnWidth={getColumnWidth}
-                    sheets={sheets}
-                    selectedSheetId={selectedSheetId}
-                    onSelectSheet={onSelectSheet}
-                    onAddSheet={onAddSheet}
-                    handleUpdateSheetWithUndo={handleUpdateSheetWithUndo}
-                    onDeleteSheet={onDeleteSheet}
-                    handleEnterSelectMode={handleEnterSelectMode}
-                    handleDeleteAllInSheet={handleDeleteAllInSheet}
-                    filteredProspects={filteredProspects}
-                    prospects={prospects}
-                    sheetFilteredProspects={sheetFilteredProspects}
-                    setFilters={setFilters}
-                    isCalling={isCalling}
-                    expandedRowId={expandedRowId}
-                    handleToggleExpand={handleToggleExpand}
-                    handleUpdateWithUndo={handleUpdateWithUndo}
-                    handleDeleteWithUndo={handleDeleteWithUndo}
-                    columnWidths={columnWidths}
-                    handleToggleSelect={handleToggleSelect}
-                    enableDragAndDrop={enableDragAndDrop}
-                  />
-                </SortableContext>
-              </DndContext>
-            ) : (
-              <TableContent
-                isMobile={isMobile}
-                COLUMN_ORDER={COLUMN_ORDER}
-                selectionMode={selectionMode}
-                selectedIds={selectedIds}
-                selectionProspects={selectionProspects}
-                handleSelectAll={handleSelectAll}
-                getColumnWidth={getColumnWidth}
-                sheets={sheets}
-                selectedSheetId={selectedSheetId}
-                onSelectSheet={onSelectSheet}
-                onAddSheet={onAddSheet}
-                handleUpdateSheetWithUndo={handleUpdateSheetWithUndo}
-                onDeleteSheet={onDeleteSheet}
-                handleEnterSelectMode={handleEnterSelectMode}
-                handleDeleteAllInSheet={handleDeleteAllInSheet}
-                filteredProspects={filteredProspects}
-                prospects={prospects}
-                sheetFilteredProspects={sheetFilteredProspects}
-                setFilters={setFilters}
-                isCalling={isCalling}
-                expandedRowId={expandedRowId}
-                handleToggleExpand={handleToggleExpand}
-                handleUpdateWithUndo={handleUpdateWithUndo}
-                handleDeleteWithUndo={handleDeleteWithUndo}
-                columnWidths={columnWidths}
-                handleToggleSelect={handleToggleSelect}
-                enableDragAndDrop={enableDragAndDrop}
-              />
-            )}
-          </div>
+          {/* Conditionally wrap with DndContext only on desktop */}
+          {enableDragAndDrop ? (
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleRowDragEnd}>
+              <SortableContext items={filteredProspects.map(p => p.id)} strategy={verticalListSortingStrategy}>
+                <TableContent
+                  isMobile={isMobile}
+                  COLUMN_ORDER={COLUMN_ORDER}
+                  selectionMode={selectionMode}
+                  selectedIds={selectedIds}
+                  selectionProspects={selectionProspects}
+                  handleSelectAll={handleSelectAll}
+                  getColumnWidth={getColumnWidth}
+                  sheets={sheets}
+                  selectedSheetId={selectedSheetId}
+                  onSelectSheet={onSelectSheet}
+                  onAddSheet={onAddSheet}
+                  handleUpdateSheetWithUndo={handleUpdateSheetWithUndo}
+                  onDeleteSheet={onDeleteSheet}
+                  handleEnterSelectMode={handleEnterSelectMode}
+                  handleDeleteAllInSheet={handleDeleteAllInSheet}
+                  filteredProspects={filteredProspects}
+                  prospects={prospects}
+                  sheetFilteredProspects={sheetFilteredProspects}
+                  setFilters={setFilters}
+                  isCalling={isCalling}
+                  expandedRowId={expandedRowId}
+                  handleToggleExpand={handleToggleExpand}
+                  handleUpdateWithUndo={handleUpdateWithUndo}
+                  handleDeleteWithUndo={handleDeleteWithUndo}
+                  columnWidths={columnWidths}
+                  handleToggleSelect={handleToggleSelect}
+                  enableDragAndDrop={enableDragAndDrop}
+                />
+              </SortableContext>
+            </DndContext>
+          ) : (
+            <TableContent
+              isMobile={isMobile}
+              COLUMN_ORDER={COLUMN_ORDER}
+              selectionMode={selectionMode}
+              selectedIds={selectedIds}
+              selectionProspects={selectionProspects}
+              handleSelectAll={handleSelectAll}
+              getColumnWidth={getColumnWidth}
+              sheets={sheets}
+              selectedSheetId={selectedSheetId}
+              onSelectSheet={onSelectSheet}
+              onAddSheet={onAddSheet}
+              handleUpdateSheetWithUndo={handleUpdateSheetWithUndo}
+              onDeleteSheet={onDeleteSheet}
+              handleEnterSelectMode={handleEnterSelectMode}
+              handleDeleteAllInSheet={handleDeleteAllInSheet}
+              filteredProspects={filteredProspects}
+              prospects={prospects}
+              sheetFilteredProspects={sheetFilteredProspects}
+              setFilters={setFilters}
+              isCalling={isCalling}
+              expandedRowId={expandedRowId}
+              handleToggleExpand={handleToggleExpand}
+              handleUpdateWithUndo={handleUpdateWithUndo}
+              handleDeleteWithUndo={handleDeleteWithUndo}
+              columnWidths={columnWidths}
+              handleToggleSelect={handleToggleSelect}
+              enableDragAndDrop={enableDragAndDrop}
+            />
+          )}
           <div className="px-4 py-3 border-t border-border bg-muted/20 text-xs text-muted-foreground flex items-center justify-between">
             <span>Showing {filteredProspects.length} of {baseProspects.length} prospects</span>
           </div>
