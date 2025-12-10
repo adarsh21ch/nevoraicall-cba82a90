@@ -9,12 +9,11 @@ import { useTeamAccess, AVAILABLE_TABS, TabPermission } from '@/hooks/useTeamAcc
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Switch } from '@/components/ui/switch';
 
 const TAB_LABELS: Record<TabPermission, string> = {
   calling: 'Calling',
   follow_up: 'Follow Up',
-  activity: 'Activity',
+  activity: 'Recent (Activity)',
   todo: 'To-Do List'
 };
 
@@ -39,7 +38,10 @@ export function ShareProfileDialog() {
   const [sharing, setSharing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [editingPermissions, setEditingPermissions] = useState<string | null>(null);
+  // ALL tabs selected by default when sharing
   const [selectedTabs, setSelectedTabs] = useState<TabPermission[]>([...AVAILABLE_TABS]);
+  // Tabs to share when creating a new share
+  const [shareWithTabs, setShareWithTabs] = useState<TabPermission[]>([...AVAILABLE_TABS]);
 
   const handleCopyId = async () => {
     if (myNevorId) {
@@ -54,11 +56,15 @@ export function ShareProfileDialog() {
     if (!leaderTrackUpId.trim()) return;
     
     setSharing(true);
-    const result = await shareWithLeader(leaderTrackUpId.trim().toUpperCase());
+    // Pass the selected tabs (null if all selected)
+    const tabsToShare = shareWithTabs.length === AVAILABLE_TABS.length ? null : shareWithTabs;
+    const result = await shareWithLeader(leaderTrackUpId.trim().toUpperCase(), tabsToShare);
     setSharing(false);
     
     if (result.success) {
       setLeaderTrackUpId('');
+      // Reset tab selection to all for next share
+      setShareWithTabs([...AVAILABLE_TABS]);
     } else {
       toast.error(result.error);
     }
@@ -79,6 +85,16 @@ export function ShareProfileDialog() {
 
   const handleToggleTab = (tab: TabPermission) => {
     setSelectedTabs(prev => {
+      if (prev.includes(tab)) {
+        return prev.filter(t => t !== tab);
+      } else {
+        return [...prev, tab];
+      }
+    });
+  };
+
+  const handleToggleShareTab = (tab: TabPermission) => {
+    setShareWithTabs(prev => {
       if (prev.includes(tab)) {
         return prev.filter(t => t !== tab);
       } else {
@@ -132,12 +148,29 @@ export function ShareProfileDialog() {
 
           <Separator />
 
-          {/* Share with Leader */}
-          <div className="space-y-2">
+          {/* Share with Leader - with Tab Selection */}
+          <div className="space-y-3">
             <Label className="text-sm font-medium flex items-center gap-2">
               <Users className="h-4 w-4" />
               Share with Leader/Senior
             </Label>
+            
+            {/* Tab selection for new share */}
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground font-medium">Select tabs to share (all selected by default):</p>
+              <div className="grid grid-cols-2 gap-2">
+                {AVAILABLE_TABS.map(tab => (
+                  <label key={tab} className="flex items-center gap-2 cursor-pointer p-2 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+                    <Checkbox
+                      checked={shareWithTabs.includes(tab)}
+                      onCheckedChange={() => handleToggleShareTab(tab)}
+                    />
+                    <span className="text-sm">{TAB_LABELS[tab]}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
             <div className="flex items-center gap-2">
               <Input
                 placeholder="Enter Leader's TrackUp ID (e.g., NVR-XXXXX)"
@@ -147,14 +180,14 @@ export function ShareProfileDialog() {
               />
               <Button 
                 onClick={handleShareWithLeader}
-                disabled={sharing || !leaderTrackUpId.trim()}
+                disabled={sharing || !leaderTrackUpId.trim() || shareWithTabs.length === 0}
                 size="sm"
               >
                 Share
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Share ALL your data with your leader. They must accept to view.
+              Share selected tabs with your leader. They must accept to view.
             </p>
           </div>
 
@@ -170,29 +203,40 @@ export function ShareProfileDialog() {
                 </Label>
                 <div className="space-y-2">
                   {pendingRequests.map(request => (
-                    <div key={request.id} className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg">
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{request.owner_display_name || 'Unknown'}</p>
-                        <p className="text-xs text-muted-foreground font-mono">{request.owner_nevorid}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          wants to share their data with you
-                        </p>
+                    <div key={request.id} className="p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg space-y-2">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{request.owner_display_name || 'Unknown'}</p>
+                          <p className="text-xs text-muted-foreground font-mono">{request.owner_nevorid}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            wants to share their data with you
+                          </p>
+                        </div>
+                        <div className="flex gap-2 ml-2">
+                          <Button 
+                            variant="default" 
+                            size="sm"
+                            onClick={() => acceptShareRequest(request.id)}
+                          >
+                            Accept
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => rejectShareRequest(request.id)}
+                          >
+                            Reject
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex gap-2 ml-2">
-                        <Button 
-                          variant="default" 
-                          size="sm"
-                          onClick={() => acceptShareRequest(request.id)}
-                        >
-                          Accept
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => rejectShareRequest(request.id)}
-                        >
-                          Reject
-                        </Button>
+                      {/* Show which tabs they're sharing */}
+                      <div className="flex flex-wrap gap-1">
+                        <span className="text-xs text-muted-foreground">Tabs shared:</span>
+                        {(request.allowed_tabs || AVAILABLE_TABS).map(tab => (
+                          <Badge key={tab} variant="outline" className="text-xs">
+                            {TAB_LABELS[tab]}
+                          </Badge>
+                        ))}
                       </div>
                     </div>
                   ))}
