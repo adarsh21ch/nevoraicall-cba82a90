@@ -108,7 +108,7 @@ export function ColumnOptionsSheet({
             <div className="flex items-center gap-2 p-2 rounded-lg bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-900">
               <Star className="h-4 w-4 text-yellow-500 flex-shrink-0" />
               <p className="text-xs text-yellow-700 dark:text-yellow-400">
-                Enable "Filter Tag" to show prospects with this tag in the Filter list
+                Only ONE tag can be the Filter tag. Enabling it here will disable any other.
               </p>
             </div>
           )}
