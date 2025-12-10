@@ -20,6 +20,16 @@ interface DragHandleProps {
   isDragging: boolean;
 }
 
+interface ColumnConfig {
+  id: string;
+  label: string;
+  width: number;
+  mobileWidth: number;
+  sticky?: boolean;
+  stickyLeft?: number;
+  stickyLeftMobile?: number;
+}
+
 interface ProspectRowProps {
   prospect: Prospect;
   index: number;
@@ -31,6 +41,8 @@ interface ProspectRowProps {
   isEven: boolean;
   columnOrder: string[];
   columnWidths: Record<string, number>;
+  columnConfig: ColumnConfig[];
+  selectionModeActive: boolean;
   isMobileTable?: boolean;
   dragHandleProps?: DragHandleProps;
   showSelection?: boolean;
@@ -49,6 +61,8 @@ export function ProspectRow({
   isEven,
   columnOrder,
   columnWidths,
+  columnConfig,
+  selectionModeActive,
   isMobileTable = false,
   dragHandleProps,
   showSelection = false,
@@ -132,25 +146,40 @@ export function ProspectRow({
   };
 
   const renderCell = (columnId: string) => {
-    const width = columnWidths[columnId];
-    const style = { width: width ? `${width}px` : undefined, minWidth: width ? `${width}px` : undefined };
+    const col = columnConfig.find(c => c.id === columnId);
+    const width = isMobileTable ? col?.mobileWidth : col?.width;
+    const isSticky = col?.sticky;
+    const stickyLeft = isMobileTable ? (col?.stickyLeftMobile ?? col?.stickyLeft) : col?.stickyLeft;
+    
+    // Adjust sticky left position when selection mode is active
+    const adjustedStickyLeft = selectionModeActive && isSticky ? (stickyLeft ?? 0) + 40 : stickyLeft;
+    
     // Use solid background colors - swap so first row (isEven=true) is light, second row (isEven=false) is darker
     const bgColor = isEven ? "bg-card" : "bg-muted";
-    const isNameColumn = columnId === 'name';
-    const isIndexColumn = columnId === 'index';
+    
+    const cellStyle: React.CSSProperties = {
+      width: width ? `${width}px` : undefined, 
+      minWidth: width ? `${width}px` : undefined,
+      maxWidth: width ? `${width}px` : undefined,
+      ...(isSticky && {
+        position: 'sticky',
+        left: `${adjustedStickyLeft}px`,
+        zIndex: 10,
+      }),
+    };
     
     const cellClass = cn(
       "px-2 py-2 whitespace-nowrap",
+      bgColor,
       !isMobileTable && "px-3 py-3",
       isMobileTable && "text-xs",
-      isMobileTable && isNameColumn && `sticky left-[36px] z-10 ${bgColor} border-r border-border/30`,
-      isMobileTable && isIndexColumn && `sticky left-0 z-10 ${bgColor}`
+      isSticky && "border-r border-border/30"
     );
     
     switch (columnId) {
       case 'index':
         return (
-          <td key={columnId} className={cn(cellClass, "text-center")} style={style}>
+          <td key={columnId} className={cn(cellClass, "text-center")} style={cellStyle}>
             <span className={cn("text-xs font-semibold text-muted-foreground bg-muted/60 rounded px-1.5 py-0.5", isMobileTable && "text-[10px] px-1")}>{index}</span>
           </td>
         );
@@ -162,8 +191,8 @@ export function ProspectRow({
         const infoLine = infoParts.length > 0 ? infoParts.join(', ') : '–';
         
         return (
-          <td key={columnId} className={cellClass} style={style} onPointerDown={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-1.5 overflow-hidden" style={{ maxWidth: isMobileTable ? '160px' : '220px' }}>
+          <td key={columnId} className={cellClass} style={cellStyle} onPointerDown={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-1.5 overflow-hidden" style={{ maxWidth: isMobileTable ? '140px' : '200px' }}>
               {/* Call + WhatsApp icons */}
               <div className="flex items-center gap-0.5 shrink-0">
                 <CallIconButton onClick={openCall} className={isMobileTable ? "p-0.5" : undefined} />
@@ -178,7 +207,7 @@ export function ProspectRow({
                     isExpanded && "text-primary bg-primary/10"
                   )}
                 >
-                  <span className="truncate" style={{ maxWidth: isMobileTable ? '80px' : '140px' }} title={prospect.name}>{prospect.name}</span>
+                  <span className="truncate" style={{ maxWidth: isMobileTable ? '70px' : '120px' }} title={prospect.name}>{prospect.name}</span>
                   <span className={cn("transition-transform duration-200 text-muted-foreground group-hover:text-primary shrink-0", isExpanded && "rotate-180")}>
                     <ChevronDown className={cn("h-3 w-3", isMobileTable && "h-2.5 w-2.5")} />
                   </span>
@@ -186,7 +215,7 @@ export function ProspectRow({
                 {/* Compact info: Age, Location - truncated to stay within column */}
                 <div className={cn(
                   "text-muted-foreground truncate pl-1",
-                  isMobileTable ? "text-[9px] max-w-[80px]" : "text-[10px] max-w-[140px]"
+                  isMobileTable ? "text-[9px] max-w-[70px]" : "text-[10px] max-w-[120px]"
                 )} title={infoLine}>
                   {infoLine}
                 </div>
@@ -196,7 +225,7 @@ export function ProspectRow({
         );
       case 'phone':
         return (
-          <td key={columnId} className={cellClass} style={style} onPointerDown={(e) => e.stopPropagation()}>
+          <td key={columnId} className={cellClass} style={cellStyle} onPointerDown={(e) => e.stopPropagation()}>
             {isEditingPhone ? (
               <Input ref={phoneRef} value={localPhone} onChange={(e) => setLocalPhone(e.target.value)} onBlur={handlePhoneBlur} onKeyDown={handlePhoneKeyDown} className={cn("h-7 px-1.5 text-sm border-primary", isMobileTable ? "h-5 text-[10px] w-full" : "w-28")} />
             ) : (
@@ -207,7 +236,7 @@ export function ProspectRow({
       // 'contact' column removed - Call/WhatsApp now in Name column
       case 'stage':
         return (
-          <td key={columnId} className={cellClass} style={style} onPointerDown={(e) => e.stopPropagation()}>
+          <td key={columnId} className={cellClass} style={cellStyle} onPointerDown={(e) => e.stopPropagation()}>
             <InlineSelect 
               value={prospect.funnel_stage} 
               options={stageOptions} 
@@ -224,7 +253,7 @@ export function ProspectRow({
         );
       case 'action':
         return (
-          <td key={columnId} className={cellClass} style={style} onPointerDown={(e) => e.stopPropagation()}>
+          <td key={columnId} className={cellClass} style={cellStyle} onPointerDown={(e) => e.stopPropagation()}>
             <InlineSelect 
               value={getActionDisplayValue()} 
               options={isCalling ? actionOptions : actionOptions.filter(a => a !== 'Enrollment')} 
@@ -241,7 +270,7 @@ export function ProspectRow({
         );
       case 'actions':
         return (
-          <td key={columnId} className={cellClass} style={style} onPointerDown={(e) => e.stopPropagation()}>
+          <td key={columnId} className={cellClass} style={cellStyle} onPointerDown={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-0.5">
               <Button variant="ghost" size="icon" className={cn("h-7 w-7 hover:bg-muted/50 transition-all duration-200", isMobileTable && "h-6 w-6", isExpanded && "bg-primary/10 text-primary")} onClick={onToggleExpand}>
                 <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isMobileTable && "h-3 w-3", isExpanded && "rotate-180")} />
@@ -292,9 +321,19 @@ export function ProspectRow({
           !dragHandleProps?.isDragging && "cursor-grab"
         )}
       >
-        {/* Selection checkbox cell */}
+        {/* Selection checkbox cell - sticky when in selection mode */}
         {showSelection && (
-          <td className={cn("px-2 py-2", isEven ? "bg-card" : "bg-muted")} onPointerDown={(e) => e.stopPropagation()}>
+          <td 
+            className={cn("px-2 py-2", isEven ? "bg-card" : "bg-muted")} 
+            style={{
+              width: '40px',
+              minWidth: '40px',
+              position: 'sticky',
+              left: 0,
+              zIndex: 10,
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
             <Checkbox
               checked={isSelected}
               onCheckedChange={onToggleSelect}
