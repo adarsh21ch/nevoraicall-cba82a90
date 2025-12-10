@@ -543,29 +543,6 @@ export function ProspectTable({
               exporting={exporting}
               filteredCount={filteredProspects.length}
             />
-            {/* Undo/Redo buttons - compact icons with tight spacing */}
-            <div className="flex items-center gap-0.5">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={handleUndo}
-                disabled={!canUndo}
-                title="Undo"
-              >
-                <Undo2 className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={handleRedo}
-                disabled={!canRedo}
-                title="Redo"
-              >
-                <Redo2 className="h-4 w-4" />
-              </Button>
-            </div>
           </div>
           <div className="flex gap-2 items-center justify-between">
             {/* View Toggle */}
@@ -589,7 +566,31 @@ export function ProspectTable({
                 <span className="text-xs hidden sm:inline">Cards</span>
               </Button>
             </div>
-            <div className="flex gap-2">
+            {/* Undo/Redo + Import/Add - grouped together */}
+            <div className="flex items-center gap-1.5">
+              {/* Undo/Redo buttons - compact icons with tight spacing */}
+              <div className="flex items-center gap-0.5 mr-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={handleUndo}
+                  disabled={!canUndo}
+                  title="Undo"
+                >
+                  <Undo2 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={handleRedo}
+                  disabled={!canRedo}
+                  title="Redo"
+                >
+                  <Redo2 className="h-4 w-4" />
+                </Button>
+              </div>
               <ImportExcelDialog 
                 onImport={handleImportProspects} 
               />
