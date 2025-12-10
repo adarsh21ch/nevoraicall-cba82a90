@@ -211,24 +211,24 @@ export function ProspectTable({
     }
   };
 
-  // Get filter tags from custom options
-  const { getFilterTags } = useCustomOptionsContext();
-  const filterTags = useMemo(() => getFilterTags(), [getFilterTags]);
+  // Get the single active filter tag from custom options
+  const { getActiveFilterTag } = useCustomOptionsContext();
+  const activeFilterTag = useMemo(() => getActiveFilterTag(), [getActiveFilterTag]);
 
-  // For DUPLICATING: Show prospects in BOTH tabs if they have funnel stages OR filter tags
+  // For DUPLICATING: Show prospects in BOTH tabs if they have the active filter tag
   const callingProspects = useMemo(() => {
     return prospects;
   }, [prospects]);
   
-  // Filter prospects: show only those whose action_taken is marked as a filter tag
+  // Filter prospects: show only those whose action_taken matches the single active filter tag
   const funnelProspects = useMemo(() => {
-    if (filterTags.length === 0) {
-      // Fallback to old behavior if no filter tags configured
+    if (!activeFilterTag) {
+      // No filter tag set - show empty or fallback to old behavior
       return prospects.filter(p => p.enrollment_status === 'Enrolled' || p.funnel_stage);
     }
-    // New behavior: show prospects with filter-tagged response
-    return prospects.filter(p => p.action_taken && filterTags.includes(p.action_taken));
-  }, [prospects, filterTags]);
+    // New behavior: show only prospects with the single active filter tag
+    return prospects.filter(p => p.action_taken === activeFilterTag);
+  }, [prospects, activeFilterTag]);
 
   // Get base prospects based on filter mode
   const baseProspects = useMemo(() => {

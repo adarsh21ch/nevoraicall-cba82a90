@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import { Star } from 'lucide-react';
 import { useCustomOptionsContext } from '@/contexts/CustomOptionsContext';
 import { EXTENDED_ACTIONS } from '@/types/prospect';
@@ -15,34 +16,19 @@ interface FilterTagSetupDialogProps {
 }
 
 export function FilterTagSetupDialog({ open, onOpenChange, onComplete }: FilterTagSetupDialogProps) {
-  const { getOptionsForType, getCustomOptionsForType, updateFilterTagStatus } = useCustomOptionsContext();
-  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
+  const { getOptionsForType, setActiveFilterTag } = useCustomOptionsContext();
+  const [selectedTag, setSelectedTag] = useState<string>('');
   const [saving, setSaving] = useState(false);
 
   // Get all Response (action_taken) options
   const allResponseOptions = getOptionsForType('action_taken', EXTENDED_ACTIONS);
-  const customOptions = getCustomOptionsForType('action_taken');
-
-  const handleToggleTag = (tag: string) => {
-    setSelectedTags(prev => {
-      const next = new Set(prev);
-      if (next.has(tag)) {
-        next.delete(tag);
-      } else {
-        next.add(tag);
-      }
-      return next;
-    });
-  };
 
   const handleSave = async () => {
+    if (!selectedTag) return;
     setSaving(true);
     try {
-      // Update filter tag status for each custom option
-      for (const opt of customOptions) {
-        const isFilterTag = selectedTags.has(opt.option_value);
-        await updateFilterTagStatus(opt.id, isFilterTag);
-      }
+      // Set the single active filter tag
+      await setActiveFilterTag(selectedTag);
       
       // Mark setup as done
       localStorage.setItem(FILTER_SETUP_KEY, 'true');
@@ -65,39 +51,35 @@ export function FilterTagSetupDialog({ open, onOpenChange, onComplete }: FilterT
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Star className="h-5 w-5 text-yellow-500" />
-            Set Up Filter Tags
+            Set Up Filter Tag
           </DialogTitle>
           <DialogDescription>
-            Choose which Response tags should be treated as Filter tags. Prospects with these tags will appear in your Filter list.
+            Select ONE Response tag to use as your Filter tag. Prospects with this tag will appear in your Filter list.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4 space-y-3 max-h-[300px] overflow-y-auto">
+        <div className="py-4 max-h-[300px] overflow-y-auto">
           {allResponseOptions.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
               No Response tags found. Add Response tags first in the Calling tab.
             </p>
           ) : (
-            <>
-              <p className="text-xs text-muted-foreground mb-2">
-                Select the tags that indicate a prospect should appear in your Filter list:
-              </p>
+            <RadioGroup value={selectedTag} onValueChange={setSelectedTag} className="space-y-2">
               {allResponseOptions.map(tag => (
                 <label
                   key={tag}
                   className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer transition-colors"
                 >
-                  <Checkbox
-                    checked={selectedTags.has(tag)}
-                    onCheckedChange={() => handleToggleTag(tag)}
-                  />
-                  <span className="flex-1 text-sm font-medium">{tag}</span>
-                  {selectedTags.has(tag) && (
+                  <RadioGroupItem value={tag} id={tag} />
+                  <Label htmlFor={tag} className="flex-1 text-sm font-medium cursor-pointer">
+                    {tag}
+                  </Label>
+                  {selectedTag === tag && (
                     <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
                   )}
                 </label>
               ))}
-            </>
+            </RadioGroup>
           )}
         </div>
 
@@ -105,8 +87,8 @@ export function FilterTagSetupDialog({ open, onOpenChange, onComplete }: FilterT
           <Button variant="ghost" onClick={handleSkip}>
             Skip for now
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving...' : 'Save Filter Tags'}
+          <Button onClick={handleSave} disabled={saving || !selectedTag}>
+            {saving ? 'Saving...' : 'Set Filter Tag'}
           </Button>
         </DialogFooter>
       </DialogContent>
