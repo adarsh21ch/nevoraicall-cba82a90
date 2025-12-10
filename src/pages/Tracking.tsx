@@ -126,7 +126,7 @@ export default function Tracking() {
 
   const toggleOptions: [{ value: string; label: string; icon: typeof Calendar }, { value: string; label: string; icon: typeof TrendingUp }] = [
     { value: 'leads', label: 'Leads', icon: Calendar },
-    { value: 'funnel', label: 'Stages', icon: TrendingUp },
+    { value: 'funnel', label: 'Funnel', icon: TrendingUp },
   ];
 
   return (

@@ -78,14 +78,14 @@ const COLUMNS = [{
   minWidth: 100,
 }, {
   id: 'stage',
-  label: 'Stage',
+  label: 'Funnel',
   width: '35%',
   minWidth: 100,
 }];
 
 // Column order for Calling tab: #, Name, Response
 const CALLING_COLUMN_ORDER = ['index', 'name', 'action'];
-// Column order for Stages tab: #, Name, Stage
+// Column order for Funnel tab: #, Name, Funnel
 const FILTER_COLUMN_ORDER = ['index', 'name', 'stage'];
 
 // TableContent component
@@ -194,7 +194,7 @@ function TableContent({
                   <div className="flex items-center gap-0.5">
                     <span>{col.label}</span>
                     {columnId === 'action' && <ColumnOptionsSheet columnType="action_taken" columnLabel="Response" defaultOptions={EXTENDED_ACTIONS} />}
-                    {columnId === 'stage' && <ColumnOptionsSheet columnType="funnel_stage" columnLabel="Stage" defaultOptions={FUNNEL_STAGES} />}
+                    {columnId === 'stage' && <ColumnOptionsSheet columnType="funnel_stage" columnLabel="Funnel" defaultOptions={FUNNEL_STAGES} />}
                   </div>
                 </th>
               );
