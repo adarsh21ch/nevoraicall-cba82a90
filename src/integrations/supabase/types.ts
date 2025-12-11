@@ -199,6 +199,33 @@ export type Database = {
         }
         Relationships: []
       }
+      leader_member_aliases: {
+        Row: {
+          alias_name: string
+          created_at: string
+          id: string
+          leader_id: string
+          member_id: string
+          updated_at: string
+        }
+        Insert: {
+          alias_name: string
+          created_at?: string
+          id?: string
+          leader_id: string
+          member_id: string
+          updated_at?: string
+        }
+        Update: {
+          alias_name?: string
+          created_at?: string
+          id?: string
+          leader_id?: string
+          member_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payments_log: {
         Row: {
           action_taken: string | null
