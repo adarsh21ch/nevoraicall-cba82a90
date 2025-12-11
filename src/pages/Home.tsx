@@ -153,7 +153,7 @@ export default function Home() {
   }
   if (!user) return null;
 
-  // Get all activities for the selected date (sorted ascending - earliest at top)
+  // Get all activities for the selected date (sorted descending - most recent at top)
   const getActivitiesForDate = () => {
     const prospectActivities = prospects.filter(p => isSameDay(parseISO(p.updated_at), activityDate)).map(p => ({
       id: p.id,
@@ -176,8 +176,8 @@ export default function Home() {
       time: new Date(t.updated_at)
     }));
 
-    // Combine and sort ascending (earliest at top, newest at bottom)
-    return [...prospectActivities, ...todoActivities].sort((a, b) => a.time.getTime() - b.time.getTime());
+    // Combine and sort descending (most recent at top, oldest at bottom)
+    return [...prospectActivities, ...todoActivities].sort((a, b) => b.time.getTime() - a.time.getTime());
   };
   const activities = getActivitiesForDate();
   return <div className="app-layout bg-gradient-to-b from-background via-background to-muted/20">
