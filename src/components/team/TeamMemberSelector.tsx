@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useTeamAccess, TabPermission } from '@/hooks/useTeamAccess';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -44,6 +44,7 @@ export function TeamMemberSelector({
   const { getDisplayName, setAlias, loading: aliasLoading } = useMemberAliases();
   const [open, setOpen] = useState(false);
   const [emptyPopoverOpen, setEmptyPopoverOpen] = useState(false);
+  const hasRestoredRef = useRef(false);
   
   // Alias editing state
   const [editingMember, setEditingMember] = useState<SharedOwner | null>(null);
@@ -62,6 +63,12 @@ export function TeamMemberSelector({
 
   const isViewingTeam = selectedOwnerIds.length > 0;
   const hasTeam = availableOwners.length > 0;
+  
+  // Stable string of available owner IDs to use in dependencies
+  const availableOwnerIds = useMemo(() => 
+    availableOwners.map(o => o.user_id).sort().join(','), 
+    [availableOwners]
+  );
 
   // Persist selection to sessionStorage
   useEffect(() => {
@@ -72,24 +79,25 @@ export function TeamMemberSelector({
     }
   }, [selectedOwnerIds]);
 
-  // Restore selection from sessionStorage on mount
+  // Restore selection from sessionStorage on mount (only once)
   useEffect(() => {
+    if (hasRestoredRef.current || !hasTeam) return;
+    
     const saved = sessionStorage.getItem(SESSION_KEY);
-    if (saved && hasTeam && selectedOwnerIds.length === 0) {
+    if (saved && selectedOwnerIds.length === 0) {
       try {
         const parsed = JSON.parse(saved) as string[];
-        // Only restore if the saved IDs are still valid
-        const validIds = parsed.filter(id => 
-          availableOwners.some(o => o.user_id === id)
-        );
+        const validIds = parsed.filter(id => availableOwnerIds.includes(id));
         if (validIds.length > 0) {
+          hasRestoredRef.current = true;
           validIds.forEach(id => onToggleOwner(id));
         }
       } catch {
         // Ignore parse errors
       }
     }
-  }, [hasTeam, availableOwners]);
+    hasRestoredRef.current = true;
+  }, [hasTeam, availableOwnerIds, selectedOwnerIds.length, onToggleOwner]);
 
   const handleToggle = (viewTeam: boolean) => {
     if (viewTeam) {
