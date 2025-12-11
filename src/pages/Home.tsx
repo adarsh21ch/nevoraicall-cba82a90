@@ -1,11 +1,13 @@
 // Activity Page - Today's Recent Activities
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProspects } from '@/hooks/useProspects';
+import { useSharedProspects } from '@/hooks/useSharedProspects';
 import { useTodos } from '@/hooks/useTodos';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
+import { TeamToggle } from '@/components/team/TeamToggle';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -93,20 +95,38 @@ export default function Home() {
     loading: authLoading
   } = useAuth();
   const {
-    prospects,
+    prospects: myProspects,
     loading: prospectsLoading,
     refetch
   } = useProspects();
+  const {
+    sharedOwners,
+    selectedOwnerIds,
+    toggleOwnerSelection,
+    clearSelection,
+    selectAllOwners,
+    prospects: sharedProspects,
+    loading: sharedLoading,
+    refetchProspects
+  } = useSharedProspects();
   const {
     todos,
     refetch: refetchTodos
   } = useTodos();
   const [activityDate, setActivityDate] = useState<Date>(new Date());
 
+  // Determine which prospects to show
+  const isViewingTeam = selectedOwnerIds.length > 0;
+  const prospects = isViewingTeam ? sharedProspects : myProspects;
+
   // Pull-to-refresh
   const handleRefresh = useCallback(async () => {
-    await Promise.all([refetch?.(), refetchTodos?.()]);
-  }, [refetch, refetchTodos]);
+    if (isViewingTeam) {
+      await refetchProspects?.();
+    } else {
+      await Promise.all([refetch?.(), refetchTodos?.()]);
+    }
+  }, [refetch, refetchTodos, refetchProspects, isViewingTeam]);
   const {
     containerRef,
     isRefreshing,
@@ -125,7 +145,8 @@ export default function Home() {
   const handleCall = (phone: string) => {
     window.location.href = `tel:${cleanPhoneNumber(phone)}`;
   };
-  if (authLoading || prospectsLoading) {
+  const isLoading = authLoading || prospectsLoading || isViewingTeam && sharedLoading;
+  if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>;
@@ -143,7 +164,9 @@ export default function Home() {
       action: p.action_taken,
       time: new Date(p.updated_at)
     }));
-    const todoActivities = todos.filter(t => isSameDay(parseISO(t.updated_at), activityDate)).map(t => ({
+
+    // Only show todos for own data (not team data)
+    const todoActivities = isViewingTeam ? [] : todos.filter(t => isSameDay(parseISO(t.updated_at), activityDate)).map(t => ({
       id: t.id,
       type: 'todo' as const,
       name: t.title,
@@ -159,20 +182,30 @@ export default function Home() {
   const activities = getActivitiesForDate();
   return <div className="app-layout bg-gradient-to-b from-background via-background to-muted/20">
       <header className="fixed-header z-40 bg-card/80 backdrop-blur-xl border-b border-border/50">
-        <div className="flex items-center px-4 py-3">
+        <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
             <img src={nevoraLogo} alt="NevorAI Logo" className="h-10 w-10 rounded-xl object-cover shadow-md" />
             <div>
               <h1 className="text-xl font-bold tracking-tight">Activity</h1>
-              <p className="text-xs text-muted-foreground font-medium">Track all your activities</p>
+              <p className="text-xs text-muted-foreground font-medium">
+                {isViewingTeam ? 'Viewing team activities' : 'Track all your activities'}
+              </p>
             </div>
           </div>
+          <TeamToggle sharedOwners={sharedOwners} selectedOwnerIds={selectedOwnerIds} onSelectAll={selectAllOwners} onClear={clearSelection} currentTab="activity" />
         </div>
       </header>
 
       <main ref={containerRef} className="scrollable-content relative flex flex-col">
         <PullToRefreshIndicator isRefreshing={isRefreshing} pullDistance={pullDistance} showIndicator={showIndicator} />
         <div className="container py-3 px-3 pb-20 flex-1 flex flex-col">
+          {/* Team viewing indicator */}
+          {isViewingTeam && <div className="bg-primary/10 border border-primary/30 rounded-xl p-3 mb-3">
+              <p className="text-sm text-primary font-medium">
+                Viewing team activities (read-only)
+              </p>
+            </div>}
+
           {/* Today's Recent Activities - Main Focus */}
           <div className="bg-card rounded-2xl p-3 border border-border/50 flex-1 flex flex-col min-h-0">
             <div className="flex items-center justify-between mb-3">
@@ -262,6 +295,6 @@ export default function Home() {
         </div>
       </main>
 
-      <BottomNav className="px-0 my-0 border-0 py-[10px]" />
+      <BottomNav className="px-0 my-0 border-0 py-[15px]" />
     </div>;
 }

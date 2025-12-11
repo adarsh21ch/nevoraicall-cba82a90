@@ -3,13 +3,15 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProspects } from '@/hooks/useProspects';
+import { useSharedProspects } from '@/hooks/useSharedProspects';
 import { useSheets } from '@/hooks/useSheets';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { ProspectTable } from '@/components/prospects/ProspectTable';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { BottomViewToggle } from '@/components/ui/BottomViewToggle';
 import { FilterTagSetupDialog, useFilterTagSetup } from '@/components/prospects/FilterTagSetupDialog';
-import { Loader2, Phone, GitBranch } from 'lucide-react';
+import { TeamToggle } from '@/components/team/TeamToggle';
+import { Loader2, Phone, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
 import { CustomOptionsProvider } from '@/contexts/CustomOptionsContext';
@@ -89,7 +91,17 @@ function usePullToRefresh(onRefresh: () => Promise<void>, threshold = 100) {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { prospects, loading, addProspect, updateProspect, deleteProspect, bulkDeleteProspects, restoreProspect, restoreProspects, importProspects, reorderProspects, refetch } = useProspects();
+  const { prospects: myProspects, loading, addProspect, updateProspect, deleteProspect, bulkDeleteProspects, restoreProspect, restoreProspects, importProspects, reorderProspects, refetch } = useProspects();
+  const { 
+    sharedOwners, 
+    selectedOwnerIds, 
+    toggleOwnerSelection, 
+    clearSelection, 
+    selectAllOwners,
+    prospects: sharedProspects, 
+    loading: sharedLoading, 
+    refetchProspects 
+  } = useSharedProspects();
   const { sheets, selectedSheetId, setSelectedSheetId, addSheet, updateSheet, deleteSheet, refetch: refetchSheets } = useSheets();
   
   // Main tab state - Calling is default
@@ -99,7 +111,11 @@ export default function Dashboard() {
   const { needsSetup, markSetupDone } = useFilterTagSetup();
   const [showFilterSetup, setShowFilterSetup] = useState(false);
 
-  // Handle tab change - show setup dialog when switching to Filter for first time
+  // Determine which prospects to show
+  const isViewingTeam = selectedOwnerIds.length > 0;
+  const prospects = isViewingTeam ? sharedProspects : myProspects;
+
+  // Handle tab change - show setup dialog when switching to Stages for first time
   const handleTabChange = (newTab: string) => {
     if (newTab === 'funnel' && needsSetup) {
       setShowFilterSetup(true);
@@ -109,8 +125,12 @@ export default function Dashboard() {
 
   // Pull-to-refresh
   const handleRefresh = useCallback(async () => {
-    await Promise.all([refetch?.(), refetchSheets?.()]);
-  }, [refetch, refetchSheets]);
+    if (isViewingTeam) {
+      await refetchProspects?.();
+    } else {
+      await Promise.all([refetch?.(), refetchSheets?.()]);
+    }
+  }, [refetch, refetchSheets, refetchProspects, isViewingTeam]);
   const { containerRef, isRefreshing, pullDistance, showIndicator } = usePullToRefresh(handleRefresh);
 
   useEffect(() => {
@@ -129,9 +149,11 @@ export default function Dashboard() {
 
   if (!user) return null;
 
-  const toggleOptions: [{ value: string; label: string; icon: typeof Phone }, { value: string; label: string; icon: typeof GitBranch }] = [
+  const isLoading = loading || (isViewingTeam && sharedLoading);
+
+  const toggleOptions: [{ value: string; label: string; icon: typeof Phone }, { value: string; label: string; icon: typeof Layers }] = [
     { value: 'leads', label: 'Calling', icon: Phone },
-    { value: 'funnel', label: 'Filter', icon: GitBranch },
+    { value: 'funnel', label: 'Filter', icon: Layers },
   ];
 
   return (
@@ -147,29 +169,49 @@ export default function Dashboard() {
                 className="h-10 w-10 rounded-xl object-cover shadow-md"
               />
               <div>
-                <h1 className="text-xl font-bold tracking-tight">Calling</h1>
-                <p className="text-xs text-muted-foreground font-medium">Manage your prospects</p>
+              <h1 className="text-xl font-bold tracking-tight">
+                  {mainTab === 'leads' ? 'Calling' : 'Filter'}
+                </h1>
+                <p className="text-xs text-muted-foreground font-medium">
+                  {isViewingTeam ? 'Viewing team data (read-only)' : 'Manage your prospects'}
+                </p>
               </div>
             </div>
+            <TeamToggle
+              sharedOwners={sharedOwners}
+              selectedOwnerIds={selectedOwnerIds}
+              onSelectAll={selectAllOwners}
+              onClear={clearSelection}
+              currentTab="calling"
+            />
           </div>
         </header>
 
         <main ref={containerRef} className="scrollable-content relative" style={{ touchAction: 'pan-x pan-y' }}>
           <PullToRefreshIndicator isRefreshing={isRefreshing} pullDistance={pullDistance} showIndicator={showIndicator} />
           <div className="py-3 px-4 pb-28">
+            {/* Team viewing indicator */}
+            {isViewingTeam && (
+              <div className="bg-primary/10 border border-primary/30 rounded-xl p-3 mb-3">
+                <p className="text-sm text-primary font-medium">
+                  Viewing team data (read-only)
+                </p>
+              </div>
+            )}
+            
             {/* Content based on active tab */}
             {mainTab === 'leads' ? (
               <ProspectTable
                 prospects={prospects}
-                loading={loading}
-                onAdd={addProspect}
-                onUpdate={updateProspect}
-                onDelete={deleteProspect}
-                onBulkDelete={bulkDeleteProspects}
-                onRestoreProspect={restoreProspect}
-                onRestoreProspects={restoreProspects}
-                onImport={importProspects}
-                onReorderProspects={reorderProspects}
+                loading={isLoading}
+                onAdd={isViewingTeam ? async () => null : addProspect}
+                onUpdate={isViewingTeam ? async () => null : updateProspect}
+                onDelete={isViewingTeam ? async () => false : deleteProspect}
+                onBulkDelete={isViewingTeam ? undefined : bulkDeleteProspects}
+                onRestoreProspect={isViewingTeam ? undefined : restoreProspect}
+                onRestoreProspects={isViewingTeam ? undefined : restoreProspects}
+                onImport={isViewingTeam ? async () => ({ imported: 0, skipped: 0 }) : importProspects}
+                onReorderProspects={isViewingTeam ? undefined : reorderProspects}
                 sheets={sheets}
                 selectedSheetId={selectedSheetId}
                 onSelectSheet={setSelectedSheetId}
@@ -182,15 +224,15 @@ export default function Dashboard() {
             ) : (
               <ProspectTable
                 prospects={prospects}
-                loading={loading}
-                onAdd={addProspect}
-                onUpdate={updateProspect}
-                onDelete={deleteProspect}
-                onBulkDelete={bulkDeleteProspects}
-                onRestoreProspect={restoreProspect}
-                onRestoreProspects={restoreProspects}
-                onImport={importProspects}
-                onReorderProspects={reorderProspects}
+                loading={isLoading}
+                onAdd={isViewingTeam ? async () => null : addProspect}
+                onUpdate={isViewingTeam ? async () => null : updateProspect}
+                onDelete={isViewingTeam ? async () => false : deleteProspect}
+                onBulkDelete={isViewingTeam ? undefined : bulkDeleteProspects}
+                onRestoreProspect={isViewingTeam ? undefined : restoreProspect}
+                onRestoreProspects={isViewingTeam ? undefined : restoreProspects}
+                onImport={isViewingTeam ? async () => ({ imported: 0, skipped: 0 }) : importProspects}
+                onReorderProspects={isViewingTeam ? undefined : reorderProspects}
                 sheets={sheets}
                 selectedSheetId={selectedSheetId}
                 onSelectSheet={setSelectedSheetId}
