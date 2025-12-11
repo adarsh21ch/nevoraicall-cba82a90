@@ -4,8 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTodos } from '@/hooks/useTodos';
 import { useTeamTodos } from '@/hooks/useTeamTodos';
+import { useSharedProspects } from '@/hooks/useSharedProspects';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
+import { TeamToggle } from '@/components/team/TeamToggle';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -69,7 +71,8 @@ export default function TodoUp() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { todos, loading: todosLoading, addTodo, updateTodo, toggleTodo, deleteTodo, refetch: refetchTodos } = useTodos();
-  const { teamTodos, loading: teamTodosLoading, hasTeamAccess, refetch: refetchTeamTodos } = useTeamTodos();
+  const { teamTodos, loading: teamTodosLoading, refetch: refetchTeamTodos } = useTeamTodos();
+  const { sharedOwners, selectedOwnerIds, selectAllOwners, clearSelection } = useSharedProspects();
   
   const [newTodoInput, setNewTodoInput] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -173,33 +176,20 @@ export default function TodoUp() {
               <p className="text-xs text-muted-foreground font-medium">Your Tasks & Reminders</p>
             </div>
           </div>
-          {/* My/Team Toggle */}
-          {hasTeamAccess && (
-            <div className="flex items-center gap-1 bg-muted/50 rounded-full p-0.5">
-              <button
-                onClick={() => setIsViewingTeam(false)}
-                className={cn(
-                  "px-3 py-1.5 text-xs font-medium rounded-full transition-all duration-200",
-                  !isViewingTeam
-                    ? "bg-card text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                My Data
-              </button>
-              <button
-                onClick={() => setIsViewingTeam(true)}
-                className={cn(
-                  "px-3 py-1.5 text-xs font-medium rounded-full transition-all duration-200",
-                  isViewingTeam
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                Team
-              </button>
-            </div>
-          )}
+          {/* Team Toggle */}
+          <TeamToggle
+            sharedOwners={sharedOwners}
+            selectedOwnerIds={selectedOwnerIds}
+            onSelectAll={() => {
+              selectAllOwners();
+              setIsViewingTeam(true);
+            }}
+            onClear={() => {
+              clearSelection();
+              setIsViewingTeam(false);
+            }}
+            currentTab="todo"
+          />
         </div>
       </header>
 
