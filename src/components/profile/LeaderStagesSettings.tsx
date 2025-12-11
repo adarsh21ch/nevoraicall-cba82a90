@@ -287,7 +287,7 @@ export function LeaderStagesSettings({
         </div>
         
         <p className="text-xs text-muted-foreground">
-          Tracking tags are used in your Calling List (Response column) and Stage Track to follow each lead's progress.
+          Tracking tags are used in your Calling List (Response column) and Stage Track to follow each lead's progress. Personal tags are your own temporary labels and are always private.
         </p>
 
         <RadioGroup 
@@ -299,10 +299,10 @@ export function LeaderStagesSettings({
             <RadioGroupItem value="leader" id="leader-tags" className="mt-1" />
             <div className="flex-1">
               <Label htmlFor="leader-tags" className="font-medium cursor-pointer">
-                Use leader tracking tags
+                Use leader tracking tags + my personal tags
               </Label>
               <p className="text-xs text-muted-foreground mt-1">
-                Inherit calling and stage tracking tags from your leader for team consistency.
+                Use your leader's tracking tags for Calling List and Stage Track, and add your own personal tags that are visible only to you.
               </p>
             </div>
           </div>
@@ -311,10 +311,10 @@ export function LeaderStagesSettings({
             <RadioGroupItem value="own" id="own-tags" className="mt-1" />
             <div className="flex-1">
               <Label htmlFor="own-tags" className="font-medium cursor-pointer">
-                Create my own tracking tags
+                Create my own tracking tags (and personal tags)
               </Label>
               <p className="text-xs text-muted-foreground mt-1">
-                Define your own custom calling and stage tracking tags.
+                Create and use your own tracking tags for Calling List and Stage Track. You can still add personal tags that your team does not inherit.
               </p>
             </div>
           </div>
