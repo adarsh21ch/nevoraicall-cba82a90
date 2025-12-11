@@ -88,6 +88,7 @@ function usePullToRefresh(onRefresh: () => Promise<void>, threshold = 80) {
     showIndicator: pullDistance > 20 || isRefreshing
   };
 }
+
 export default function Home() {
   const navigate = useNavigate();
   const {
@@ -99,15 +100,15 @@ export default function Home() {
     loading: prospectsLoading,
     refetch
   } = useProspects();
-  const {
-    sharedOwners,
-    selectedOwnerIds,
-    toggleOwnerSelection,
-    clearSelection,
+  const { 
+    sharedOwners, 
+    selectedOwnerIds, 
+    toggleOwnerSelection, 
+    clearSelection, 
     selectAllOwners,
-    prospects: sharedProspects,
-    loading: sharedLoading,
-    refetchProspects
+    prospects: sharedProspects, 
+    loading: sharedLoading, 
+    refetchProspects 
   } = useSharedProspects();
   const {
     todos,
@@ -133,11 +134,13 @@ export default function Home() {
     pullDistance,
     showIndicator
   } = usePullToRefresh(handleRefresh);
+
   useEffect(() => {
     if (!user && !authLoading) {
       navigate('/auth');
     }
   }, [user, authLoading, navigate]);
+
   const cleanPhoneNumber = (phone: string) => phone.replace(/[^0-9+]/g, '');
   const handleWhatsApp = (phone: string) => {
     window.location.href = `whatsapp://send?phone=${cleanPhoneNumber(phone)}`;
@@ -145,7 +148,9 @@ export default function Home() {
   const handleCall = (phone: string) => {
     window.location.href = `tel:${cleanPhoneNumber(phone)}`;
   };
-  const isLoading = authLoading || prospectsLoading || isViewingTeam && sharedLoading;
+
+  const isLoading = authLoading || prospectsLoading || (isViewingTeam && sharedLoading);
+
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -164,7 +169,7 @@ export default function Home() {
       action: p.action_taken,
       time: new Date(p.updated_at)
     }));
-
+    
     // Only show todos for own data (not team data)
     const todoActivities = isViewingTeam ? [] : todos.filter(t => isSameDay(parseISO(t.updated_at), activityDate)).map(t => ({
       id: t.id,
@@ -180,6 +185,7 @@ export default function Home() {
     return [...prospectActivities, ...todoActivities].sort((a, b) => a.time.getTime() - b.time.getTime());
   };
   const activities = getActivitiesForDate();
+
   return <div className="app-layout bg-gradient-to-b from-background via-background to-muted/20">
       <header className="fixed-header z-40 bg-card/80 backdrop-blur-xl border-b border-border/50">
         <div className="flex items-center justify-between px-4 py-3">
@@ -192,7 +198,13 @@ export default function Home() {
               </p>
             </div>
           </div>
-          <TeamToggle sharedOwners={sharedOwners} selectedOwnerIds={selectedOwnerIds} onSelectAll={selectAllOwners} onClear={clearSelection} currentTab="activity" />
+          <TeamToggle
+            sharedOwners={sharedOwners}
+            selectedOwnerIds={selectedOwnerIds}
+            onSelectAll={selectAllOwners}
+            onClear={clearSelection}
+            currentTab="activity"
+          />
         </div>
       </header>
 
@@ -200,11 +212,13 @@ export default function Home() {
         <PullToRefreshIndicator isRefreshing={isRefreshing} pullDistance={pullDistance} showIndicator={showIndicator} />
         <div className="container py-3 px-3 pb-20 flex-1 flex flex-col">
           {/* Team viewing indicator */}
-          {isViewingTeam && <div className="bg-primary/10 border border-primary/30 rounded-xl p-3 mb-3">
+          {isViewingTeam && (
+            <div className="bg-primary/10 border border-primary/30 rounded-xl p-3 mb-3">
               <p className="text-sm text-primary font-medium">
                 Viewing team activities (read-only)
               </p>
-            </div>}
+            </div>
+          )}
 
           {/* Today's Recent Activities - Main Focus */}
           <div className="bg-card rounded-2xl p-3 border border-border/50 flex-1 flex flex-col min-h-0">
@@ -295,6 +309,6 @@ export default function Home() {
         </div>
       </main>
 
-      <BottomNav className="px-0 my-0 border-0 py-[15px]" />
+      <BottomNav className="px-0 my-0 border-0 py-[10px]" />
     </div>;
 }
