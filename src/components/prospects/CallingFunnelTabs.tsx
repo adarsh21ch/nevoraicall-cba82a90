@@ -1,5 +1,5 @@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Phone, Layers } from 'lucide-react';
+import { Phone, GitBranch } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type TabType = 'calling' | 'funnel';
@@ -44,7 +44,7 @@ export function CallingFunnelTabs({ activeTab, onTabChange, callingCount, funnel
             : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
         )}
       >
-        <Layers className="h-4 w-4" />
+        <GitBranch className="h-4 w-4" />
         <span>Filter</span>
         <span className={cn(
           "ml-1 text-xs px-2 py-0.5 rounded-full font-semibold",

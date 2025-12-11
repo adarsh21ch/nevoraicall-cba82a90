@@ -76,9 +76,9 @@ export function TeamBar({
         )}
       </Button>
 
-      {/* Expandable Team Selector Panel - Fixed positioning */}
+      {/* Expandable Team Selector Panel */}
       {isExpanded && (
-        <div className="absolute top-full right-0 mt-2 z-[100] bg-card border border-border rounded-xl shadow-xl p-3 space-y-3 animate-in fade-in-0 slide-in-from-top-2 duration-200 min-w-[300px] max-w-[340px]">
+        <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-card border border-border rounded-xl shadow-lg p-3 space-y-3 animate-in fade-in-0 slide-in-from-top-2 duration-200 min-w-[280px]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-muted-foreground" />

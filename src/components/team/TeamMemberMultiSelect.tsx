@@ -79,9 +79,9 @@ export function TeamMemberMultiSelect({
         )} />
       </Button>
 
-      {/* Dropdown Content - Fixed positioning issues */}
+      {/* Dropdown Content */}
       {isOpen && (
-        <div className="absolute z-[100] mt-1 left-0 right-0 min-w-[280px] max-w-[320px] bg-card border border-border rounded-xl shadow-xl overflow-hidden">
+        <div className="absolute z-50 mt-1 w-full bg-card border border-border rounded-lg shadow-lg overflow-hidden">
           {/* Header with actions */}
           <div className="flex items-center justify-between px-3 py-2 bg-muted/30 border-b border-border/50">
             <span className="text-xs font-medium text-muted-foreground">
@@ -116,8 +116,8 @@ export function TeamMemberMultiSelect({
             </div>
           </div>
 
-          {/* Member List with proper scrolling */}
-          <div className="max-h-64 overflow-y-auto overscroll-contain">
+          {/* Member List */}
+          <div className="max-h-60 overflow-y-auto">
             {teamMembers.length === 0 ? (
               <div className="px-3 py-4 text-center text-sm text-muted-foreground">
                 No team members available
@@ -132,7 +132,7 @@ export function TeamMemberMultiSelect({
                     key={member.user_id}
                     onClick={() => onToggle(member.user_id)}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-3 cursor-pointer transition-colors",
+                      "flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors",
                       "hover:bg-muted/50",
                       isSelected && "bg-primary/5"
                     )}
@@ -140,14 +140,14 @@ export function TeamMemberMultiSelect({
                     <Checkbox
                       checked={isSelected}
                       onCheckedChange={() => onToggle(member.user_id)}
-                      className="pointer-events-none flex-shrink-0"
+                      className="pointer-events-none"
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium leading-tight">
+                      <p className="text-sm font-medium truncate">
                         {member.display_name}
                       </p>
                       {member.nevorid && (
-                        <p className="text-xs text-muted-foreground truncate">
+                        <p className="text-xs text-muted-foreground">
                           {member.nevorid}
                         </p>
                       )}

@@ -78,14 +78,14 @@ const COLUMNS = [{
   minWidth: 100,
 }, {
   id: 'stage',
-  label: 'Stage',
+  label: 'Funnel',
   width: '35%',
   minWidth: 100,
 }];
 
 // Column order for Calling tab: #, Name, Response
 const CALLING_COLUMN_ORDER = ['index', 'name', 'action'];
-// Column order for Funnel tab: #, Name, Funnel
+// Column order for Filter tab: #, Name, Funnel
 const FILTER_COLUMN_ORDER = ['index', 'name', 'stage'];
 
 // TableContent component
@@ -194,7 +194,7 @@ function TableContent({
                   <div className="flex items-center gap-0.5">
                     <span>{col.label}</span>
                     {columnId === 'action' && <ColumnOptionsSheet columnType="action_taken" columnLabel="Response" defaultOptions={EXTENDED_ACTIONS} />}
-                    {columnId === 'stage' && <ColumnOptionsSheet columnType="funnel_stage" columnLabel="Stage" defaultOptions={FUNNEL_STAGES} />}
+                    {columnId === 'stage' && <ColumnOptionsSheet columnType="funnel_stage" columnLabel="Funnel" defaultOptions={FUNNEL_STAGES} />}
                   </div>
                 </th>
               );
@@ -410,7 +410,7 @@ export function ProspectTable({
     if (filters.actions.length > 0) return filters.actions.join('_').replace(/\s+/g, '');
     if (filters.qualities.length > 0) return filters.qualities.join('_');
     if (filters.incompleteOnly) return 'Incomplete';
-    return filterMode === 'calling' ? 'Calling' : 'Filter';
+    return filterMode === 'calling' ? 'Calling' : 'Funnel';
   };
 
   const exportToExcel = async () => {
@@ -738,25 +738,26 @@ export function ProspectTable({
 
   return (
     <div className="space-y-3">
-      {/* Single Action Bar - Filters left, Actions right */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        {/* Left side - Filters */}
-        <div className="flex items-center gap-2 flex-wrap flex-1">
-          <ProspectFilters
-            filters={filters}
-            onFiltersChange={setFilters}
-            onExport={exportToExcel}
-            exporting={exporting}
-            filteredCount={filteredProspects.length}
-          />
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Undo/Redo buttons */}
+          <div className="flex items-center gap-1 mr-2">
+            <Button variant="ghost" size="icon" onClick={handleUndo} disabled={!canUndo} className="h-8 w-8">
+              <Undo2 className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={handleRedo} disabled={!canRedo} className="h-8 w-8">
+              <Redo2 className="h-4 w-4" />
+            </Button>
+          </div>
+
           {/* Filter tag button for funnel mode */}
           {!isCalling && <ChangeFilterTagButton />}
         </div>
 
-        {/* Right side - Actions */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2">
           {/* Selection mode controls */}
-          {selectionMode.active ? (
+          {selectionMode.active && (
             <div className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-1.5">
               <span className="text-sm font-medium">{selectedIds.size} selected</span>
               <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmOpen(true)} disabled={selectedIds.size === 0}>
@@ -767,25 +768,26 @@ export function ProspectTable({
                 <X className="h-4 w-4" />
               </Button>
             </div>
-          ) : (
-            <>
-              {/* Undo/Redo buttons */}
-              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" onClick={handleUndo} disabled={!canUndo} className="h-8 w-8">
-                  <Undo2 className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={handleRedo} disabled={!canRedo} className="h-8 w-8">
-                  <Redo2 className="h-4 w-4" />
-                </Button>
-              </div>
+          )}
 
-              {/* Import & Add buttons */}
+          {/* Action buttons - only show in calling mode */}
+          {isCalling && !selectionMode.active && (
+            <>
               <ImportExcelDialog onImport={handleImportProspects} />
               <AddProspectDialog onAdd={handleAddProspect} />
             </>
           )}
         </div>
       </div>
+
+      {/* Filters */}
+      <ProspectFilters
+        filters={filters}
+        onFiltersChange={setFilters}
+        onExport={exportToExcel}
+        exporting={exporting}
+        filteredCount={filteredProspects.length}
+      />
 
       {/* Table */}
       <div className="bg-card rounded-xl border border-border/50 overflow-hidden shadow-sm">
