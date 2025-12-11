@@ -748,6 +748,8 @@ export function ProspectTable({
             onExport={exportToExcel}
             exporting={exporting}
             filteredCount={filteredProspects.length}
+            showStagesFilter={!isCalling}
+            showResponsesFilter={isCalling}
           />
           {/* Filter tag button for funnel mode */}
           {!isCalling && <ChangeFilterTagButton />}
