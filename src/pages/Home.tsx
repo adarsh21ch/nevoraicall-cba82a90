@@ -121,7 +121,7 @@ export default function Home() {
   // Determine which prospects to show
   const isViewingTeam = selectedOwnerIds.length > 0;
   const prospects = isViewingTeam ? sharedProspects : myProspects;
-  
+
   // Show skeleton when switching to team view or loading team data
   const showSkeleton = isViewingTeam && sharedInitialLoading;
 
@@ -151,7 +151,7 @@ export default function Home() {
   const handleCall = (phone: string) => {
     window.open(`tel:${cleanPhoneNumber(phone)}`, '_self');
   };
-  
+
   // Only show full loading for initial auth
   if (authLoading) {
     return <div className="min-h-screen flex items-center justify-center bg-background">
@@ -199,15 +199,7 @@ export default function Home() {
               </p>
             </div>
           </div>
-          <TeamMemberSelector 
-            sharedOwners={sharedOwners} 
-            selectedOwnerIds={selectedOwnerIds} 
-            onToggleOwner={toggleOwnerSelection} 
-            onSelectAll={selectAllOwners} 
-            onClear={clearSelection} 
-            currentTab="activity"
-            prospectCounts={prospectCounts}
-          />
+          <TeamMemberSelector sharedOwners={sharedOwners} selectedOwnerIds={selectedOwnerIds} onToggleOwner={toggleOwnerSelection} onSelectAll={selectAllOwners} onClear={clearSelection} currentTab="activity" prospectCounts={prospectCounts} />
         </div>
       </header>
 
@@ -245,9 +237,7 @@ export default function Home() {
               </Popover>
             </div>
             
-            {showSkeleton ? (
-              <ActivitySkeleton />
-            ) : activities.length === 0 ? <div className="text-center py-12 flex-1 flex flex-col items-center justify-center">
+            {showSkeleton ? <ActivitySkeleton /> : activities.length === 0 ? <div className="text-center py-12 flex-1 flex flex-col items-center justify-center">
                 <Clock className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
                 <p className="text-sm text-muted-foreground">
                   No activity for this date
@@ -312,6 +302,6 @@ export default function Home() {
         </div>
       </main>
 
-      <BottomNav className="px-0 my-0 border-0 py-[15px]" />
+      <BottomNav className="px-0 my-0 border-0 py-0" />
     </div>;
 }
