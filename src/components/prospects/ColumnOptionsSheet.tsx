@@ -89,46 +89,49 @@ export function ColumnOptionsSheet({
         </DialogHeader>
         
         <div className="mt-4 space-y-4">
-          {/* Add new option */}
-          <div className="flex gap-2">
-            <Input 
-              placeholder={`Add new ${columnLabel.toLowerCase()}...`} 
-              value={newValue} 
-              onChange={e => setNewValue(e.target.value)} 
-              onKeyDown={e => e.key === 'Enter' && handleAddOption()} 
-              className="flex-1" 
-            />
-            <Button size="sm" onClick={handleAddOption} disabled={!newValue.trim() || adding}>
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* Filter tag hint for Response column */}
-          {isResponseColumn && (
-            <div className="flex items-center gap-2 p-2 rounded-lg bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-900">
-              <Star className="h-4 w-4 text-yellow-500 flex-shrink-0" />
-              <p className="text-xs text-yellow-700 dark:text-yellow-400">
-                Only ONE tag can be the Filter tag. Enabling it here will disable any other.
-              </p>
-            </div>
-          )}
-
-          {/* Default options (non-editable) */}
+          {/* Default Tags section first - read-only */}
           <div className="space-y-1">
-            <p className="text-xs text-muted-foreground font-medium mb-2">Default Tags</p>
-            {defaultOptions.map(opt => (
+            <p className="text-xs text-muted-foreground font-medium mb-2">Default Tags (from Profile → Tracking Tags)</p>
+            {defaultOptions.length > 0 ? defaultOptions.map(opt => (
               <div key={opt} className="flex items-center justify-between p-2.5 rounded-md bg-muted/30">
                 <span className="text-sm">{opt}</span>
-                <span className="text-xs text-muted-foreground">Default</span>
+                <span className="text-xs text-muted-foreground italic">Tracking tag</span>
               </div>
-            ))}
+            )) : (
+              <p className="text-xs text-muted-foreground italic p-2">No tracking tags configured. Add them in Profile → Leader & Tracking Tags.</p>
+            )}
           </div>
 
-          {/* Custom options (editable) */}
-          {customOptions.length > 0 && (
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground font-medium mb-2">Custom Tags</p>
-              {customOptions.map(opt => (
+          {/* Custom Tags section - editable */}
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground font-medium mb-2">Custom Tags</p>
+            <p className="text-[10px] text-muted-foreground mb-2">Custom tags are for your convenience and are not counted in TrackUp analytics.</p>
+            
+            {/* Add new custom tag */}
+            <div className="flex gap-2 mb-2">
+              <Input 
+                placeholder={`Add custom ${columnLabel.toLowerCase()} tag...`} 
+                value={newValue} 
+                onChange={e => setNewValue(e.target.value)} 
+                onKeyDown={e => e.key === 'Enter' && handleAddOption()} 
+                className="flex-1" 
+              />
+              <Button size="sm" onClick={handleAddOption} disabled={!newValue.trim() || adding}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Filter tag hint for Response column */}
+            {isResponseColumn && customOptions.length > 0 && (
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-900 mb-2">
+                <Star className="h-4 w-4 text-yellow-500 flex-shrink-0" />
+                <p className="text-xs text-yellow-700 dark:text-yellow-400">
+                  Only ONE tag can be the Filter tag. Enabling it here will disable any other.
+                </p>
+              </div>
+            )}
+
+            {customOptions.length > 0 ? customOptions.map(opt => (
                 <div key={opt.id} className="flex items-center justify-between p-2.5 rounded-md bg-muted/30">
                   {editingId === opt.id ? (
                     <div className="flex items-center gap-2 flex-1">
@@ -206,15 +209,12 @@ export function ColumnOptionsSheet({
                     </>
                   )}
                 </div>
-              ))}
-            </div>
-          )}
-
-          {customOptions.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              No custom tags yet. Add one above!
-            </p>
-          )}
+            )) : (
+              <p className="text-xs text-muted-foreground italic py-2">
+                No custom tags yet. Add one above!
+              </p>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
