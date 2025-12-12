@@ -14,7 +14,7 @@ import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { User, LogOut, ChevronRight, Phone, Building2, MapPin, Loader2, FileText, Shield, Receipt, Mail, Settings, Users } from 'lucide-react';
+import { User, LogOut, ChevronRight, Phone, Building2, MapPin, Loader2, FileText, Shield, Receipt, Mail, Settings, Users, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
@@ -141,9 +141,21 @@ export default function Profile() {
                 <p className="font-semibold text-lg truncate">{displayName}</p>
                 <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                 {profile?.neverai_id && (
-                  <p className="text-xs text-primary font-medium mt-1">
-                    Your Leader ID: <span className="font-mono">{profile.neverai_id}</span>
-                  </p>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <p className="text-xs text-primary font-medium">
+                      Your Leader ID: <span className="font-mono">{profile.neverai_id}</span>
+                    </p>
+                    <button
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(profile.neverai_id || '');
+                        toast.success('Leader ID copied');
+                      }}
+                      className="p-1 rounded hover:bg-primary/10 transition-colors"
+                      title="Copy Leader ID"
+                    >
+                      <Copy className="h-3 w-3 text-primary" />
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -158,7 +170,7 @@ export default function Profile() {
           {/* Upgrade Card */}
           <UpgradeCard />
 
-          {/* Leader & Tags Settings - Collapsible */}
+          {/* Leader & Tracking Tags Settings - Collapsible */}
           <Accordion type="single" collapsible className="rounded-2xl border border-border/50 bg-card overflow-hidden">
             <AccordionItem value="leader-tags" className="border-none">
               <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-muted/30">
@@ -166,7 +178,7 @@ export default function Profile() {
                   <div className="p-2 rounded-lg bg-primary/10">
                     <Users className="h-4 w-4 text-primary" />
                   </div>
-                  <span className="font-medium">Leader & Tags</span>
+                  <span className="font-medium">Leader & Tracking Tags</span>
                 </div>
               </AccordionTrigger>
               <AccordionContent className="px-4 pb-4">

@@ -116,7 +116,7 @@ export function LeaderStagesSettings({
     setSavingTags(true);
     await onUpdateProfile({ use_leader_stages: true });
     setSavingTags(false);
-    toast.success('Now using leader tracking tags. Your custom tags are saved as personal reference.');
+    toast.success('Now using leader tracking tags. Your custom tags are saved for reference.');
   };
 
   // Calling tags handlers
@@ -287,7 +287,7 @@ export function LeaderStagesSettings({
         </div>
         
         <p className="text-xs text-muted-foreground">
-          Tracking tags are used in your Calling List (Response column) and Stage Track to follow each lead's progress. Personal tags are your own temporary labels and are always private.
+          Tracking tags are used in your Calling List (Response column) and Sales Stages to follow each lead's progress. Custom tags are your own temporary labels and are not included in TrackUp totals.
         </p>
 
         <RadioGroup 
@@ -299,10 +299,10 @@ export function LeaderStagesSettings({
             <RadioGroupItem value="leader" id="leader-tags" className="mt-1" />
             <div className="flex-1">
               <Label htmlFor="leader-tags" className="font-medium cursor-pointer">
-                Use leader tracking tags + my personal tags
+                Use leader tracking tags + my custom tags
               </Label>
               <p className="text-xs text-muted-foreground mt-1">
-                Use your leader's tracking tags for Calling List and Stage Track, and add your own personal tags that are visible only to you.
+                Use your leader's tracking tags for Calling List and Sales Stages, and add your own custom tags that are visible only in your account.
               </p>
             </div>
           </div>
@@ -311,10 +311,10 @@ export function LeaderStagesSettings({
             <RadioGroupItem value="own" id="own-tags" className="mt-1" />
             <div className="flex-1">
               <Label htmlFor="own-tags" className="font-medium cursor-pointer">
-                Create my own tracking tags (and personal tags)
+                Create my own tracking tags (and custom tags)
               </Label>
               <p className="text-xs text-muted-foreground mt-1">
-                Create and use your own tracking tags for Calling List and Stage Track. You can still add personal tags that your team does not inherit.
+                Create and use your own tracking tags for Calling List and Sales Stages. You can still add custom tags that your team does not inherit.
               </p>
             </div>
           </div>
@@ -347,7 +347,7 @@ export function LeaderStagesSettings({
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <Layers className="h-3.5 w-3.5 text-muted-foreground" />
-                      <p className="text-xs text-muted-foreground font-medium">Stage tracking tags (Stage Track):</p>
+                      <p className="text-xs text-muted-foreground font-medium">Stage tracking tags (Sales Stages):</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {leaderStageTags.length > 0 ? leaderStageTags.map((stage, index) => (
@@ -432,10 +432,10 @@ export function LeaderStagesSettings({
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <Layers className="h-4 w-4 text-primary" />
-                <p className="text-sm font-medium">Stage tracking tags (Stage Track)</p>
+                <p className="text-sm font-medium">Stage tracking tags (Sales Stages)</p>
               </div>
               <p className="text-xs text-muted-foreground">
-                Define your Stage Track progression (3-10 stages recommended):
+                Define your Sales Stages progression (3-10 stages recommended):
               </p>
               <div className="space-y-2">
                 {ownStageTags.map((stage, index) => (

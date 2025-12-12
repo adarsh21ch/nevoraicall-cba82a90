@@ -22,6 +22,7 @@ import { useUndoRedo, UndoAction } from '@/hooks/useUndoRedo';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useCustomOptionsContext } from '@/contexts/CustomOptionsContext';
+import { useTrackingTags } from '@/hooks/useTrackingTags';
 
 interface Filters {
   search: string;
@@ -115,6 +116,8 @@ interface TableContentProps {
   handleDeleteWithUndo: (id: string) => Promise<boolean>;
   handleToggleSelect: (id: string) => void;
   enableDragAndDrop: boolean;
+  callingTrackingTags: string[];
+  stageTrackingTags: string[];
 }
 
 function TableContent({
@@ -143,6 +146,8 @@ function TableContent({
   handleDeleteWithUndo,
   handleToggleSelect,
   enableDragAndDrop,
+  callingTrackingTags,
+  stageTrackingTags,
 }: TableContentProps) {
   return (
     <div className="relative">
@@ -193,8 +198,8 @@ function TableContent({
                 >
                   <div className="flex items-center gap-0.5">
                     <span>{col.label}</span>
-                    {columnId === 'action' && <ColumnOptionsSheet columnType="action_taken" columnLabel="Response" defaultOptions={EXTENDED_ACTIONS} />}
-                    {columnId === 'stage' && <ColumnOptionsSheet columnType="funnel_stage" columnLabel="Stage" defaultOptions={FUNNEL_STAGES} />}
+                    {columnId === 'action' && <ColumnOptionsSheet columnType="action_taken" columnLabel="Response" defaultOptions={callingTrackingTags.length > 0 ? callingTrackingTags : EXTENDED_ACTIONS} />}
+                    {columnId === 'stage' && <ColumnOptionsSheet columnType="funnel_stage" columnLabel="Stage" defaultOptions={stageTrackingTags.length > 0 ? stageTrackingTags : FUNNEL_STAGES} />}
                   </div>
                 </th>
               );
@@ -339,6 +344,9 @@ export function ProspectTable({
   // Get the single active filter tag from custom options
   const { getActiveFilterTag } = useCustomOptionsContext();
   const activeFilterTag = useMemo(() => getActiveFilterTag(), [getActiveFilterTag]);
+
+  // Get tracking tags from profile
+  const { callingTrackingTags, stageTrackingTags } = useTrackingTags();
 
   // For DUPLICATING: Show prospects in BOTH tabs if they have the active filter tag
   const callingProspects = useMemo(() => {
@@ -819,6 +827,8 @@ export function ProspectTable({
                 handleDeleteWithUndo={handleDeleteWithUndo}
                 handleToggleSelect={handleToggleSelect}
                 enableDragAndDrop={enableDragAndDrop}
+                callingTrackingTags={callingTrackingTags}
+                stageTrackingTags={stageTrackingTags}
               />
             </SortableContext>
           </DndContext>
@@ -849,6 +859,8 @@ export function ProspectTable({
             handleDeleteWithUndo={handleDeleteWithUndo}
             handleToggleSelect={handleToggleSelect}
             enableDragAndDrop={enableDragAndDrop}
+            callingTrackingTags={callingTrackingTags}
+            stageTrackingTags={stageTrackingTags}
           />
         )}
       </div>

@@ -111,7 +111,7 @@ export function InlineSelect<T extends string>({
             </SelectItem>
           ))}
           
-          {/* Add new option - always available if optionType and onAddOption are provided */}
+          {/* Add custom option - always available if optionType and onAddOption are provided */}
           {canAddNew && (
             <SelectItem 
               value="__add_new__" 
@@ -119,7 +119,7 @@ export function InlineSelect<T extends string>({
             >
               <div className="flex items-center gap-1.5">
                 <Plus className="h-3 w-3" />
-                <span>Add new...</span>
+                <span>Add custom tag...</span>
               </div>
             </SelectItem>
           )}
@@ -130,7 +130,7 @@ export function InlineSelect<T extends string>({
       {isAddingNew && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4" onClick={() => setIsAddingNew(false)}>
           <div className="bg-card rounded-2xl border border-border/50 p-5 w-[calc(100%-2rem)] max-w-[320px] shadow-2xl" onClick={e => e.stopPropagation()}>
-            <p className="text-sm font-medium mb-3">Add new option</p>
+            <p className="text-sm font-medium mb-3">Add custom tag</p>
             <Input
               value={newValue}
               onChange={(e) => setNewValue(e.target.value)}
