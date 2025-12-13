@@ -234,7 +234,6 @@ export function ProspectRow({
               showTagSeparation={hasLeadsTrackingTags}
               trackingOptions={leadsTrackingTagNames}
               nonTrackingOptions={leadsNonTrackingTags}
-              personalOptions={customActionOptions.filter(o => !leadsTrackingTagNames.includes(o) && !leadsNonTrackingTags.includes(o))}
               finalTargetTag={leadsFinalTargetTag}
             />
           </td>
@@ -257,7 +256,6 @@ export function ProspectRow({
               showTagSeparation={hasStageTrackingTags}
               trackingOptions={stageTagNames}
               nonTrackingOptions={stageNonTrackingTags}
-              personalOptions={customStageOptions.filter(o => !stageTagNames.includes(o) && !stageNonTrackingTags.includes(o))}
               finalTargetTag={stageFinalTargetTag}
             />
           </td>
