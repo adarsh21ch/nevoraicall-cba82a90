@@ -365,12 +365,12 @@ export function LeaderTrackingFormatSettings({
 
       <Separator />
 
-      {/* Leader's Tracking Format Section */}
+      {/* Leader ID Input Section - Always Visible at Top */}
       <div className="rounded-2xl p-4 bg-card border border-border/50 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Tag className="h-4 w-4 text-primary" />
-            <Label className="text-sm font-semibold">Leader's Tracking Format</Label>
+            <Label className="text-sm font-semibold">Your Leader's ID</Label>
           </div>
           {autoSaveStatus === 'saving' && (
             <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -385,329 +385,305 @@ export function LeaderTrackingFormatSettings({
         </div>
         
         <p className="text-xs text-muted-foreground">
-          Choose how your tracking tags, levels, and funnel logic are configured.
+          Enter your leader's ID to use their tracking format (tags, levels, and funnel logic).
         </p>
 
-        <RadioGroup 
-          value={formatMode} 
-          onValueChange={(v) => handleFormatModeChange(v as 'leader' | 'own')}
-          className="space-y-3"
-        >
-          {/* Option 1: Use Leader's Format */}
-          <div className={`flex items-start space-x-3 p-3 rounded-lg border transition-colors ${formatMode === 'leader' ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/30'}`}>
-            <RadioGroupItem value="leader" id="leader-format" className="mt-1" />
-            <div className="flex-1">
-              <Label htmlFor="leader-format" className="font-medium cursor-pointer">
-                Use Leader's Tracking Format
-              </Label>
-              <p className="text-xs text-muted-foreground mt-1">
-                Enter Leader ID to inherit their complete tracking system (tags, levels, and funnel logic).
-              </p>
-              
-              {formatMode === 'leader' && (
-                <div className="mt-3 space-y-3">
-                  {hasLeader ? (
-                    <>
-                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                        <div>
-                          <p className="text-xs text-muted-foreground">Connected to Leader</p>
-                          <p className="font-mono font-semibold">{profile?.leaders_id_of_my_leader}</p>
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={handleClearLeader} disabled={updating}>
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      
-                      {/* Visibility Toggle */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          {profile?.allow_leader_to_view ? (
-                            <Eye className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <EyeOff className="h-4 w-4 text-muted-foreground" />
-                          )}
-                          <span className="text-sm">Allow leader to see my data</span>
-                        </div>
-                        <Switch
-                          checked={profile?.allow_leader_to_view || false}
-                          onCheckedChange={handleToggleVisibility}
-                          disabled={updating}
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      {/* Leader ID Input */}
-                      <div className="space-y-2">
-                        <Label htmlFor="leader-id-input" className="text-sm">Leader ID</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            id="leader-id-input"
-                            placeholder="Enter Leader ID…"
-                            value={leaderIdInput}
-                            onChange={(e) => setLeaderIdInput(e.target.value.toUpperCase())}
-                            className="font-mono"
-                          />
-                          <Button 
-                            onClick={handleSaveLeaderId} 
-                            disabled={!leaderIdInput.trim() || savingLeader}
-                            size="sm"
-                          >
-                            {savingLeader ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Connect'}
-                          </Button>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Enter your leader's ID to inherit their complete tracking system (tags, levels, and funnel logic).
-                        </p>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
+        {/* Leader ID Input - Always visible */}
+        {hasLeader ? (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg border border-primary/20">
+              <div>
+                <p className="text-xs text-muted-foreground">Connected to Leader</p>
+                <p className="font-mono font-semibold text-primary">{profile?.leaders_id_of_my_leader}</p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={handleClearLeader} disabled={updating}>
+                <X className="h-4 w-4 mr-1" />
+                Disconnect
+              </Button>
             </div>
-          </div>
-          
-          {/* Option 2: Create Own Format */}
-          <div className={`flex items-start space-x-3 p-3 rounded-lg border transition-colors ${formatMode === 'own' ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/30'}`}>
-            <RadioGroupItem value="own" id="own-format" className="mt-1" />
-            <div className="flex-1">
-              <Label htmlFor="own-format" className="font-medium cursor-pointer">
-                Create My Own Tracking Format
-              </Label>
-              <p className="text-xs text-muted-foreground mt-1">
-                Define your own tracking tags, levels, and become a root leader for your team.
-              </p>
-            </div>
-          </div>
-        </RadioGroup>
-
-        {/* Own Format Editor */}
-        {formatMode === 'own' && (
-          <div className="space-y-6 mt-4 pt-4 border-t border-border/50">
             
-            {/* 1. TEAM LEVELS */}
-            <div className="space-y-3">
+            {/* Visibility Toggle */}
+            <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
               <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-primary" />
-                <p className="text-sm font-medium">Team Levels</p>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Define levels for your team members. New members joining with your Leader ID will be assigned Level 1 as default.
-              </p>
-              
-              <div className="space-y-2">
-                {ownLevels.map((level, index) => (
-                  <div key={level.id} className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
-                    <span className="text-xs text-muted-foreground w-16 shrink-0">Level {index + 1}</span>
-                    <Input
-                      value={level.label}
-                      onChange={(e) => handleUpdateLevelLabel(level.id, e.target.value)}
-                      onBlur={() => handleUpdateLevelLabel(level.id, level.label)}
-                      placeholder="Aligned name..."
-                      className="flex-1 h-8"
-                    />
-                    {level.is_default && (
-                      <Badge variant="outline" className="text-xs shrink-0">Default</Badge>
-                    )}
-                    {ownLevels.length > 1 && !level.is_default && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => deleteLevel(level.id)}
-                        className="h-7 w-7 text-destructive shrink-0"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-              
-              {ownLevels.length < 10 && (
-                <div className="flex gap-2">
-                  <Input
-                    value={newLevelLabel}
-                    onChange={(e) => setNewLevelLabel(e.target.value)}
-                    placeholder="Add new level..."
-                    className="flex-1 h-8"
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddLevel()}
-                  />
-                  <Button variant="outline" size="sm" onClick={handleAddLevel} disabled={!newLevelLabel.trim()}>
-                    <Plus className="h-3 w-3" />
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            <Separator />
-
-            {/* 2. LEADS TRACKING TAGS */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Tag className="h-4 w-4 text-primary" />
-                  <p className="text-sm font-medium">Leads Tracking Tags (Responses)</p>
-                </div>
-                {leadsTrackingTags.length < 4 && (
-                  <Button variant="outline" size="sm" onClick={handleAddLeadsTag}>
-                    <Plus className="h-3 w-3 mr-1" />
-                    Add
-                  </Button>
+                {profile?.allow_leader_to_view ? (
+                  <Eye className="h-4 w-4 text-green-500" />
+                ) : (
+                  <EyeOff className="h-4 w-4 text-muted-foreground" />
                 )}
+                <span className="text-sm">Allow leader to see my data</span>
               </div>
-              <p className="text-xs text-muted-foreground">
-                These tags are used in the Leads tab and are counted in analytics. Mark one as ★ Final target.
-              </p>
-              
-              <div className="space-y-2">
-                {leadsTrackingTags.map((tag, index) => (
-                  <div key={index} className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
-                    <span className="text-xs text-muted-foreground w-6">#{index + 1}</span>
-                    <Input
-                      value={tag.name}
-                      onChange={(e) => handleLeadsTagChange(index, 'name', e.target.value)}
-                      placeholder={`Response ${index + 1}`}
-                      className="flex-1 h-8"
-                    />
-                    <div className="flex items-center gap-2 shrink-0">
-                      <div className="flex items-center gap-1" title="Use as filter">
-                        <Checkbox
-                          checked={tag.isFilter}
-                          onCheckedChange={(checked) => handleLeadsTagChange(index, 'isFilter', checked)}
-                        />
-                        <Filter className="h-3 w-3 text-muted-foreground" />
-                      </div>
-                      <button
-                        onClick={() => handleLeadsTagChange(index, 'isFinalTarget', true)}
-                        className={`p-1 rounded transition-colors ${tag.isFinalTarget ? 'text-yellow-500' : 'text-muted-foreground hover:text-yellow-500'}`}
-                        title="Set as Final Target"
-                      >
-                        <Star className={`h-4 w-4 ${tag.isFinalTarget ? 'fill-yellow-500' : ''}`} />
-                      </button>
-                    </div>
-                    {leadsTrackingTags.length > 1 && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemoveLeadsTag(index)}
-                        className="h-7 w-7 text-destructive"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-              
-              {/* Leads Non-Tracking Tags */}
-              <div className="pt-2">
-                <p className="text-xs text-muted-foreground mb-2">Leads Non-Tracking Tags (display only)</p>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {leadsNonTrackingTags.map((tag, idx) => (
-                    <Badge key={idx} variant="outline" className="gap-1 pr-1">
-                      {tag}
-                      <button onClick={() => handleRemoveLeadsNonTracking(idx)} className="ml-1 hover:text-destructive">
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    value={newLeadsNonTrackingTag}
-                    onChange={(e) => setNewLeadsNonTrackingTag(e.target.value)}
-                    placeholder="Add non-tracking tag..."
-                    className="flex-1 h-8"
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddLeadsNonTracking()}
-                  />
-                  <Button variant="outline" size="sm" onClick={handleAddLeadsNonTracking} disabled={!newLeadsNonTrackingTag.trim()}>
-                    <Plus className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
+              <Switch
+                checked={profile?.allow_leader_to_view || false}
+                onCheckedChange={handleToggleVisibility}
+                disabled={updating}
+              />
             </div>
-
-            <Separator />
-
-            {/* 3. STAGE TAGS */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Layers className="h-4 w-4 text-primary" />
-                  <p className="text-sm font-medium">Stage Tags (Sales Stages)</p>
-                </div>
-                {stageTags.length < 10 && (
-                  <Button variant="outline" size="sm" onClick={handleAddStageTag}>
-                    <Plus className="h-3 w-3 mr-1" />
-                    Add
-                  </Button>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                These stages are used in the Stage tab and funnel analytics. Mark one as ★ Final stage.
-              </p>
-              
-              <div className="space-y-2">
-                {stageTags.map((tag, index) => (
-                  <div key={index} className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
-                    <span className="text-xs text-muted-foreground w-16 shrink-0">Stage {index + 1}</span>
-                    <Input
-                      value={tag.name}
-                      onChange={(e) => handleStageTagChange(index, 'name', e.target.value)}
-                      placeholder={`Stage ${index + 1}`}
-                      className="flex-1 h-8"
-                    />
-                    <button
-                      onClick={() => handleStageTagChange(index, 'isFinalTarget', true)}
-                      className={`p-1 rounded transition-colors shrink-0 ${tag.isFinalTarget ? 'text-yellow-500' : 'text-muted-foreground hover:text-yellow-500'}`}
-                      title="Set as Final Stage"
-                    >
-                      <Star className={`h-4 w-4 ${tag.isFinalTarget ? 'fill-yellow-500' : ''}`} />
-                    </button>
-                    {stageTags.length > 1 && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemoveStageTag(index)}
-                        className="h-7 w-7 text-destructive shrink-0"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-              
-              {/* Stage Non-Tracking Tags */}
-              <div className="pt-2">
-                <p className="text-xs text-muted-foreground mb-2">Stage Non-Tracking Tags (display only)</p>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {stageNonTrackingTags.map((tag, idx) => (
-                    <Badge key={idx} variant="outline" className="gap-1 pr-1">
-                      {tag}
-                      <button onClick={() => handleRemoveStageNonTracking(idx)} className="ml-1 hover:text-destructive">
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    value={newStageNonTrackingTag}
-                    onChange={(e) => setNewStageNonTrackingTag(e.target.value)}
-                    placeholder="Add non-tracking tag..."
-                    className="flex-1 h-8"
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddStageNonTracking()}
-                  />
-                  <Button variant="outline" size="sm" onClick={handleAddStageNonTracking} disabled={!newStageNonTrackingTag.trim()}>
-                    <Plus className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <Input
+                placeholder="Enter Leader ID…"
+                value={leaderIdInput}
+                onChange={(e) => setLeaderIdInput(e.target.value.toUpperCase())}
+                className="font-mono"
+              />
+              <Button 
+                onClick={handleSaveLeaderId} 
+                disabled={!leaderIdInput.trim() || savingLeader}
+                size="sm"
+              >
+                {savingLeader ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Connect'}
+              </Button>
             </div>
           </div>
         )}
       </div>
+
+      {/* Create Own Format Option */}
+      {!hasLeader && (
+        <div className="rounded-2xl p-4 bg-card border border-border/50">
+          <div className="flex items-center gap-3">
+            <div className="text-muted-foreground text-sm">— or —</div>
+          </div>
+          <button 
+            onClick={() => handleFormatModeChange('own')}
+            className={`mt-3 w-full text-left p-3 rounded-lg border transition-colors ${formatMode === 'own' ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/30'}`}
+          >
+            <p className="font-medium text-sm">Create My Own Tracking Format</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Define your own tracking tags, levels, and become a root leader for your team.
+            </p>
+          </button>
+        </div>
+      )}
+
+      {/* Own Format Editor */}
+      {formatMode === 'own' && (
+        <div className="rounded-2xl p-4 bg-card border border-border/50 space-y-6">
+          
+          {/* 1. TEAM LEVELS */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-primary" />
+              <p className="text-sm font-medium">Team Levels</p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Define levels for your team members. New members joining with your Leader ID will be assigned Level 1 as default.
+            </p>
+            
+            <div className="space-y-2">
+              {ownLevels.map((level, index) => (
+                <div key={level.id} className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
+                  <span className="text-xs text-muted-foreground w-16 shrink-0">Level {index + 1}</span>
+                  <Input
+                    value={level.label}
+                    onChange={(e) => handleUpdateLevelLabel(level.id, e.target.value)}
+                    onBlur={() => handleUpdateLevelLabel(level.id, level.label)}
+                    placeholder="Aligned name..."
+                    className="flex-1 h-8"
+                  />
+                  {level.is_default && (
+                    <Badge variant="outline" className="text-xs shrink-0">Default</Badge>
+                  )}
+                  {ownLevels.length > 1 && !level.is_default && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => deleteLevel(level.id)}
+                      className="h-7 w-7 text-destructive shrink-0"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            {ownLevels.length < 10 && (
+              <div className="flex gap-2">
+                <Input
+                  value={newLevelLabel}
+                  onChange={(e) => setNewLevelLabel(e.target.value)}
+                  placeholder="Add new level..."
+                  className="flex-1 h-8"
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddLevel()}
+                />
+                <Button variant="outline" size="sm" onClick={handleAddLevel} disabled={!newLevelLabel.trim()}>
+                  <Plus className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <Separator />
+
+          {/* 2. LEADS TRACKING TAGS */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Tag className="h-4 w-4 text-primary" />
+                <p className="text-sm font-medium">Leads Tracking Tags (Responses)</p>
+              </div>
+              {leadsTrackingTags.length < 4 && (
+                <Button variant="outline" size="sm" onClick={handleAddLeadsTag}>
+                  <Plus className="h-3 w-3 mr-1" />
+                  Add
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              These tags are used in the Leads tab and are counted in analytics. Mark one as ★ Final target.
+            </p>
+            
+            <div className="space-y-2">
+              {leadsTrackingTags.map((tag, index) => (
+                <div key={index} className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
+                  <span className="text-xs text-muted-foreground w-6">#{index + 1}</span>
+                  <Input
+                    value={tag.name}
+                    onChange={(e) => handleLeadsTagChange(index, 'name', e.target.value)}
+                    placeholder={`Response ${index + 1}`}
+                    className="flex-1 h-8"
+                  />
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1" title="Use as filter">
+                      <Checkbox
+                        checked={tag.isFilter}
+                        onCheckedChange={(checked) => handleLeadsTagChange(index, 'isFilter', checked)}
+                      />
+                      <Filter className="h-3 w-3 text-muted-foreground" />
+                    </div>
+                    <button
+                      onClick={() => handleLeadsTagChange(index, 'isFinalTarget', true)}
+                      className={`p-1 rounded transition-colors ${tag.isFinalTarget ? 'text-yellow-500' : 'text-muted-foreground hover:text-yellow-500'}`}
+                      title="Set as Final Target"
+                    >
+                      <Star className={`h-4 w-4 ${tag.isFinalTarget ? 'fill-yellow-500' : ''}`} />
+                    </button>
+                  </div>
+                  {leadsTrackingTags.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveLeadsTag(index)}
+                      className="h-7 w-7 text-destructive"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            {/* Leads Non-Tracking Tags */}
+            <div className="pt-2">
+              <p className="text-xs text-muted-foreground mb-2">Leads Non-Tracking Tags (display only)</p>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {leadsNonTrackingTags.map((tag, idx) => (
+                  <Badge key={idx} variant="outline" className="gap-1 pr-1">
+                    {tag}
+                    <button onClick={() => handleRemoveLeadsNonTracking(idx)} className="ml-1 hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  value={newLeadsNonTrackingTag}
+                  onChange={(e) => setNewLeadsNonTrackingTag(e.target.value)}
+                  placeholder="Add non-tracking tag..."
+                  className="flex-1 h-8"
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddLeadsNonTracking()}
+                />
+                <Button variant="outline" size="sm" onClick={handleAddLeadsNonTracking} disabled={!newLeadsNonTrackingTag.trim()}>
+                  <Plus className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* 3. STAGE TAGS */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Layers className="h-4 w-4 text-primary" />
+                <p className="text-sm font-medium">Stage Tags (Sales Stages)</p>
+              </div>
+              {stageTags.length < 10 && (
+                <Button variant="outline" size="sm" onClick={handleAddStageTag}>
+                  <Plus className="h-3 w-3 mr-1" />
+                  Add
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              These stages are used in the Stage tab and funnel analytics. Mark one as ★ Final stage.
+            </p>
+            
+            <div className="space-y-2">
+              {stageTags.map((tag, index) => (
+                <div key={index} className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
+                  <span className="text-xs text-muted-foreground w-16 shrink-0">Stage {index + 1}</span>
+                  <Input
+                    value={tag.name}
+                    onChange={(e) => handleStageTagChange(index, 'name', e.target.value)}
+                    placeholder={`Stage ${index + 1}`}
+                    className="flex-1 h-8"
+                  />
+                  <button
+                    onClick={() => handleStageTagChange(index, 'isFinalTarget', true)}
+                    className={`p-1 rounded transition-colors shrink-0 ${tag.isFinalTarget ? 'text-yellow-500' : 'text-muted-foreground hover:text-yellow-500'}`}
+                    title="Set as Final Stage"
+                  >
+                    <Star className={`h-4 w-4 ${tag.isFinalTarget ? 'fill-yellow-500' : ''}`} />
+                  </button>
+                  {stageTags.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveStageTag(index)}
+                      className="h-7 w-7 text-destructive shrink-0"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            {/* Stage Non-Tracking Tags */}
+            <div className="pt-2">
+              <p className="text-xs text-muted-foreground mb-2">Stage Non-Tracking Tags (display only)</p>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {stageNonTrackingTags.map((tag, idx) => (
+                  <Badge key={idx} variant="outline" className="gap-1 pr-1">
+                    {tag}
+                    <button onClick={() => handleRemoveStageNonTracking(idx)} className="ml-1 hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  value={newStageNonTrackingTag}
+                  onChange={(e) => setNewStageNonTrackingTag(e.target.value)}
+                  placeholder="Add non-tracking tag..."
+                  className="flex-1 h-8"
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddStageNonTracking()}
+                />
+                <Button variant="outline" size="sm" onClick={handleAddStageNonTracking} disabled={!newStageNonTrackingTag.trim()}>
+                  <Plus className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Switch Confirmation Dialog */}
       <AlertDialog open={showSwitchConfirm} onOpenChange={setShowSwitchConfirm}>
