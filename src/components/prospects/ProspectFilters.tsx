@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Search, X, Download, ChevronDown, Loader2 } from 'lucide-react';
+import { X, Download, ChevronDown, Loader2 } from 'lucide-react';
 import { FUNNEL_STAGES, EXTENDED_ACTIONS, FunnelStage, ProspectQuality, ExtendedActionTaken } from '@/types/prospect';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useCustomOptionsContext } from '@/contexts/CustomOptionsContext';
@@ -83,7 +83,7 @@ export function ProspectFilters({
       {/* Search bar row - with filter tag button beside it (hidden if hideSearch is true) */}
       {!hideSearch && <div className="flex items-center gap-2">
           <div className="relative flex-1 sm:max-w-xs sm:flex-none">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            
             
           </div>
           {filterTagButton}
