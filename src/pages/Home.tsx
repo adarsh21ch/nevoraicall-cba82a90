@@ -1,11 +1,13 @@
-// Activity Page - Today's Recent Activities (Personal Data Only)
-import { useState, useEffect, useRef, useCallback } from 'react';
+// Activity Page - Today's Recent Activities with Team Support
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProspects } from '@/hooks/useProspects';
 import { useTodos } from '@/hooks/useTodos';
+import { useTeamActivities } from '@/hooks/useTeamActivities';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
+import { TeamMemberSelector } from '@/components/team/TeamMemberSelector';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -83,10 +85,24 @@ export default function Home() {
   const [activityDate, setActivityDate] = useState<Date>(new Date());
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Team activities
+  const {
+    sharedOwners,
+    selectedOwnerIds,
+    teamActivities,
+    loading: teamLoading,
+    isViewingTeam,
+    hasTeam,
+    toggleOwnerSelection,
+    selectAllOwners,
+    clearSelection,
+    refetch: refetchTeam
+  } = useTeamActivities(activityDate, 'activity');
+
   // Pull-to-refresh
   const handleRefresh = useCallback(async () => {
-    await Promise.all([refetch?.(), refetchTodos?.()]);
-  }, [refetch, refetchTodos]);
+    await Promise.all([refetch?.(), refetchTodos?.(), refetchTeam?.()]);
+  }, [refetch, refetchTodos, refetchTeam]);
   const { containerRef, isRefreshing, pullDistance, showIndicator } = usePullToRefresh(handleRefresh);
 
   useEffect(() => {
@@ -113,8 +129,8 @@ export default function Home() {
 
   if (!user) return null;
 
-  // Get all activities for the selected date (sorted descending - most recent at top)
-  const getActivitiesForDate = () => {
+  // Get personal activities for the selected date (sorted descending - most recent at top)
+  const getPersonalActivities = () => {
     const prospectActivities = prospects
       .filter(p => isSameDay(parseISO(p.updated_at), activityDate))
       .map(p => ({
@@ -124,7 +140,9 @@ export default function Home() {
         phone: p.phone,
         stage: p.funnel_stage,
         action: p.action_taken,
-        time: new Date(p.updated_at)
+        time: new Date(p.updated_at),
+        owner_name: null as string | null,
+        owner_id: null as string | null
       }));
 
     const todoActivities = todos
@@ -133,24 +151,34 @@ export default function Home() {
         id: t.id,
         type: 'todo' as const,
         name: t.title,
-        phone: null,
+        phone: null as string | null,
         stage: t.completed ? 'Completed' : 'Updated',
-        action: null,
-        time: new Date(t.updated_at)
+        action: null as string | null,
+        time: new Date(t.updated_at),
+        owner_name: null as string | null,
+        owner_id: null as string | null
       }));
 
     // Combine and sort descending (most recent at top)
-    const all = [...prospectActivities, ...todoActivities].sort((a, b) => b.time.getTime() - a.time.getTime());
+    return [...prospectActivities, ...todoActivities].sort((a, b) => b.time.getTime() - a.time.getTime());
+  };
+
+  // Get activities based on whether viewing team or personal data
+  const getActivitiesForDate = () => {
+    let activitiesList = isViewingTeam 
+      ? teamActivities.map(a => ({ ...a, owner_id: a.owner_id, owner_name: a.owner_name }))
+      : getPersonalActivities();
     
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      return all.filter(a => 
+      activitiesList = activitiesList.filter(a => 
         a.name.toLowerCase().includes(query) || 
-        (a.phone && a.phone.includes(query))
+        (a.phone && a.phone.includes(query)) ||
+        (a.owner_name && a.owner_name.toLowerCase().includes(query))
       );
     }
-    return all;
+    return activitiesList;
   };
 
   const activities = getActivitiesForDate();
@@ -164,10 +192,20 @@ export default function Home() {
             <div>
               <h1 className="text-xl font-bold tracking-tight">Activity</h1>
               <p className="text-xs text-muted-foreground font-medium">
-                Track all your activities
+                {isViewingTeam ? 'Team activities' : 'Track all your activities'}
               </p>
             </div>
           </div>
+          {/* Team Toggle */}
+          <TeamMemberSelector
+            sharedOwners={sharedOwners}
+            selectedOwnerIds={selectedOwnerIds}
+            onToggleOwner={toggleOwnerSelection}
+            onSelectAll={selectAllOwners}
+            onClear={clearSelection}
+            currentTab="activity"
+            loading={teamLoading}
+          />
         </div>
       </header>
 
@@ -240,7 +278,14 @@ export default function Home() {
                         <div className="flex-1 min-w-0 pb-3">
                           <div className="flex items-start justify-between gap-2 p-2.5 rounded-xl bg-muted/30 hover:bg-muted/40 transition-colors">
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium truncate">{activity.name}</p>
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-sm font-medium truncate">{activity.name}</p>
+                                {isViewingTeam && activity.owner_name && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-secondary text-secondary-foreground shrink-0">
+                                    {activity.owner_name.split(' ')[0]}
+                                  </span>
+                                )}
+                              </div>
                               
                               {/* Tags */}
                               <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
