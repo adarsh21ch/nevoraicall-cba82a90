@@ -22,7 +22,6 @@ interface InlineSelectProps<T extends string> {
   // Tracking vs Non-tracking tags separation
   trackingOptions?: readonly string[];
   nonTrackingOptions?: readonly string[];
-  personalOptions?: readonly string[];
   showTagSeparation?: boolean;
   finalTargetTag?: string | null;
   // Legacy props - kept for compatibility
@@ -44,7 +43,6 @@ export function InlineSelect<T extends string>({
   renderValue,
   trackingOptions = [],
   nonTrackingOptions = [],
-  personalOptions = [],
   showTagSeparation = false,
   finalTargetTag = null,
 }: InlineSelectProps<T>) {
@@ -100,7 +98,7 @@ export function InlineSelect<T extends string>({
         )}
         
         {/* Separator */}
-        {trackingOptions.length > 0 && (nonTrackingOptions.length > 0 || personalOptions.length > 0) && (
+        {trackingOptions.length > 0 && nonTrackingOptions.length > 0 && (
           <SelectSeparator className="my-1" />
         )}
         
@@ -124,28 +122,9 @@ export function InlineSelect<T extends string>({
           </SelectGroup>
         )}
         
-        {/* Personal/custom tags group */}
-        {personalOptions.length > 0 && (
-          <SelectGroup>
-            <SelectLabel className="text-[10px] text-muted-foreground/70 px-2 py-1">
-              Personal tags (only you see these)
-            </SelectLabel>
-            {personalOptions.map((option) => (
-              <SelectItem 
-                key={option} 
-                value={option as string} 
-                className="text-xs min-h-[44px] sm:min-h-[32px] flex items-center"
-              >
-                <div className="flex items-center gap-2">
-                  {renderValue ? renderValue(option as T) : option}
-                </div>
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        )}
 
-        {/* Fallback if both empty but options exist */}
-        {trackingOptions.length === 0 && personalOptions.length === 0 && options.map((option) => (
+        {/* Fallback if tracking options empty but options exist */}
+        {trackingOptions.length === 0 && nonTrackingOptions.length === 0 && options.map((option) => (
           <SelectItem 
             key={option} 
             value={option} 
