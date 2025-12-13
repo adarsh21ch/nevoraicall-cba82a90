@@ -67,19 +67,19 @@ export function LeaderTrackingFormatSettings({
   // Team Levels state
   const [newLevelLabel, setNewLevelLabel] = useState('');
 
-  // Leads Tracking Tags state (max 4)
+  // Leads Tracking Tags state (max 4) - first tag is filter, last is final target
   const [leadsTrackingTags, setLeadsTrackingTags] = useState<LeadsTagInput[]>([{
     name: '',
     isFilter: true,
-    isFinalTarget: false
+    isFinalTarget: true // Single tag is both filter and final target
   }]);
   const [leadsNonTrackingTags, setLeadsNonTrackingTags] = useState<string[]>([]);
   const [newLeadsNonTrackingTag, setNewLeadsNonTrackingTag] = useState('');
 
-  // Stage Tags state
+  // Stage Tags state - last tag is final target
   const [stageTags, setStageTags] = useState<StageTagInput[]>([{
     name: '',
-    isFinalTarget: false
+    isFinalTarget: true // Single tag is final target
   }]);
   const [stageNonTrackingTags, setStageNonTrackingTags] = useState<string[]>([]);
   const [newStageNonTrackingTag, setNewStageNonTrackingTag] = useState('');
@@ -298,10 +298,12 @@ export function LeaderTrackingFormatSettings({
   };
   const handleAddLeadsTag = () => {
     if (leadsTrackingTags.length < 4) {
-      setLeadsTrackingTags([...leadsTrackingTags, {
+      // Move final target to the new last tag
+      const updated = leadsTrackingTags.map(t => ({ ...t, isFinalTarget: false }));
+      setLeadsTrackingTags([...updated, {
         name: '',
         isFilter: true,
-        isFinalTarget: false
+        isFinalTarget: true // New tag becomes final target
       }]);
     }
   };
@@ -347,9 +349,11 @@ export function LeaderTrackingFormatSettings({
   };
   const handleAddStageTag = () => {
     if (stageTags.length < 10) {
-      setStageTags([...stageTags, {
+      // Move final target to the new last tag
+      const updated = stageTags.map(t => ({ ...t, isFinalTarget: false }));
+      setStageTags([...updated, {
         name: '',
-        isFinalTarget: false
+        isFinalTarget: true // New tag becomes final target
       }]);
     }
   };
