@@ -81,31 +81,23 @@ export function ProspectFilters({
   };
   return <div className="flex flex-col gap-2 w-full">
       {/* Search bar row - with filter tag button beside it (hidden if hideSearch is true) */}
-      {!hideSearch && (
-        <div className="flex items-center gap-2">
+      {!hideSearch && <div className="flex items-center gap-2">
           <div className="relative flex-1 sm:max-w-xs sm:flex-none">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search name, phone..." value={filters.search} onChange={e => onFiltersChange({
-            ...filters,
-            search: e.target.value
-          })} className="pl-8 h-10 sm:h-9 w-full mx-0" />
+            
           </div>
           {filterTagButton}
-        </div>
-      )}
+        </div>}
       
       {/* Filter tag button shown standalone when search is hidden */}
-      {hideSearch && filterTagButton && (
-        <div className="flex items-center gap-2">
+      {hideSearch && filterTagButton && <div className="flex items-center gap-2">
           {filterTagButton}
-        </div>
-      )}
+        </div>}
 
       {/* Filters row - scrollable on mobile */}
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 sm:flex-wrap sm:overflow-visible">
         {/* Multi-select Responses Filter - only show if showResponsesFilter is true */}
-        {showResponsesFilter && (
-          <Popover>
+        {showResponsesFilter && <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className={cn("h-10 sm:h-9 min-w-[100px] w-auto text-xs shrink-0 justify-between gap-1", filters.actions.length > 0 && "border-primary/50 bg-primary/5")}>
                 <span className="truncate">{getActionsLabel()}</span>
@@ -120,18 +112,16 @@ export function ProspectFilters({
                   </label>)}
               </div>
               {filters.actions.length > 0 && <Button variant="ghost" size="sm" className="w-full mt-2 h-8 text-xs" onClick={() => onFiltersChange({
-              ...filters,
-              actions: []
-            })}>
+            ...filters,
+            actions: []
+          })}>
                   Clear Responses
                 </Button>}
             </PopoverContent>
-          </Popover>
-        )}
+          </Popover>}
 
         {/* Multi-select Stages Filter - only show if showStagesFilter is true */}
-        {showStagesFilter && (
-          <Popover>
+        {showStagesFilter && <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className={cn("h-10 sm:h-9 min-w-[100px] w-auto text-xs shrink-0 justify-between gap-1", filters.stages.length > 0 && "border-primary/50 bg-primary/5")}>
                 <span className="truncate">{getStagesLabel()}</span>
@@ -146,14 +136,13 @@ export function ProspectFilters({
                   </label>)}
               </div>
               {filters.stages.length > 0 && <Button variant="ghost" size="sm" className="w-full mt-2 h-8 text-xs" onClick={() => onFiltersChange({
-              ...filters,
-              stages: []
-            })}>
+            ...filters,
+            stages: []
+          })}>
                   Clear Stages
                 </Button>}
             </PopoverContent>
-          </Popover>
-        )}
+          </Popover>}
 
         {hasFilters && <Button variant="ghost" size="sm" onClick={clearFilters} className="h-10 sm:h-9 px-2 text-xs shrink-0">
             <X className="h-3.5 w-3.5 mr-1" />
