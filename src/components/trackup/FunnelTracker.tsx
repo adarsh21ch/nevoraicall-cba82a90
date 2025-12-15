@@ -90,14 +90,14 @@ export function FunnelTracker({ isPro = true }: FunnelTrackerProps) {
     }
   }, [config]);
 
-  // Build funnel config for the hook - fixed 3-day funnel
+  // Build funnel config for the hook - use configured funnel length
   const funnelConfigForStats = useMemo(() => {
     if (!selectedDate) return null;
     return {
       day_1_start: format(selectedDate, 'yyyy-MM-dd'),
-      funnel_length: 3, // Fixed 3-day funnel
+      funnel_length: config?.funnel_length || 3,
     };
-  }, [selectedDate]);
+  }, [selectedDate, config?.funnel_length]);
 
   // Pass config to hook for auto-calculated funnel rows
   const { totals, loading, totalProspects, funnelRows } = useProspectFunnelStats(funnelConfigForStats);
@@ -109,7 +109,7 @@ export function FunnelTracker({ isPro = true }: FunnelTrackerProps) {
     setDatePickerOpen(false);
     await saveConfig({
       funnel_name: 'Default Funnel',
-      funnel_length: 3, // Fixed 3-day funnel
+      funnel_length: config?.funnel_length || 3,
       day_1_start: format(date, 'yyyy-MM-dd'),
     });
   };
@@ -191,7 +191,7 @@ export function FunnelTracker({ isPro = true }: FunnelTrackerProps) {
               </Popover>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">3-day funnel auto-calculated from Follow Up.</p>
+          <p className="text-xs text-muted-foreground mt-1">{config?.funnel_length || 3}-day funnel auto-calculated from Follow Up.</p>
         </div>
         
         <div className="overflow-x-auto">
