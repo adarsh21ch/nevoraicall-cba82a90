@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,13 +8,18 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Users, Tag, Copy, Check, Loader2, Eye, EyeOff, X, Plus, Trash2, Star, Layers } from 'lucide-react';
+import { Users, Tag, Copy, Check, Loader2, Eye, EyeOff, X, Plus, Trash2, Star, Layers, CalendarDays, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Profile, ProfileUpdate } from '@/hooks/useProfile';
 import { useTrackingFormatContext } from '@/contexts/TrackingFormatContext';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useLeaderLevels } from '@/hooks/useLeaderLevels';
+import { useFunnelConfig } from '@/hooks/useFunnelConfig';
 import { supabase } from '@/integrations/supabase/client';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 interface LeaderTrackingFormatSettingsProps {
   profile: Profile | null;
   updating: boolean;
@@ -62,10 +68,17 @@ export function LeaderTrackingFormatSettings({
     updateLevel,
     deleteLevel
   } = useLeaderLevels();
+  const { config: funnelConfig, saveConfig: saveFunnelConfig, loading: funnelConfigLoading } = useFunnelConfig();
+  
   const [copiedId, setCopiedId] = useState(false);
   const [leaderIdInput, setLeaderIdInput] = useState('');
   const [savingLeader, setSavingLeader] = useState(false);
   const [formatMode, setFormatMode] = useState<'leader' | 'own'>('leader');
+  
+  // Funnel config state
+  const [funnelDay1Date, setFunnelDay1Date] = useState<Date | undefined>(undefined);
+  const [funnelLength, setFunnelLength] = useState<number>(3);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [leaderName, setLeaderName] = useState<string | null>(null);
 
   // Team Levels state
@@ -181,6 +194,42 @@ export function LeaderTrackingFormatSettings({
     };
     fetchLeaderName();
   }, [profile?.leaders_id_of_my_leader]);
+
+  // Initialize funnel config from saved data
+  useEffect(() => {
+    if (funnelConfig) {
+      setFunnelDay1Date(new Date(funnelConfig.day_1_start));
+      setFunnelLength(funnelConfig.funnel_length);
+    }
+  }, [funnelConfig]);
+
+  // Handle funnel Day 1 date change
+  const handleFunnelDateSelect = async (date: Date | undefined) => {
+    if (!date) return;
+    setFunnelDay1Date(date);
+    setDatePickerOpen(false);
+    await saveFunnelConfig({
+      funnel_name: 'Default Funnel',
+      funnel_length: funnelLength,
+      day_1_start: format(date, 'yyyy-MM-dd'),
+    });
+    toast.success('Funnel start date saved');
+  };
+
+  // Handle funnel length change
+  const handleFunnelLengthChange = async (value: string) => {
+    const length = parseInt(value);
+    setFunnelLength(length);
+    if (funnelDay1Date) {
+      await saveFunnelConfig({
+        funnel_name: 'Default Funnel',
+        funnel_length: length,
+        day_1_start: format(funnelDay1Date, 'yyyy-MM-dd'),
+      });
+      toast.success('Funnel length saved');
+    }
+  };
+
   // Auto-save personal tags when in leader mode
   const autoSavePersonalTags = useCallback(async () => {
     if (formatMode !== 'leader') return;
@@ -452,6 +501,75 @@ export function LeaderTrackingFormatSettings({
         <p className="text-xs text-muted-foreground mt-2">
           Share this ID with your team so they can use your tracking format.
         </p>
+      </div>
+
+      <Separator />
+
+      {/* Funnel Tracking Configuration */}
+      <div className="rounded-2xl p-4 bg-card border border-border/50 space-y-4">
+        <div className="flex items-center gap-2">
+          <Settings2 className="h-4 w-4 text-primary" />
+          <Label className="text-sm font-semibold">Funnel Tracking Configuration</Label>
+        </div>
+        
+        <p className="text-xs text-muted-foreground">
+          Set your funnel start date and how many days each funnel lasts. The system will auto-calculate which funnel number each lead belongs to.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Day 1 Start Date */}
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">Funnel Day 1 Start Date</Label>
+            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+              <PopoverTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  className={cn(
+                    "w-full justify-start text-left font-normal h-10",
+                    !funnelDay1Date && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarDays className="mr-2 h-4 w-4" />
+                  {funnelDay1Date ? format(funnelDay1Date, 'MMM d, yyyy') : 'Select start date'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 z-50" align="start">
+                <Calendar
+                  mode="single"
+                  selected={funnelDay1Date}
+                  onSelect={handleFunnelDateSelect}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Funnel Length */}
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">Days per Funnel</Label>
+            <Select value={funnelLength.toString()} onValueChange={handleFunnelLengthChange}>
+              <SelectTrigger className="w-full h-10">
+                <SelectValue placeholder="Select days" />
+              </SelectTrigger>
+              <SelectContent className="bg-popover border border-border z-50">
+                {[1, 2, 3, 4, 5, 6, 7].map((num) => (
+                  <SelectItem key={num} value={num.toString()}>
+                    {num} {num === 1 ? 'day' : 'days'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {funnelDay1Date && (
+          <div className="p-3 bg-muted/30 rounded-lg">
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">Current config:</span> {funnelLength}-day funnels starting from {format(funnelDay1Date, 'MMMM d, yyyy')}
+            </p>
+          </div>
+        )}
       </div>
 
       <Separator />

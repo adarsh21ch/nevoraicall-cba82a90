@@ -100,12 +100,9 @@ export function useFunnelConfig() {
     const length = config?.funnel_length || 3;
     const baseStages: string[] = [];
     
-    for (let i = 1; i <= Math.min(length, 3); i++) {
+    for (let i = 1; i <= length; i++) {
       baseStages.push(`Day ${i}`);
     }
-    
-    // Always include post-day stages
-    baseStages.push('Minimum Bill', 'Level Up', '2CC');
     
     return baseStages;
   };
