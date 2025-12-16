@@ -225,27 +225,18 @@ export function useTrackingFormat() {
         const leaderData = await fetchDirectLeaderFormat(profile.leaders_id_of_my_leader);
         
         if (leaderData) {
-          // Combine leader's personal tags + user's own personal tags for dropdown display
-          const combinedLeadsPersonal = [
-            ...leaderData.leadsNonTracking,
-            ...ownLeadsPersonal.filter(tag => !leaderData.leadsNonTracking.includes(tag))
-          ];
-          const combinedStagePersonal = [
-            ...leaderData.stageNonTracking,
-            ...ownStagePersonal.filter(tag => !leaderData.stageNonTracking.includes(tag))
-          ];
-          
+          // Personal tags are NEVER inherited - only user's own
           setTrackingFormat({
             // TRACKING tags come from DIRECT leader
             leadsTrackingTags: leaderData.leadsTracking,
             stageTags: leaderData.stageTags,
             levels: leaderData.levels,
-            // Combined for dropdowns
-            leadsNonTrackingTags: combinedLeadsPersonal,
-            stageNonTrackingTags: combinedStagePersonal,
-            // Separate arrays for UI display
-            leaderLeadsPersonalTags: leaderData.leadsNonTracking,
-            leaderStagePersonalTags: leaderData.stageNonTracking,
+            // Only user's own personal tags (no leader's personal tags)
+            leadsNonTrackingTags: ownLeadsPersonal,
+            stageNonTrackingTags: ownStagePersonal,
+            // Leader's personal tags NOT inherited - always empty for members
+            leaderLeadsPersonalTags: [],
+            leaderStagePersonalTags: [],
             ownLeadsPersonalTags: ownLeadsPersonal,
             ownStagePersonalTags: ownStagePersonal,
             // Metadata
