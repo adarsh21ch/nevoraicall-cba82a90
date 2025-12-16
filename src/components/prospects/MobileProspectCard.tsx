@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { MessageCircle, Phone, Trash2, Calendar as CalendarIcon, ChevronDown, MapPin, Target, X } from 'lucide-react';
+import { MessageCircle, Phone, Trash2, Calendar as CalendarIcon, ChevronDown, MapPin, Target } from 'lucide-react';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useActivityLogs } from '@/hooks/useActivityLogs';
@@ -25,7 +25,7 @@ interface MobileProspectCardProps {
 
 export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDelete }: MobileProspectCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-const [localData, setLocalData] = useState({
+  const [localData, setLocalData] = useState({
     name: prospect.name,
     phone: prospect.phone,
     address: prospect.address || '',
@@ -34,19 +34,13 @@ const [localData, setLocalData] = useState({
   });
   const [isDeleting, setIsDeleting] = useState(false);
   const { activities } = useActivityLogs();
-  const { addOption, deleteOption, getOptionsForType, getCustomOptionsForType } = useCustomOptionsContext();
+  const { getOptionsForType, getCustomOptionsForType } = useCustomOptionsContext();
   const { 
-    // Leads tags
-    leadsTrackingTags,
-    leadsNonTrackingTags,
+    // Response tags
     leadsTrackingTagNames,
-    leadsFinalTargetTag,
-    isLeadsFinalTarget,
-    leadsStageTag,
+    leadsFunnelTag,
     
     // Stage tags
-    stageTags,
-    stageNonTrackingTags,
     stageTagNames,
     stageFinalTargetTag,
     isStageFinalTarget,
@@ -55,33 +49,24 @@ const [localData, setLocalData] = useState({
     handleTargetComplete 
   } = useTrackingFormatContext();
 
-  // Build dropdown options using the correct tag systems
+  // Build dropdown options
   const customActionOptions = getCustomOptionsForType('action_taken').map(o => o.option_value);
   const customStageOptions = getCustomOptionsForType('funnel_stage').map(o => o.option_value);
   
-  // Leads tab uses leadsTrackingTags for Response column
+  // Response options (Leads tab)
   const hasLeadsTrackingTags = leadsTrackingTagNames.length > 0;
   const actionOptions = hasLeadsTrackingTags 
-    ? [
-        ...leadsTrackingTagNames, 
-        ...leadsNonTrackingTags, 
-        ...customActionOptions.filter(o => !leadsTrackingTagNames.includes(o) && !leadsNonTrackingTags.includes(o))
-      ]
+    ? [...leadsTrackingTagNames, ...customActionOptions.filter(o => !leadsTrackingTagNames.includes(o))]
     : getOptionsForType('action_taken', EXTENDED_ACTIONS) as string[];
   
-  // Funnel tab uses stageTags for Filter column
+  // Stage options (Funnel tab)
   const hasStageTrackingTags = stageTagNames.length > 0;
   const stageOptions = hasStageTrackingTags
-    ? [
-        ...stageTagNames, 
-        ...stageNonTrackingTags,
-        ...customStageOptions.filter(o => !stageTagNames.includes(o) && !stageNonTrackingTags.includes(o))
-      ]
+    ? [...stageTagNames, ...customStageOptions.filter(o => !stageTagNames.includes(o))]
     : getOptionsForType('funnel_stage', FUNNEL_STAGES) as string[];
     
   const statusOptions = getOptionsForType('prospect_status', STATUSES) as (typeof STATUSES[number])[];
 
-  // Only reset local data when switching to a different lead
   useEffect(() => {
     setLocalData({
       name: prospect.name,
@@ -90,7 +75,7 @@ const [localData, setLocalData] = useState({
       why_need: prospect.why_need || '',
       notes: prospect.notes || '',
     });
-  }, [prospect.id]); // Only reset when lead ID changes
+  }, [prospect.id]);
 
   const prospectActivities = activities
     .filter(log => log.prospect_id === prospect.id)
@@ -116,24 +101,13 @@ const [localData, setLocalData] = useState({
     setIsDeleting(false);
   };
 
-  // Handle action change with Leads target completion check
   const handleActionChange = (value: ExtendedActionTaken) => {
-    const updates: Partial<Prospect> = {};
-    updates.action_taken = value as ActionTaken;
-    
-    // Check if this is the final Leads target tag
-    if (isLeadsFinalTarget(value)) {
-      handleTargetComplete(value, prospect.name);
-    }
-    
-    onUpdate(prospect.id, updates);
+    onUpdate(prospect.id, { action_taken: value as ActionTaken });
   };
 
-  // Handle stage change with Stage target completion check
   const handleStageChange = (value: string) => {
     const updates: Partial<Prospect> = { funnel_stage: value };
     
-    // Check if this is the final Stage target tag
     if (isStageFinalTarget(value)) {
       handleTargetComplete(value, prospect.name);
     }
@@ -151,7 +125,6 @@ const [localData, setLocalData] = useState({
     }
   };
 
-  // Handle address field
   const handleAddressChange = (value: string) => {
     setLocalData(prev => ({ ...prev, address: value }));
   };
@@ -162,10 +135,9 @@ const [localData, setLocalData] = useState({
     }
   };
 
-
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-sm overflow-hidden">
-      {/* Header: Name + Phone + Age/Gender + Quick Actions */}
+      {/* Header */}
       <div className="p-4 border-b border-border/30">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
@@ -214,7 +186,7 @@ const [localData, setLocalData] = useState({
         </div>
       </div>
 
-      {/* Status Chips Row - Tracking Tags */}
+      {/* Status Chips Row */}
       <div className="px-4 py-3 flex flex-wrap items-center gap-2 bg-muted/10">
         {!isCalling && (
           <InlineSelect<FunnelStage>
@@ -223,9 +195,6 @@ const [localData, setLocalData] = useState({
             onChange={handleStageChange}
             renderValue={(value) => <StageBadge stage={value} />}
             placeholder="Stage"
-            showTagSeparation={hasStageTrackingTags}
-            trackingOptions={stageTagNames}
-            nonTrackingOptions={stageNonTrackingTags}
             finalTargetTag={stageFinalTargetTag}
           />
         )}
@@ -235,11 +204,7 @@ const [localData, setLocalData] = useState({
           onChange={handleActionChange}
           placeholder="Response"
           renderValue={(value) => <ActionBadge action={value as any} />}
-          showTagSeparation={hasLeadsTrackingTags}
-          trackingOptions={leadsTrackingTagNames}
-          nonTrackingOptions={leadsNonTrackingTags}
-          finalTargetTag={leadsFinalTargetTag}
-          stageTag={leadsStageTag}
+          funnelTag={leadsFunnelTag}
         />
         <InlineSelect<ProspectStatus>
           value={prospect.prospect_status}
@@ -247,11 +212,6 @@ const [localData, setLocalData] = useState({
           onChange={(value) => onUpdate(prospect.id, { prospect_status: value })}
           placeholder="Status"
           renderValue={(value) => <StatusBadge status={value} />}
-          optionType="prospect_status"
-          customOptions={getCustomOptionsForType('prospect_status')}
-          onAddOption={addOption}
-          onDeleteOption={deleteOption}
-          defaultOptions={STATUSES}
         />
       </div>
 
@@ -363,7 +323,6 @@ const [localData, setLocalData] = useState({
               className="min-h-[80px] text-sm resize-none"
             />
           </div>
-
 
           {/* Recent Activity */}
           {prospectActivities.length > 0 && (
