@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { MessageCircle, Phone, Trash2, Calendar as CalendarIcon, ChevronDown, MapPin, Target } from 'lucide-react';
+import { MessageCircle, Phone, Trash2, Calendar as CalendarIcon, ChevronDown, MapPin, Target, X } from 'lucide-react';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useActivityLogs } from '@/hooks/useActivityLogs';
@@ -25,7 +25,7 @@ interface MobileProspectCardProps {
 
 export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDelete }: MobileProspectCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [localData, setLocalData] = useState({
+const [localData, setLocalData] = useState({
     name: prospect.name,
     phone: prospect.phone,
     address: prospect.address || '',
@@ -34,13 +34,19 @@ export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDel
   });
   const [isDeleting, setIsDeleting] = useState(false);
   const { activities } = useActivityLogs();
-  const { getOptionsForType, getCustomOptionsForType } = useCustomOptionsContext();
+  const { addOption, deleteOption, getOptionsForType, getCustomOptionsForType } = useCustomOptionsContext();
   const { 
-    // Response tags
+    // Leads tags
+    leadsTrackingTags,
+    leadsNonTrackingTags,
     leadsTrackingTagNames,
-    leadsFunnelTag,
+    leadsFinalTargetTag,
+    isLeadsFinalTarget,
+    leadsStageTag,
     
     // Stage tags
+    stageTags,
+    stageNonTrackingTags,
     stageTagNames,
     stageFinalTargetTag,
     isStageFinalTarget,
@@ -49,24 +55,33 @@ export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDel
     handleTargetComplete 
   } = useTrackingFormatContext();
 
-  // Build dropdown options
+  // Build dropdown options using the correct tag systems
   const customActionOptions = getCustomOptionsForType('action_taken').map(o => o.option_value);
   const customStageOptions = getCustomOptionsForType('funnel_stage').map(o => o.option_value);
   
-  // Response options (Leads tab)
+  // Leads tab uses leadsTrackingTags for Response column
   const hasLeadsTrackingTags = leadsTrackingTagNames.length > 0;
   const actionOptions = hasLeadsTrackingTags 
-    ? [...leadsTrackingTagNames, ...customActionOptions.filter(o => !leadsTrackingTagNames.includes(o))]
+    ? [
+        ...leadsTrackingTagNames, 
+        ...leadsNonTrackingTags, 
+        ...customActionOptions.filter(o => !leadsTrackingTagNames.includes(o) && !leadsNonTrackingTags.includes(o))
+      ]
     : getOptionsForType('action_taken', EXTENDED_ACTIONS) as string[];
   
-  // Stage options (Funnel tab)
+  // Funnel tab uses stageTags for Filter column
   const hasStageTrackingTags = stageTagNames.length > 0;
   const stageOptions = hasStageTrackingTags
-    ? [...stageTagNames, ...customStageOptions.filter(o => !stageTagNames.includes(o))]
+    ? [
+        ...stageTagNames, 
+        ...stageNonTrackingTags,
+        ...customStageOptions.filter(o => !stageTagNames.includes(o) && !stageNonTrackingTags.includes(o))
+      ]
     : getOptionsForType('funnel_stage', FUNNEL_STAGES) as string[];
     
   const statusOptions = getOptionsForType('prospect_status', STATUSES) as (typeof STATUSES[number])[];
 
+  // Only reset local data when switching to a different lead
   useEffect(() => {
     setLocalData({
       name: prospect.name,
@@ -75,7 +90,7 @@ export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDel
       why_need: prospect.why_need || '',
       notes: prospect.notes || '',
     });
-  }, [prospect.id]);
+  }, [prospect.id]); // Only reset when lead ID changes
 
   const prospectActivities = activities
     .filter(log => log.prospect_id === prospect.id)
@@ -101,13 +116,24 @@ export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDel
     setIsDeleting(false);
   };
 
+  // Handle action change with Leads target completion check
   const handleActionChange = (value: ExtendedActionTaken) => {
-    onUpdate(prospect.id, { action_taken: value as ActionTaken });
+    const updates: Partial<Prospect> = {};
+    updates.action_taken = value as ActionTaken;
+    
+    // Check if this is the final Leads target tag
+    if (isLeadsFinalTarget(value)) {
+      handleTargetComplete(value, prospect.name);
+    }
+    
+    onUpdate(prospect.id, updates);
   };
 
+  // Handle stage change with Stage target completion check
   const handleStageChange = (value: string) => {
     const updates: Partial<Prospect> = { funnel_stage: value };
     
+    // Check if this is the final Stage target tag
     if (isStageFinalTarget(value)) {
       handleTargetComplete(value, prospect.name);
     }
@@ -125,6 +151,7 @@ export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDel
     }
   };
 
+  // Handle address field
   const handleAddressChange = (value: string) => {
     setLocalData(prev => ({ ...prev, address: value }));
   };
@@ -135,9 +162,10 @@ export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDel
     }
   };
 
+
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-sm overflow-hidden">
-      {/* Header */}
+      {/* Header: Name + Phone + Age/Gender + Quick Actions */}
       <div className="p-4 border-b border-border/30">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
@@ -186,7 +214,7 @@ export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDel
         </div>
       </div>
 
-      {/* Status Chips Row */}
+      {/* Status Chips Row - Tracking Tags */}
       <div className="px-4 py-3 flex flex-wrap items-center gap-2 bg-muted/10">
         {!isCalling && (
           <InlineSelect<FunnelStage>
@@ -195,6 +223,9 @@ export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDel
             onChange={handleStageChange}
             renderValue={(value) => <StageBadge stage={value} />}
             placeholder="Stage"
+            showTagSeparation={hasStageTrackingTags}
+            trackingOptions={stageTagNames}
+            nonTrackingOptions={stageNonTrackingTags}
             finalTargetTag={stageFinalTargetTag}
           />
         )}
@@ -204,7 +235,11 @@ export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDel
           onChange={handleActionChange}
           placeholder="Response"
           renderValue={(value) => <ActionBadge action={value as any} />}
-          funnelTag={leadsFunnelTag}
+          showTagSeparation={hasLeadsTrackingTags}
+          trackingOptions={leadsTrackingTagNames}
+          nonTrackingOptions={leadsNonTrackingTags}
+          finalTargetTag={leadsFinalTargetTag}
+          stageTag={leadsStageTag}
         />
         <InlineSelect<ProspectStatus>
           value={prospect.prospect_status}
@@ -212,6 +247,11 @@ export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDel
           onChange={(value) => onUpdate(prospect.id, { prospect_status: value })}
           placeholder="Status"
           renderValue={(value) => <StatusBadge status={value} />}
+          optionType="prospect_status"
+          customOptions={getCustomOptionsForType('prospect_status')}
+          onAddOption={addOption}
+          onDeleteOption={deleteOption}
+          defaultOptions={STATUSES}
         />
       </div>
 
@@ -323,6 +363,7 @@ export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDel
               className="min-h-[80px] text-sm resize-none"
             />
           </div>
+
 
           {/* Recent Activity */}
           {prospectActivities.length > 0 && (

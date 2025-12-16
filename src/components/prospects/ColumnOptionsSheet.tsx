@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Edit, Star, Target, Lock } from 'lucide-react';
 import { useTrackingFormatContext } from '@/contexts/TrackingFormatContext';
 import { OptionType } from '@/hooks/useCustomOptions';
+import { cn } from '@/lib/utils';
 
 interface ColumnOptionsSheetProps {
   columnType: OptionType;
@@ -13,6 +14,7 @@ interface ColumnOptionsSheetProps {
 export function ColumnOptionsSheet({
   columnType,
   columnLabel,
+  defaultOptions
 }: ColumnOptionsSheetProps) {
   const {
     leadsTrackingTags,
@@ -20,6 +22,7 @@ export function ColumnOptionsSheet({
     isUsingLeaderFormat,
     rootLeaderName,
     isLeadsStageTag,
+    isLeadsFinalTarget,
     isStageFinalTarget,
   } = useTrackingFormatContext();
   const [open, setOpen] = useState(false);
@@ -72,7 +75,7 @@ export function ColumnOptionsSheet({
             )}
           </div>
 
-          {/* Tracking Tags section */}
+          {/* Tracking Tags section - read-only display */}
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground font-medium mb-2">Tracking tags</p>
             {trackingTags.length > 0 ? trackingTags.map((tag, index) => {

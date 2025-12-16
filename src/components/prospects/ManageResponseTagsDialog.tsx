@@ -3,7 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Star, Tag, Loader2, Check, Lock } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { AlertCircle, Plus, Trash2, Star, Tag, X, Loader2, Check, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTrackingFormatContext } from '@/contexts/TrackingFormatContext';
 import { useProfile } from '@/hooks/useProfile';
@@ -26,11 +27,15 @@ export function ManageResponseTagsDialog({ open, onOpenChange }: ManageResponseT
     isUsingLeaderFormat, 
     directLeaderName,
     leadsTrackingTags, 
+    ownLeadsPersonalTags,
   } = useTrackingFormatContext();
   const { profile, updateProfile } = useProfile();
   
   // Only for root leaders - tracking tag editing
   const [trackingTags, setTrackingTags] = useState<LeadsTagInput[]>([]);
+  // For all users - personal tag editing
+  const [personalTags, setPersonalTags] = useState<string[]>([]);
+  const [newPersonalTag, setNewPersonalTag] = useState('');
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -38,18 +43,47 @@ export function ManageResponseTagsDialog({ open, onOpenChange }: ManageResponseT
   // Initialize from tracking format
   useEffect(() => {
     if (open) {
+      // Tracking tags - only editable if root leader
       const tags = leadsTrackingTags.map(t => ({
         name: t.name,
         isStageTag: t.isStageTag,
         isFinalTarget: t.isFinalTarget,
       }));
       setTrackingTags(tags.length > 0 ? tags : [{ name: '', isStageTag: false, isFinalTarget: false }]);
+      
+      // Personal tags - always user's own
+      setPersonalTags(ownLeadsPersonalTags || []);
     }
-  }, [leadsTrackingTags, open]);
+  }, [leadsTrackingTags, ownLeadsPersonalTags, open]);
 
-  // Auto-save function for root leader
+  // Auto-save function for personal tags
+  const autoSavePersonalTags = useCallback(async () => {
+    setAutoSaveStatus('saving');
+    
+    // Get current response_labels and only update nonTracking
+    const currentResponseLabels = profile?.response_labels as any;
+    
+    const responseLabelsData = {
+      tracking: currentResponseLabels?.tracking || [],
+      nonTracking: personalTags,
+    };
+    
+    await updateProfile({
+      response_labels: responseLabelsData as any,
+    });
+    
+    refreshFormat();
+    setAutoSaveStatus('saved');
+    setTimeout(() => setAutoSaveStatus('idle'), 1500);
+  }, [personalTags, profile?.response_labels, updateProfile, refreshFormat]);
+
+  // Auto-save function for root leader (tracking + personal)
   const autoSaveAll = useCallback(async () => {
-    if (!isRootLeader) return;
+    if (!isRootLeader) {
+      // Members only save personal tags
+      await autoSavePersonalTags();
+      return;
+    }
     
     setAutoSaveStatus('saving');
     
@@ -61,6 +95,7 @@ export function ManageResponseTagsDialog({ open, onOpenChange }: ManageResponseT
         isStageTag: t.isStageTag,
         isFinalTarget: t.isFinalTarget,
       })),
+      nonTracking: personalTags,
     };
     
     await updateProfile({
@@ -71,7 +106,7 @@ export function ManageResponseTagsDialog({ open, onOpenChange }: ManageResponseT
     refreshFormat();
     setAutoSaveStatus('saved');
     setTimeout(() => setAutoSaveStatus('idle'), 1500);
-  }, [trackingTags, isRootLeader, updateProfile, refreshFormat]);
+  }, [trackingTags, personalTags, isRootLeader, updateProfile, refreshFormat, autoSavePersonalTags]);
 
   // Debounced auto-save
   const triggerAutoSave = useCallback(() => {
@@ -90,7 +125,7 @@ export function ManageResponseTagsDialog({ open, onOpenChange }: ManageResponseT
     setTrackingTags(prev => {
       const updated = [...prev];
       if (field === 'isStageTag' && value === true) {
-        // Only ONE tag can be the Funnel Tag
+        // Only ONE tag can be the Filter Tag
         updated.forEach((t, i) => { t.isStageTag = i === index; });
       } else if (field === 'isStageTag' && value === false) {
         updated[index] = { ...updated[index], isStageTag: false };
@@ -118,6 +153,28 @@ export function ManageResponseTagsDialog({ open, onOpenChange }: ManageResponseT
     }
   };
 
+  // === Personal tag handlers (all users) ===
+  const handleAddPersonalTag = () => {
+    const tag = newPersonalTag.trim().toUpperCase();
+    if (!tag) return;
+    
+    // Check if tag already exists in tracking or personal
+    const trackingNames = leadsTrackingTags.map(t => t.name.toUpperCase());
+    if (personalTags.map(t => t.toUpperCase()).includes(tag) || trackingNames.includes(tag)) {
+      toast.error('This tag already exists');
+      return;
+    }
+    
+    setPersonalTags([...personalTags, tag]);
+    setNewPersonalTag('');
+    triggerAutoSave();
+  };
+
+  const handleRemovePersonalTag = (index: number) => {
+    setPersonalTags(personalTags.filter((_, i) => i !== index));
+    triggerAutoSave();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
@@ -141,15 +198,15 @@ export function ManageResponseTagsDialog({ open, onOpenChange }: ManageResponseT
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Response Tags Section */}
+          {/* SECTION A: Tracking Tags */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Tag className="h-4 w-4 text-primary" />
                 <p className="text-sm font-medium">
                   {isUsingLeaderFormat && !isRootLeader 
-                    ? `Response Tags (from ${directLeaderName || 'Leader'})`
-                    : 'Response Tags'
+                    ? `Tracking Tags (from ${directLeaderName || 'Leader'})`
+                    : 'Tracking Tags (Your Config)'
                   }
                 </p>
               </div>
@@ -166,10 +223,6 @@ export function ManageResponseTagsDialog({ open, onOpenChange }: ManageResponseT
               )}
             </div>
             
-            <p className="text-xs text-muted-foreground">
-              Response tags are used in the Leads tab. Mark one as ★ Funnel Tag to move leads to the Funnel tab.
-            </p>
-            
             {isUsingLeaderFormat && !isRootLeader ? (
               // Read-only view for members
               <div className="space-y-2">
@@ -181,7 +234,7 @@ export function ManageResponseTagsDialog({ open, onOpenChange }: ManageResponseT
                     </Badge>
                   ))}
                   {leadsTrackingTags.length === 0 && (
-                    <span className="text-xs text-muted-foreground italic">No response tags from leader</span>
+                    <span className="text-xs text-muted-foreground italic">No tracking tags from leader</span>
                   )}
                 </div>
                 <p className="text-[10px] text-muted-foreground">
@@ -223,6 +276,58 @@ export function ManageResponseTagsDialog({ open, onOpenChange }: ManageResponseT
                 ))}
               </div>
             )}
+          </div>
+
+          <Separator />
+
+          {/* SECTION B: Personal Tags (all users can edit) */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium">Your Personal Tags (not counted)</p>
+            </div>
+            
+            {/* Info banner */}
+            <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-900">
+              <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+              <p className="text-xs text-blue-700 dark:text-blue-300">
+                Personal tags are for your own organization only and don't appear in team analytics.
+              </p>
+            </div>
+            
+            <div className="flex flex-wrap gap-2">
+              {personalTags.map((tag, idx) => (
+                <Badge key={idx} variant="outline" className="text-xs flex items-center gap-1 pr-1">
+                  {tag}
+                  <button
+                    onClick={() => handleRemovePersonalTag(idx)}
+                    className="hover:bg-destructive/20 rounded-full p-0.5"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </Badge>
+              ))}
+              {personalTags.length === 0 && (
+                <span className="text-xs text-muted-foreground italic">No personal tags yet</span>
+              )}
+            </div>
+            
+            <div className="flex gap-2">
+              <Input
+                value={newPersonalTag}
+                onChange={(e) => setNewPersonalTag(e.target.value.toUpperCase())}
+                placeholder="Add personal tag..."
+                className="h-8 text-sm flex-1 uppercase"
+                onKeyDown={(e) => e.key === 'Enter' && handleAddPersonalTag()}
+              />
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleAddPersonalTag}
+                disabled={!newPersonalTag.trim()}
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+            </div>
           </div>
         </div>
 
