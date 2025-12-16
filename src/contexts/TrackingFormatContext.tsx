@@ -35,7 +35,9 @@ interface TrackingFormatContextType {
   // Metadata
   isRootLeader: boolean;
   isUsingLeaderFormat: boolean;
-  rootLeaderName: string | null;
+  directLeaderName: string | null;
+  directLeaderId: string | null;
+  rootLeaderName: string | null; // Legacy alias
   
   // Legacy aliases
   trackingTagNames: string[];
