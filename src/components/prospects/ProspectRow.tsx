@@ -1,5 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
-import { Prospect, FunnelStage, ActionTaken, ProspectStatus, FUNNEL_STAGES, EXTENDED_ACTIONS, STATUSES, ExtendedActionTaken } from '@/types/prospect';
+import { Prospect, FunnelStage, FUNNEL_STAGES, EXTENDED_ACTIONS, ExtendedActionTaken } from '@/types/prospect';
 import { InlineSelect } from './InlineSelect';
 import { StatusBadge, StageBadge, ActionBadge } from './StatusBadge';
 import { InlineReportCard } from './InlineReportCard';
@@ -34,7 +33,7 @@ interface ProspectRowProps {
   showSelection?: boolean;
   isSelected?: boolean;
   onToggleSelect?: () => void;
-  tabType?: 'leads' | 'stage'; // New prop to determine which tag system to use
+  tabType?: 'leads' | 'stage';
 }
 
 export function ProspectRow({ 
@@ -55,68 +54,44 @@ export function ProspectRow({
   onToggleSelect,
   tabType = 'leads',
 }: ProspectRowProps) {
-  const { addOption, deleteOption, getCustomOptionsForType } = useCustomOptionsContext();
+  const { getCustomOptionsForType } = useCustomOptionsContext();
   const { 
-    // Leads tags
-    leadsTrackingTags,
-    leadsNonTrackingTags,
+    // Response tags
     leadsTrackingTagNames,
-    leadsFinalTargetTag,
-    isLeadsFinalTarget,
-    leadsStageTag,
+    leadsFunnelTag,
     
     // Stage tags
-    stageTags,
-    stageNonTrackingTags,
     stageTagNames,
     stageFinalTargetTag,
     isStageFinalTarget,
     
     // Helpers
     handleTargetComplete,
-    loading: formatLoading 
   } = useTrackingFormatContext();
 
-  // Build dropdown options based on tab type
+  // Build dropdown options
   const customActionOptions = getCustomOptionsForType('action_taken').map(o => o.option_value);
   const customStageOptions = getCustomOptionsForType('funnel_stage').map(o => o.option_value);
   
-  // Leads tab uses leadsTrackingTags for Response column
+  // Leads tab uses Response tags
   const hasLeadsTrackingTags = leadsTrackingTagNames.length > 0;
   const actionOptions = hasLeadsTrackingTags 
-    ? [
-        ...leadsTrackingTagNames, 
-        ...leadsNonTrackingTags, 
-        ...customActionOptions.filter(o => !leadsTrackingTagNames.includes(o) && !leadsNonTrackingTags.includes(o))
-      ]
+    ? [...leadsTrackingTagNames, ...customActionOptions.filter(o => !leadsTrackingTagNames.includes(o))]
     : [...EXTENDED_ACTIONS, ...customActionOptions];
   
-  // Funnel tab uses stageTags for Filter column
+  // Funnel tab uses Stage tags
   const hasStageTrackingTags = stageTagNames.length > 0;
   const stageOptions = hasStageTrackingTags
-    ? [
-        ...stageTagNames, 
-        ...stageNonTrackingTags,
-        ...customStageOptions.filter(o => !stageTagNames.includes(o) && !stageNonTrackingTags.includes(o))
-      ]
+    ? [...stageTagNames, ...customStageOptions.filter(o => !stageTagNames.includes(o))]
     : [...FUNNEL_STAGES, ...customStageOptions];
 
   const handleActionChange = (value: ExtendedActionTaken) => {
-    const updates: Partial<Prospect> = {};
-    updates.action_taken = value;
-    
-    // Check if this is the final Leads target tag
-    if (isLeadsFinalTarget(value)) {
-      handleTargetComplete(value, prospect.name);
-    }
-    
-    onUpdate(prospect.id, updates);
+    onUpdate(prospect.id, { action_taken: value });
   };
 
   const handleStageChange = (value: string) => {
     const updates: Partial<Prospect> = { funnel_stage: value };
     
-    // Check if this is the final Stage target tag
     if (isStageFinalTarget(value)) {
       handleTargetComplete(value, prospect.name);
     }
@@ -143,7 +118,6 @@ export function ProspectRow({
     return prospect.action_taken || null;
   };
 
-  // Row background color
   const bgColor = isEven ? "bg-card" : "bg-muted";
 
   const renderCell = (columnId: string) => {
@@ -171,7 +145,6 @@ export function ProspectRow({
         );
       
       case 'name':
-        // Compact info line: "Age, Location"
         const ageValue = (prospect as any).age_or_dob || '';
         const locationValue = prospect.address || '';
         const infoParts = [ageValue, locationValue].filter(Boolean);
@@ -185,7 +158,6 @@ export function ProspectRow({
             onPointerDown={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-1.5">
-              {/* Call + WhatsApp icons */}
               <div className="flex items-center gap-0.5 shrink-0">
                 <CallIconButton onClick={openCall} className={isMobileTable ? "p-0.5 h-6 w-6" : "h-7 w-7"} />
                 <WhatsAppIconButton onClick={openWhatsApp} className={isMobileTable ? "p-0.5 h-6 w-6" : "h-7 w-7"} />
@@ -204,7 +176,6 @@ export function ProspectRow({
                     <ChevronDown className={cn("h-3 w-3", isMobileTable && "h-2.5 w-2.5")} />
                   </span>
                 </button>
-                {/* Compact info: Age, Location */}
                 {infoLine && (
                   <div className={cn(
                     "text-muted-foreground truncate pl-1",
@@ -232,11 +203,7 @@ export function ProspectRow({
               onChange={handleActionChange} 
               placeholder="Select..." 
               renderValue={(value) => <ActionBadge action={value} />} 
-              showTagSeparation={hasLeadsTrackingTags}
-              trackingOptions={leadsTrackingTagNames}
-              nonTrackingOptions={leadsNonTrackingTags}
-              finalTargetTag={leadsFinalTargetTag}
-              stageTag={leadsStageTag}
+              funnelTag={leadsFunnelTag}
             />
           </td>
         );
@@ -255,9 +222,6 @@ export function ProspectRow({
               onChange={handleStageChange} 
               renderValue={(value) => <StageBadge stage={value} />} 
               placeholder="Select..." 
-              showTagSeparation={hasStageTrackingTags}
-              trackingOptions={stageTagNames}
-              nonTrackingOptions={stageNonTrackingTags}
               finalTargetTag={stageFinalTargetTag}
             />
           </td>
@@ -288,7 +252,6 @@ export function ProspectRow({
           !dragHandleProps?.isDragging && "cursor-grab"
         )}
       >
-        {/* Selection checkbox cell */}
         {showSelection && (
           <td 
             className={cn("px-2 py-2", bgColor)} 

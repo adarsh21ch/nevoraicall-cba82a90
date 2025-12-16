@@ -7,17 +7,15 @@ interface TrackingFormatContextType {
   loading: boolean;
   refreshFormat: () => void;
   
-  // Leads (Response) tags
+  // Response tags
   leadsTrackingTags: TrackingTag[];
-  leadsNonTrackingTags: string[];
   leadsTrackingTagNames: string[];
-  leadsFinalTargetTag: string | null;
-  isLeadsFinalTarget: (tagName: string) => boolean;
+  leadsFunnelTag: string | null;
+  isLeadsFunnelTag: (tagName: string) => boolean;
   isLeadsTrackingTag: (tagName: string) => boolean;
   
   // Stage tags
   stageTags: StageTag[];
-  stageNonTrackingTags: string[];
   stageTagNames: string[];
   stageFinalTargetTag: string | null;
   isStageFinalTarget: (tagName: string) => boolean;
@@ -26,32 +24,22 @@ interface TrackingFormatContextType {
   // Team levels
   levels: TeamLevel[];
   
-  // Separate personal tags (for UI display)
-  leaderLeadsPersonalTags: string[];
-  leaderStagePersonalTags: string[];
-  ownLeadsPersonalTags: string[];
-  ownStagePersonalTags: string[];
-  
   // Metadata
   isRootLeader: boolean;
   isUsingLeaderFormat: boolean;
   directLeaderName: string | null;
   directLeaderId: string | null;
-  rootLeaderName: string | null; // Legacy alias
+  rootLeaderName: string | null;
   
-  // Legacy aliases
+  // Legacy aliases for backward compatibility
+  leadsStageTag: string | null;
+  isLeadsStageTag: (tagName: string) => boolean;
+  leadsFilterTag: string | null;
+  isLeadsFilterTag: (tagName: string) => boolean;
   trackingTagNames: string[];
-  nonTrackingTags: string[];
   finalTargetTag: string | null;
   isFinalTarget: (tagName: string) => boolean;
   isTrackingTag: (tagName: string) => boolean;
-  
-  // Filter tag helpers (used for Funnel tab)
-  leadsStageTag: string | null;
-  isLeadsStageTag: (tagName: string) => boolean;
-  // Legacy aliases for backward compatibility
-  leadsFilterTag: string | null;
-  isLeadsFilterTag: (tagName: string) => boolean;
   
   // Helpers
   handleTargetComplete: (tagName: string, prospectName?: string) => void;
@@ -64,47 +52,27 @@ const TrackingFormatContext = createContext<TrackingFormatContextType | null>(nu
 export function TrackingFormatProvider({ children }: { children: React.ReactNode }) {
   const trackingFormatHook = useTrackingFormat();
 
-  // Get the filter tag from leader's format (for Funnel tab)
-  const leadsStageTag = trackingFormatHook.trackingFormat?.leadsTrackingTags.find(t => t.isStageTag)?.name || null;
-
-  const isLeadsStageTag = useCallback((tagName: string) => {
-    return trackingFormatHook.trackingFormat?.leadsTrackingTags.find(t => t.name === tagName)?.isStageTag || false;
-  }, [trackingFormatHook.trackingFormat]);
-
   // Handle target completion when final tag is selected
   const handleTargetComplete = useCallback((tagName: string, prospectName?: string) => {
-    if (trackingFormatHook.isLeadsFinalTarget(tagName)) {
-      toast.success(`🎯 Target Complete! ${prospectName ? `(${prospectName})` : ''}`, {
-        duration: 2000,
-      });
-    } else if (trackingFormatHook.isStageFinalTarget(tagName)) {
+    if (trackingFormatHook.isStageFinalTarget(tagName)) {
       toast.success(`🏆 Final Stage Reached! ${prospectName ? `(${prospectName})` : ''}`, {
         duration: 2000,
       });
     }
-  }, [trackingFormatHook.isLeadsFinalTarget, trackingFormatHook.isStageFinalTarget]);
+  }, [trackingFormatHook.isStageFinalTarget]);
 
-  // Get Leads dropdown options (tracking + non-tracking)
+  // Get Leads dropdown options (only tracking tags)
   const getLeadsDropdownOptions = useCallback(() => {
-    const tracking = trackingFormatHook.leadsTrackingTagNames || [];
-    const nonTracking = trackingFormatHook.leadsNonTrackingTags || [];
-    return [...tracking, ...nonTracking];
-  }, [trackingFormatHook.leadsTrackingTagNames, trackingFormatHook.leadsNonTrackingTags]);
+    return trackingFormatHook.leadsTrackingTagNames || [];
+  }, [trackingFormatHook.leadsTrackingTagNames]);
 
-  // Get Stage dropdown options (tracking + non-tracking)
+  // Get Stage dropdown options (only stage tags)
   const getStageDropdownOptions = useCallback(() => {
-    const stages = trackingFormatHook.stageTagNames || [];
-    const nonTracking = trackingFormatHook.stageNonTrackingTags || [];
-    return [...stages, ...nonTracking];
-  }, [trackingFormatHook.stageTagNames, trackingFormatHook.stageNonTrackingTags]);
+    return trackingFormatHook.stageTagNames || [];
+  }, [trackingFormatHook.stageTagNames]);
 
   const value: TrackingFormatContextType = {
     ...trackingFormatHook,
-    leadsStageTag,
-    isLeadsStageTag,
-    // Keep old names for backward compatibility
-    leadsFilterTag: leadsStageTag,
-    isLeadsFilterTag: isLeadsStageTag,
     handleTargetComplete,
     getLeadsDropdownOptions,
     getStageDropdownOptions,

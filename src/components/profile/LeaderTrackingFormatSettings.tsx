@@ -856,33 +856,6 @@ export function LeaderTrackingFormatSettings({
               ))}
             </div>
             
-            {/* Leads Personal Tags */}
-            <div className="pt-2">
-              <p className="text-xs text-muted-foreground mb-1">Leads Personal Tags (not counted)</p>
-              <p className="text-[10px] text-muted-foreground/70 mb-2">Personal tags are just for your own use and are not counted in analytics.</p>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {leadsNonTrackingTags.map((tag, idx) => (
-                  <Badge key={idx} variant="outline" className="gap-1 pr-1">
-                    {tag}
-                    <button onClick={() => handleRemoveLeadsNonTracking(idx)} className="ml-1 hover:text-destructive">
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <Input 
-                  value={newLeadsNonTrackingTag} 
-                  onChange={e => setNewLeadsNonTrackingTag(e.target.value)} 
-                  placeholder="Add personal tag..." 
-                  className="flex-1 h-8" 
-                  onKeyDown={e => e.key === 'Enter' && handleAddLeadsNonTracking()} 
-                />
-                <Button variant="outline" size="sm" onClick={handleAddLeadsNonTracking} disabled={!newLeadsNonTrackingTag.trim()}>
-                  <Plus className="h-3 w-3" />
-                </Button>
-              </div>
-            </div>
           </div>
 
           <Separator />
@@ -936,33 +909,6 @@ export function LeaderTrackingFormatSettings({
               ))}
             </div>
             
-            {/* Funnel Personal Tags */}
-            <div className="pt-2">
-              <p className="text-xs text-muted-foreground mb-1">Funnel Personal Tags (not counted)</p>
-              <p className="text-[10px] text-muted-foreground/70 mb-2">Personal tags are just for your own use and are not counted in analytics.</p>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {stageNonTrackingTags.map((tag, idx) => (
-                  <Badge key={idx} variant="outline" className="gap-1 pr-1">
-                    {tag}
-                    <button onClick={() => handleRemoveStageNonTracking(idx)} className="ml-1 hover:text-destructive">
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <Input 
-                  value={newStageNonTrackingTag} 
-                  onChange={e => setNewStageNonTrackingTag(e.target.value)} 
-                  placeholder="Add personal tag..." 
-                  className="flex-1 h-8" 
-                  onKeyDown={e => e.key === 'Enter' && handleAddStageNonTracking()} 
-                />
-                <Button variant="outline" size="sm" onClick={handleAddStageNonTracking} disabled={!newStageNonTrackingTag.trim()}>
-                  <Plus className="h-3 w-3" />
-                </Button>
-              </div>
-            </div>
           </div>
         </div>
       )}

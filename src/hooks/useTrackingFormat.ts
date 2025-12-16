@@ -5,7 +5,7 @@ import { useProfile } from '@/hooks/useProfile';
 
 export interface TrackingTag {
   name: string;
-  isStageTag: boolean;  // true = filter tag (appears in Funnel tab), false = leads-only
+  isStageTag: boolean;  // true = Funnel tag (appears in Funnel tab)
   isFinalTarget: boolean;
 }
 
@@ -23,21 +23,11 @@ export interface TeamLevel {
 }
 
 export interface TrackingFormat {
-  // Leads tracking (responses)
-  leadsTrackingTags: TrackingTag[];  // Max 3-4, for analytics
-  leadsNonTrackingTags: string[];    // Combined personal tags for dropdowns
+  // Response tags (leads tracking)
+  leadsTrackingTags: TrackingTag[];
   
-  // Stage tracking (sales stages)
-  stageTags: StageTag[];             // Ordered stages
-  stageNonTrackingTags: string[];    // Combined personal tags for dropdowns
-  
-  // Leader's personal tags (read-only, inherited)
-  leaderLeadsPersonalTags: string[];
-  leaderStagePersonalTags: string[];
-  
-  // User's own personal tags (editable)
-  ownLeadsPersonalTags: string[];
-  ownStagePersonalTags: string[];
+  // Stage tags (funnel progression)
+  stageTags: StageTag[];
   
   // Team levels
   levels: TeamLevel[];
@@ -48,70 +38,57 @@ export interface TrackingFormat {
   isUsingLeaderFormat: boolean;
   isRootLeader: boolean;
   
-  // Legacy aliases (kept for compatibility)
+  // Legacy aliases
   rootLeaderName: string | null;
   rootLeaderId: string | null;
 }
 
-// Parse response_labels JSON structure
-function parseResponseLabels(labels: any): { leadsTracking: TrackingTag[]; leadsNonTracking: string[] } {
-  if (!labels) {
-    return { leadsTracking: [], leadsNonTracking: [] };
-  }
+// Parse response_labels JSON structure - only tracking tags
+function parseResponseLabels(labels: any): TrackingTag[] {
+  if (!labels) return [];
   
-  // Handle new format: { tracking: [...], nonTracking: [...] }
+  // Handle new format: { tracking: [...] }
   if (typeof labels === 'object' && labels.tracking) {
-    return {
-      leadsTracking: (labels.tracking || []).map((t: any) => ({
-        name: t.name || t,
-        // Support both old "isFilter" and new "isStageTag" field names
-        isStageTag: t.isStageTag ?? t.isFilter ?? false,
-        isFinalTarget: t.isFinalTarget ?? false,
-      })),
-      leadsNonTracking: labels.nonTracking || [],
-    };
+    return (labels.tracking || []).map((t: any) => ({
+      name: t.name || t,
+      isStageTag: t.isStageTag ?? t.isFilter ?? false,
+      isFinalTarget: t.isFinalTarget ?? false,
+    }));
   }
   
   // Handle legacy format: string[]
   if (Array.isArray(labels)) {
-    const tracking = labels.map((name, idx, arr) => ({
+    return labels.map((name) => ({
       name: String(name),
-      isStageTag: false,  // Legacy tags are NOT stage tags by default
-      isFinalTarget: false,  // No Final for leads - Final is only for stages
+      isStageTag: false,
+      isFinalTarget: false,
     }));
-    return { leadsTracking: tracking, leadsNonTracking: [] };
   }
   
-  return { leadsTracking: [], leadsNonTracking: [] };
+  return [];
 }
 
-// Parse stage_labels JSON structure
-function parseStageLabels(labels: any): { stageTags: StageTag[]; stageNonTracking: string[] } {
-  if (!labels) {
-    return { stageTags: [], stageNonTracking: [] };
-  }
+// Parse stage_labels JSON structure - only stage tags
+function parseStageLabels(labels: any): StageTag[] {
+  if (!labels) return [];
   
-  // Handle new format: { stages: [...], nonTracking: [...] }
+  // Handle new format: { stages: [...] }
   if (typeof labels === 'object' && labels.stages) {
-    return {
-      stageTags: (labels.stages || []).map((s: any) => ({
-        name: s.name || s,
-        isFinalTarget: s.isFinalTarget ?? false,
-      })),
-      stageNonTracking: labels.nonTracking || [],
-    };
+    return (labels.stages || []).map((s: any) => ({
+      name: s.name || s,
+      isFinalTarget: s.isFinalTarget ?? false,
+    }));
   }
   
   // Handle legacy format: string[]
   if (Array.isArray(labels)) {
-    const stageTags = labels.map((name, idx, arr) => ({
+    return labels.map((name, idx, arr) => ({
       name: String(name),
       isFinalTarget: idx === arr.length - 1,
     }));
-    return { stageTags, stageNonTracking: [] };
   }
   
-  return { stageTags: [], stageNonTracking: [] };
+  return [];
 }
 
 export function useTrackingFormat() {
@@ -120,17 +97,14 @@ export function useTrackingFormat() {
   const [trackingFormat, setTrackingFormat] = useState<TrackingFormat | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch DIRECT leader's tracking format (single lookup, no chain walking)
+  // Fetch DIRECT leader's tracking format
   const fetchDirectLeaderFormat = useCallback(async (leaderNeveraiId: string): Promise<{
     directLeaderId: string;
     directLeaderName: string;
     leadsTracking: TrackingTag[];
-    leadsNonTracking: string[];
     stageTags: StageTag[];
-    stageNonTracking: string[];
     levels: TeamLevel[];
   } | null> => {
-    // Single lookup to direct leader - no chain walking
     const { data: leaderProfile, error } = await supabase
       .from('profiles')
       .select('user_id, display_name, neverai_id, response_labels, stage_labels')
@@ -149,16 +123,14 @@ export function useTrackingFormat() {
       .eq('leader_id', leaderProfile.user_id)
       .order('position', { ascending: true });
 
-    const { leadsTracking, leadsNonTracking } = parseResponseLabels(leaderProfile.response_labels);
-    const { stageTags, stageNonTracking } = parseStageLabels(leaderProfile.stage_labels);
+    const leadsTracking = parseResponseLabels(leaderProfile.response_labels);
+    const stageTags = parseStageLabels(leaderProfile.stage_labels);
 
     return {
       directLeaderId: leaderProfile.neverai_id || leaderNeveraiId,
       directLeaderName: leaderProfile.display_name || 'Leader',
       leadsTracking,
-      leadsNonTracking,
       stageTags,
-      stageNonTracking,
       levels: (levels || []).map(l => ({
         id: l.id,
         position: l.position,
@@ -179,32 +151,20 @@ export function useTrackingFormat() {
     setLoading(true);
 
     try {
-      // Parse user's OWN personal tags from their profile
-      const { leadsNonTracking: ownLeadsPersonal } = parseResponseLabels(profile.response_labels);
-      const { stageNonTracking: ownStagePersonal } = parseStageLabels(profile.stage_labels);
-
       // If user creates their own format (is root leader / no leader)
       if (!profile.use_leader_stages || !profile.leaders_id_of_my_leader) {
-        // User is their own root leader - use their own tracking tags
         const { data: levels } = await supabase
           .from('leader_levels')
           .select('id, label, code, is_default, position')
           .eq('leader_id', user.id)
           .order('position', { ascending: true });
 
-        const { leadsTracking } = parseResponseLabels(profile.response_labels);
-        const { stageTags } = parseStageLabels(profile.stage_labels);
+        const leadsTracking = parseResponseLabels(profile.response_labels);
+        const stageTags = parseStageLabels(profile.stage_labels);
 
         setTrackingFormat({
           leadsTrackingTags: leadsTracking,
-          leadsNonTrackingTags: ownLeadsPersonal,
           stageTags,
-          stageNonTrackingTags: ownStagePersonal,
-          // For root leader, all personal tags are their own
-          leaderLeadsPersonalTags: [],
-          leaderStagePersonalTags: [],
-          ownLeadsPersonalTags: ownLeadsPersonal,
-          ownStagePersonalTags: ownStagePersonal,
           levels: (levels || []).map(l => ({
             id: l.id,
             position: l.position,
@@ -216,56 +176,37 @@ export function useTrackingFormat() {
           directLeaderId: null,
           isUsingLeaderFormat: false,
           isRootLeader: true,
-          // Legacy aliases
           rootLeaderName: profile.display_name || 'You',
           rootLeaderId: profile.neverai_id,
         });
       } else {
-        // User uses leader's format - fetch DIRECT leader only (no chain)
+        // User uses leader's format - fetch DIRECT leader only
         const leaderData = await fetchDirectLeaderFormat(profile.leaders_id_of_my_leader);
         
         if (leaderData) {
-          // Personal tags are NEVER inherited - only user's own
           setTrackingFormat({
-            // TRACKING tags come from DIRECT leader
             leadsTrackingTags: leaderData.leadsTracking,
             stageTags: leaderData.stageTags,
             levels: leaderData.levels,
-            // Only user's own personal tags (no leader's personal tags)
-            leadsNonTrackingTags: ownLeadsPersonal,
-            stageNonTrackingTags: ownStagePersonal,
-            // Leader's personal tags NOT inherited - always empty for members
-            leaderLeadsPersonalTags: [],
-            leaderStagePersonalTags: [],
-            ownLeadsPersonalTags: ownLeadsPersonal,
-            ownStagePersonalTags: ownStagePersonal,
-            // Metadata
             directLeaderName: leaderData.directLeaderName,
             directLeaderId: leaderData.directLeaderId,
             isUsingLeaderFormat: true,
             isRootLeader: false,
-            // Legacy aliases
             rootLeaderName: leaderData.directLeaderName,
             rootLeaderId: leaderData.directLeaderId,
           });
         } else {
           // Fallback to user's own tags if leader not found
-          const { leadsTracking } = parseResponseLabels(profile.response_labels);
-          const { stageTags } = parseStageLabels(profile.stage_labels);
+          const leadsTracking = parseResponseLabels(profile.response_labels);
+          const stageTags = parseStageLabels(profile.stage_labels);
           
           setTrackingFormat({
             leadsTrackingTags: leadsTracking,
-            leadsNonTrackingTags: ownLeadsPersonal,
             stageTags,
-            stageNonTrackingTags: ownStagePersonal,
-            leaderLeadsPersonalTags: [],
-            leaderStagePersonalTags: [],
-            ownLeadsPersonalTags: ownLeadsPersonal,
-            ownStagePersonalTags: ownStagePersonal,
             levels: [],
             directLeaderName: null,
             directLeaderId: null,
-            isUsingLeaderFormat: true, // Still marked as using leader format (just not found)
+            isUsingLeaderFormat: true,
             isRootLeader: false,
             rootLeaderName: null,
             rootLeaderId: null,
@@ -285,7 +226,7 @@ export function useTrackingFormat() {
     }
   }, [profileLoading, loadTrackingFormat]);
 
-  // Reload format (no cache since we removed caching for real-time updates)
+  // Reload format
   const refreshFormat = useCallback(() => {
     loadTrackingFormat();
   }, [loadTrackingFormat]);
@@ -296,13 +237,13 @@ export function useTrackingFormat() {
     [trackingFormat]
   );
 
-  const leadsFinalTargetTag = useMemo(() => 
-    trackingFormat?.leadsTrackingTags.find(t => t.isFinalTarget)?.name || null,
+  const leadsFunnelTag = useMemo(() => 
+    trackingFormat?.leadsTrackingTags.find(t => t.isStageTag)?.name || null,
     [trackingFormat]
   );
 
-  const isLeadsFinalTarget = useCallback((tagName: string) => {
-    return trackingFormat?.leadsTrackingTags.find(t => t.name === tagName)?.isFinalTarget || false;
+  const isLeadsFunnelTag = useCallback((tagName: string) => {
+    return trackingFormat?.leadsTrackingTags.find(t => t.name === tagName)?.isStageTag || false;
   }, [trackingFormat]);
 
   const isLeadsTrackingTag = useCallback((tagName: string) => {
@@ -328,35 +269,20 @@ export function useTrackingFormat() {
     return trackingFormat?.stageTags.some(t => t.name === tagName) || false;
   }, [trackingFormat]);
 
-  // === Legacy helpers for backward compatibility ===
-  const trackingTagNames = leadsTrackingTagNames;
-  const nonTrackingTags = trackingFormat?.leadsNonTrackingTags || [];
-  const finalTargetTag = leadsFinalTargetTag;
-  
-  const isFinalTarget = useCallback((tagName: string) => {
-    return isLeadsFinalTarget(tagName) || isStageFinalTarget(tagName);
-  }, [isLeadsFinalTarget, isStageFinalTarget]);
-  
-  const isTrackingTag = useCallback((tagName: string) => {
-    return isLeadsTrackingTag(tagName) || isStageTag(tagName);
-  }, [isLeadsTrackingTag, isStageTag]);
-
   return {
     trackingFormat,
     loading: loading || profileLoading,
     refreshFormat,
     
-    // Leads (Response) tags
+    // Response tags
     leadsTrackingTags: trackingFormat?.leadsTrackingTags || [],
-    leadsNonTrackingTags: trackingFormat?.leadsNonTrackingTags || [],
     leadsTrackingTagNames,
-    leadsFinalTargetTag,
-    isLeadsFinalTarget,
+    leadsFunnelTag,
+    isLeadsFunnelTag,
     isLeadsTrackingTag,
     
     // Stage tags
     stageTags: trackingFormat?.stageTags || [],
-    stageNonTrackingTags: trackingFormat?.stageNonTrackingTags || [],
     stageTagNames,
     stageFinalTargetTag,
     isStageFinalTarget,
@@ -365,25 +291,21 @@ export function useTrackingFormat() {
     // Team levels
     levels: trackingFormat?.levels || [],
     
-    // Separate personal tags (for UI display)
-    leaderLeadsPersonalTags: trackingFormat?.leaderLeadsPersonalTags || [],
-    leaderStagePersonalTags: trackingFormat?.leaderStagePersonalTags || [],
-    ownLeadsPersonalTags: trackingFormat?.ownLeadsPersonalTags || [],
-    ownStagePersonalTags: trackingFormat?.ownStagePersonalTags || [],
-    
     // Metadata
     isRootLeader: trackingFormat?.isRootLeader || false,
     isUsingLeaderFormat: trackingFormat?.isUsingLeaderFormat || false,
     directLeaderName: trackingFormat?.directLeaderName || null,
     directLeaderId: trackingFormat?.directLeaderId || null,
-    // Legacy aliases
     rootLeaderName: trackingFormat?.rootLeaderName || null,
     
     // Legacy aliases for backward compatibility
-    trackingTagNames,
-    nonTrackingTags,
-    finalTargetTag,
-    isFinalTarget,
-    isTrackingTag,
+    leadsStageTag: leadsFunnelTag,
+    isLeadsStageTag: isLeadsFunnelTag,
+    leadsFilterTag: leadsFunnelTag,
+    isLeadsFilterTag: isLeadsFunnelTag,
+    trackingTagNames: leadsTrackingTagNames,
+    finalTargetTag: stageFinalTargetTag,
+    isFinalTarget: isStageFinalTarget,
+    isTrackingTag: isLeadsTrackingTag,
   };
 }
