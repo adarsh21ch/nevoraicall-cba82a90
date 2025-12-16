@@ -26,10 +26,8 @@ export function ManageResponseTagsDialog({ open, onOpenChange }: ManageResponseT
     isRootLeader, 
     isUsingLeaderFormat, 
     directLeaderName,
-    directLeaderId,
     leadsTrackingTags, 
     ownLeadsPersonalTags,
-    leaderLeadsPersonalTags,
   } = useTrackingFormatContext();
   const { profile, updateProfile } = useProfile();
   
@@ -281,23 +279,6 @@ export function ManageResponseTagsDialog({ open, onOpenChange }: ManageResponseT
           </div>
 
           <Separator />
-
-          {/* Show leader's personal tags if member */}
-          {isUsingLeaderFormat && !isRootLeader && leaderLeadsPersonalTags.length > 0 && (
-            <>
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Leader's Personal Tags (read-only)</p>
-                <div className="flex flex-wrap gap-2">
-                  {leaderLeadsPersonalTags.map((tag, idx) => (
-                    <Badge key={idx} variant="outline" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              <Separator />
-            </>
-          )}
 
           {/* SECTION B: Personal Tags (all users can edit) */}
           <div className="space-y-3">
