@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -12,7 +11,6 @@ import { Users, Tag, Copy, Check, Loader2, Eye, EyeOff, X, Plus, Trash2, Star, L
 import { toast } from 'sonner';
 import { Profile, ProfileUpdate } from '@/hooks/useProfile';
 import { useTrackingFormatContext } from '@/contexts/TrackingFormatContext';
-import { Checkbox } from '@/components/ui/checkbox';
 import { useLeaderLevels } from '@/hooks/useLeaderLevels';
 import { useFunnelConfig } from '@/hooks/useFunnelConfig';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,6 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+
 interface LeaderTrackingFormatSettingsProps {
   profile: Profile | null;
   updating: boolean;
@@ -35,15 +34,18 @@ interface LeaderTrackingFormatSettingsProps {
     error?: string;
   }>;
 }
+
 interface LeadsTagInput {
   name: string;
   isStageTag: boolean;
   isFinalTarget: boolean;
 }
+
 interface StageTagInput {
   name: string;
   isFinalTarget: boolean;
 }
+
 export function LeaderTrackingFormatSettings({
   profile,
   updating,
@@ -55,19 +57,19 @@ export function LeaderTrackingFormatSettings({
     trackingFormat,
     refreshFormat,
     isRootLeader,
-    rootLeaderName,
+    directLeaderName,
+    directLeaderId,
     levels: inheritedLevels,
-    leaderLeadsPersonalTags,
-    leaderStagePersonalTags,
-    ownLeadsPersonalTags: contextOwnLeadsPersonal,
-    ownStagePersonalTags: contextOwnStagePersonal,
+    loading: formatLoading,
   } = useTrackingFormatContext();
+  
   const {
     levels: ownLevels,
     addLevel,
     updateLevel,
     deleteLevel
   } = useLeaderLevels();
+  
   const { config: funnelConfig, leaderConfig: leaderFunnelConfig, saveConfig: saveFunnelConfig, fetchLeaderConfig, loading: funnelConfigLoading } = useFunnelConfig();
   
   const [copiedId, setCopiedId] = useState(false);
@@ -79,7 +81,6 @@ export function LeaderTrackingFormatSettings({
   const [funnelDay1Date, setFunnelDay1Date] = useState<Date | undefined>(undefined);
   const [funnelLength, setFunnelLength] = useState<number>(3);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
-  const [leaderName, setLeaderName] = useState<string | null>(null);
 
   // Team Levels state
   const [newLevelLabel, setNewLevelLabel] = useState('');
@@ -96,7 +97,7 @@ export function LeaderTrackingFormatSettings({
   // Stage Tags state - last tag is final target
   const [stageTags, setStageTags] = useState<StageTagInput[]>([{
     name: '',
-    isFinalTarget: true // Single tag is final target
+    isFinalTarget: true
   }]);
   const [stageNonTrackingTags, setStageNonTrackingTags] = useState<string[]>([]);
   const [newStageNonTrackingTag, setNewStageNonTrackingTag] = useState('');
@@ -133,7 +134,6 @@ export function LeaderTrackingFormatSettings({
           }]);
           setLeadsNonTrackingTags(responseLabels.nonTracking || []);
         } else if (Array.isArray(responseLabels)) {
-          // Legacy format - no filter tags by default
           const tags = responseLabels.slice(0, 4).map((name: string) => ({
             name,
             isStageTag: false,
@@ -162,7 +162,6 @@ export function LeaderTrackingFormatSettings({
           }]);
           setStageNonTrackingTags(stageLabels.nonTracking || []);
         } else if (Array.isArray(stageLabels)) {
-          // Legacy format
           const tags = stageLabels.map((name: string, idx: number, arr: string[]) => ({
             name,
             isFinalTarget: idx === arr.length - 1
@@ -176,27 +175,11 @@ export function LeaderTrackingFormatSettings({
     }
   }, [profile]);
 
-  // Fetch leader name and funnel config when connected
+  // Fetch leader's funnel config when connected
   useEffect(() => {
-    const fetchLeaderData = async () => {
-      if (profile?.leaders_id_of_my_leader) {
-        // Fetch leader name
-        const { data, error } = await supabase.rpc('get_user_by_neverai_id', {
-          target_neverai_id: profile.leaders_id_of_my_leader.toUpperCase()
-        });
-        if (!error && data && data.length > 0) {
-          setLeaderName(data[0].display_name || null);
-        } else {
-          setLeaderName(null);
-        }
-        
-        // Fetch leader's funnel config
-        await fetchLeaderConfig(profile.leaders_id_of_my_leader);
-      } else {
-        setLeaderName(null);
-      }
-    };
-    fetchLeaderData();
+    if (profile?.leaders_id_of_my_leader) {
+      fetchLeaderConfig(profile.leaders_id_of_my_leader);
+    }
   }, [profile?.leaders_id_of_my_leader, fetchLeaderConfig]);
 
   // Initialize funnel config from saved data
@@ -233,36 +216,6 @@ export function LeaderTrackingFormatSettings({
       toast.success('Funnel length saved');
     }
   };
-
-  // Auto-save personal tags when in leader mode
-  const autoSavePersonalTags = useCallback(async () => {
-    if (formatMode !== 'leader') return;
-    setAutoSaveStatus('saving');
-
-    // When using leader format, only save personal tags to user's own profile
-    // Tracking tags come from leader, but personal tags are user's own
-    const currentResponseLabels = profile?.response_labels as any;
-    const currentStageLabels = profile?.stage_labels as any;
-    
-    // Preserve any existing tracking structure (though it shouldn't be used when use_leader_stages=true)
-    const responseLabelsData = {
-      tracking: currentResponseLabels?.tracking || [],
-      nonTracking: leadsNonTrackingTags
-    };
-    
-    const stageLabelsData = {
-      stages: currentStageLabels?.stages || [],
-      nonTracking: stageNonTrackingTags
-    };
-    
-    await onUpdateProfile({
-      response_labels: responseLabelsData as any,
-      stage_labels: stageLabelsData as any,
-    });
-    refreshFormat();
-    setAutoSaveStatus('saved');
-    setTimeout(() => setAutoSaveStatus('idle'), 1500);
-  }, [formatMode, leadsNonTrackingTags, stageNonTrackingTags, onUpdateProfile, refreshFormat, profile?.response_labels, profile?.stage_labels]);
 
   const autoSaveFormat = useCallback(async () => {
     if (formatMode !== 'own') return;
@@ -305,13 +258,10 @@ export function LeaderTrackingFormatSettings({
       clearTimeout(saveTimerRef.current);
     }
     saveTimerRef.current = setTimeout(() => {
-      if (formatMode === 'own') {
-        autoSaveFormat();
-      } else {
-        autoSavePersonalTags();
-      }
+      autoSaveFormat();
     }, 800);
-  }, [autoSaveFormat, autoSavePersonalTags, formatMode]);
+  }, [autoSaveFormat]);
+
   const handleCopyLeaderId = async () => {
     if (profile?.neverai_id) {
       await navigator.clipboard.writeText(profile.neverai_id);
@@ -320,6 +270,7 @@ export function LeaderTrackingFormatSettings({
       setTimeout(() => setCopiedId(false), 2000);
     }
   };
+
   const handleSaveLeaderId = async () => {
     if (!leaderIdInput.trim()) return;
     setSavingLeader(true);
@@ -335,6 +286,7 @@ export function LeaderTrackingFormatSettings({
     }
     setSavingLeader(false);
   };
+
   const handleClearLeader = async () => {
     await onClearLeaderHierarchy();
     setFormatMode('own');
@@ -343,11 +295,13 @@ export function LeaderTrackingFormatSettings({
     });
     refreshFormat();
   };
+
   const handleToggleVisibility = async (value: boolean) => {
     await onUpdateProfile({
       allow_leader_to_view: value
     });
   };
+
   const handleFormatModeChange = async (mode: 'leader' | 'own') => {
     if (mode === 'own' && formatMode === 'leader') {
       setFormatMode('own');
@@ -364,6 +318,7 @@ export function LeaderTrackingFormatSettings({
       setShowSwitchConfirm(true);
     }
   };
+
   const confirmSwitchToLeader = async () => {
     setShowSwitchConfirm(false);
     setFormatMode('leader');
@@ -379,7 +334,6 @@ export function LeaderTrackingFormatSettings({
     setLeadsTrackingTags(prev => {
       const updated = [...prev];
       if (field === 'isStageTag' && value === true) {
-        // Only ONE tag can be the Filter Tag at a time
         updated.forEach((t, i) => {
           t.isStageTag = i === index;
         });
@@ -393,6 +347,7 @@ export function LeaderTrackingFormatSettings({
     });
     triggerAutoSave();
   };
+
   const handleAddLeadsTag = () => {
     if (leadsTrackingTags.length < 4) {
       setLeadsTrackingTags([...leadsTrackingTags, {
@@ -402,6 +357,7 @@ export function LeaderTrackingFormatSettings({
       }]);
     }
   };
+
   const handleRemoveLeadsTag = (index: number) => {
     if (leadsTrackingTags.length > 1) {
       const updated = leadsTrackingTags.filter((_, i) => i !== index);
@@ -409,6 +365,7 @@ export function LeaderTrackingFormatSettings({
       triggerAutoSave();
     }
   };
+
   const handleAddLeadsNonTracking = () => {
     if (newLeadsNonTrackingTag.trim() && !leadsNonTrackingTags.includes(newLeadsNonTrackingTag.trim())) {
       setLeadsNonTrackingTags([...leadsNonTrackingTags, newLeadsNonTrackingTag.trim()]);
@@ -416,6 +373,7 @@ export function LeaderTrackingFormatSettings({
       triggerAutoSave();
     }
   };
+
   const handleRemoveLeadsNonTracking = (index: number) => {
     setLeadsNonTrackingTags(leadsNonTrackingTags.filter((_, i) => i !== index));
     triggerAutoSave();
@@ -439,16 +397,17 @@ export function LeaderTrackingFormatSettings({
     });
     triggerAutoSave();
   };
+
   const handleAddStageTag = () => {
     if (stageTags.length < 10) {
-      // Move final target to the new last tag
       const updated = stageTags.map(t => ({ ...t, isFinalTarget: false }));
       setStageTags([...updated, {
         name: '',
-        isFinalTarget: true // New tag becomes final target
+        isFinalTarget: true
       }]);
     }
   };
+
   const handleRemoveStageTag = (index: number) => {
     if (stageTags.length > 1) {
       const updated = stageTags.filter((_, i) => i !== index);
@@ -459,6 +418,7 @@ export function LeaderTrackingFormatSettings({
       triggerAutoSave();
     }
   };
+
   const handleAddStageNonTracking = () => {
     if (newStageNonTrackingTag.trim() && !stageNonTrackingTags.includes(newStageNonTrackingTag.trim())) {
       setStageNonTrackingTags([...stageNonTrackingTags, newStageNonTrackingTag.trim()]);
@@ -466,6 +426,7 @@ export function LeaderTrackingFormatSettings({
       triggerAutoSave();
     }
   };
+
   const handleRemoveStageNonTracking = (index: number) => {
     setStageNonTrackingTags(stageNonTrackingTags.filter((_, i) => i !== index));
     triggerAutoSave();
@@ -478,14 +439,18 @@ export function LeaderTrackingFormatSettings({
       setNewLevelLabel('');
     }
   };
+
   const handleUpdateLevelLabel = async (levelId: string, newLabel: string) => {
     await updateLevel(levelId, {
       label: newLabel
     });
   };
+
   const hasLeader = !!profile?.leaders_id_of_my_leader;
   const displayLevels = formatMode === 'own' ? ownLevels : inheritedLevels;
-  return <div className="space-y-6">
+
+  return (
+    <div className="space-y-6">
       {/* Your Leader ID Section */}
       <div className="rounded-2xl p-4 bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20">
         <div className="flex items-center justify-between">
@@ -621,34 +586,38 @@ export function LeaderTrackingFormatSettings({
 
       <Separator />
 
-      {/* Leader ID Input Section - Always Visible at Top */}
+      {/* Leader ID Input Section */}
       <div className="rounded-2xl p-4 bg-card border border-border/50 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Tag className="h-4 w-4 text-primary" />
             <Label className="text-sm font-semibold">Your Leader's ID</Label>
           </div>
-          {autoSaveStatus === 'saving' && <span className="text-xs text-muted-foreground flex items-center gap-1">
+          {autoSaveStatus === 'saving' && (
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
               <Loader2 className="h-3 w-3 animate-spin" /> Saving...
-            </span>}
-          {autoSaveStatus === 'saved' && <span className="text-xs text-green-600 flex items-center gap-1">
+            </span>
+          )}
+          {autoSaveStatus === 'saved' && (
+            <span className="text-xs text-green-600 flex items-center gap-1">
               <Check className="h-3 w-3" /> Saved
-            </span>}
+            </span>
+          )}
         </div>
         
         <p className="text-xs text-muted-foreground">
           Enter your leader's ID to use their tracking format (tags, levels, and funnel logic).
         </p>
 
-        {/* Leader ID Input - Always visible */}
-        {hasLeader ? <div className="space-y-4">
+        {hasLeader ? (
+          <div className="space-y-4">
             <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg border border-primary/20">
               <div>
                 <p className="text-xs text-muted-foreground">Connected to Leader</p>
                 <div className="flex items-center gap-2">
                   <p className="font-mono font-semibold text-primary">{profile?.leaders_id_of_my_leader}</p>
-                  {leaderName && (
-                    <span className="text-sm text-foreground font-medium">({leaderName})</span>
+                  {directLeaderName && (
+                    <span className="text-sm text-foreground font-medium">({directLeaderName})</span>
                   )}
                 </div>
               </div>
@@ -667,179 +636,119 @@ export function LeaderTrackingFormatSettings({
               <Switch checked={profile?.allow_leader_to_view || false} onCheckedChange={handleToggleVisibility} disabled={updating} />
             </div>
 
-            {/* Inherited Format Preview */}
+            {/* Inherited Format Preview - No personal tags editing here */}
             <Separator />
             <div className="space-y-4">
-              <p className="text-xs text-muted-foreground font-medium">Inherited Tracking Format (Read-only)</p>
+              <p className="text-xs text-muted-foreground font-medium">
+                Inherited Tracking Format from {directLeaderName || 'Leader'} ({directLeaderId})
+              </p>
               
               {/* Inherited Team Levels */}
-              {inheritedLevels.length > 0 && <div className="space-y-2">
+              {inheritedLevels.length > 0 && (
+                <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Users className="h-3 w-3 text-muted-foreground" />
                     <p className="text-xs font-medium text-muted-foreground">Team Levels</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {inheritedLevels.map((level, idx) => <Badge key={level.id} variant="secondary" className="text-xs">
+                    {inheritedLevels.map((level, idx) => (
+                      <Badge key={level.id} variant="secondary" className="text-xs">
                         L{idx + 1}: {level.label}
-                      </Badge>)}
+                      </Badge>
+                    ))}
                   </div>
-                </div>}
+                </div>
+              )}
 
               {/* Inherited Leads Tracking Tags */}
-              {trackingFormat?.leadsTrackingTags && trackingFormat.leadsTrackingTags.length > 0 && <div className="space-y-2">
+              {trackingFormat?.leadsTrackingTags && trackingFormat.leadsTrackingTags.length > 0 && (
+                <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Tag className="h-3 w-3 text-muted-foreground" />
                     <p className="text-xs font-medium text-muted-foreground">Leads Tracking Tags</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {trackingFormat.leadsTrackingTags.map((tag, idx) => <Badge key={idx} variant="outline" className="text-xs gap-1">
+                    {trackingFormat.leadsTrackingTags.map((tag, idx) => (
+                      <Badge key={idx} variant="outline" className="text-xs gap-1">
                         {tag.name}
-                        {tag.isFinalTarget && <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />}
-                      </Badge>)}
+                        {tag.isStageTag && <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />}
+                      </Badge>
+                    ))}
                   </div>
-                </div>}
+                </div>
+              )}
 
               {/* Inherited Funnel Tracking Tags */}
-              {trackingFormat?.stageTags && trackingFormat.stageTags.length > 0 && <div className="space-y-2">
+              {trackingFormat?.stageTags && trackingFormat.stageTags.length > 0 && (
+                <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Layers className="h-3 w-3 text-muted-foreground" />
                     <p className="text-xs font-medium text-muted-foreground">Funnel Tracking Tags (Stages)</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {trackingFormat.stageTags.map((tag, idx) => <Badge key={idx} variant="outline" className="text-xs gap-1">
+                    {trackingFormat.stageTags.map((tag, idx) => (
+                      <Badge key={idx} variant="outline" className="text-xs gap-1">
                         {tag.name}
                         {tag.isFinalTarget && <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />}
-                      </Badge>)}
-                  </div>
-                </div>}
-
-              {/* Leader's Personal Tags (Read-only) */}
-              <Separator className="my-3" />
-              <div className="space-y-3">
-                <p className="text-xs font-medium text-muted-foreground">Leader's Personal Tags (read-only)</p>
-                
-                {/* Leader's Leads Personal Tags */}
-                <div className="space-y-1">
-                  <p className="text-[10px] text-muted-foreground">Leads:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {leaderLeadsPersonalTags.length > 0 ? (
-                      leaderLeadsPersonalTags.map((tag, idx) => (
-                        <Badge key={idx} variant="secondary" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))
-                    ) : (
-                      <span className="text-xs text-muted-foreground italic">No personal tags</span>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Leader's Funnel Personal Tags */}
-                <div className="space-y-1">
-                  <p className="text-[10px] text-muted-foreground">Funnel:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {leaderStagePersonalTags.length > 0 ? (
-                      leaderStagePersonalTags.map((tag, idx) => (
-                        <Badge key={idx} variant="secondary" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))
-                    ) : (
-                      <span className="text-xs text-muted-foreground italic">No personal tags</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* User's Own Personal Tags (Editable) */}
-              <Separator className="my-3" />
-              <div className="space-y-3">
-                <p className="text-xs font-medium text-foreground">Your Personal Tags (not counted)</p>
-                <p className="text-[10px] text-muted-foreground/70">Personal tags are just for your own use and are not counted in analytics.</p>
-                
-                {/* User's Own Leads Personal Tags */}
-                <div className="space-y-2">
-                  <p className="text-[10px] text-muted-foreground">Leads Personal Tags:</p>
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {leadsNonTrackingTags.map((tag, idx) => (
-                      <Badge key={idx} variant="outline" className="gap-1 pr-1">
-                        {tag}
-                        <button onClick={() => handleRemoveLeadsNonTracking(idx)} className="ml-1 hover:text-destructive">
-                          <X className="h-3 w-3" />
-                        </button>
                       </Badge>
                     ))}
                   </div>
-                  <div className="flex gap-2">
-                    <Input 
-                      value={newLeadsNonTrackingTag} 
-                      onChange={e => setNewLeadsNonTrackingTag(e.target.value)} 
-                      placeholder="Add personal tag..." 
-                      className="flex-1 h-8" 
-                      onKeyDown={e => e.key === 'Enter' && handleAddLeadsNonTracking()} 
-                    />
-                    <Button variant="outline" size="sm" onClick={handleAddLeadsNonTracking} disabled={!newLeadsNonTrackingTag.trim()}>
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  </div>
                 </div>
-                
-                {/* User's Own Funnel Personal Tags */}
-                <div className="space-y-2">
-                  <p className="text-[10px] text-muted-foreground">Funnel Personal Tags:</p>
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {stageNonTrackingTags.map((tag, idx) => (
-                      <Badge key={idx} variant="outline" className="gap-1 pr-1">
-                        {tag}
-                        <button onClick={() => handleRemoveStageNonTracking(idx)} className="ml-1 hover:text-destructive">
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <Input 
-                      value={newStageNonTrackingTag} 
-                      onChange={e => setNewStageNonTrackingTag(e.target.value)} 
-                      placeholder="Add personal tag..." 
-                      className="flex-1 h-8" 
-                      onKeyDown={e => e.key === 'Enter' && handleAddStageNonTracking()} 
-                    />
-                    <Button variant="outline" size="sm" onClick={handleAddStageNonTracking} disabled={!newStageNonTrackingTag.trim()}>
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
+              )}
 
-              {/* Show message if no format loaded yet */}
-              {!trackingFormat?.leadsTrackingTags?.length && !trackingFormat?.stageTags?.length && !inheritedLevels.length && <p className="text-xs text-muted-foreground italic">Loading inherited format...</p>}
+              {/* No inherited tags - show message */}
+              {(!trackingFormat?.leadsTrackingTags?.length && !trackingFormat?.stageTags?.length && !inheritedLevels.length) && (
+                <p className="text-xs text-muted-foreground italic">
+                  {formatLoading ? 'Loading...' : 'No tracking tags configured by leader yet'}
+                </p>
+              )}
+              
+              {/* Note about personal tags */}
+              <div className="p-3 bg-muted/30 rounded-lg">
+                <p className="text-xs text-muted-foreground">
+                  <strong>Personal tags:</strong> You can add your own personal tags from the Calling tab dropdown. Personal tags are not shared with your team.
+                </p>
+              </div>
             </div>
-          </div> : <div className="space-y-2">
+          </div>
+        ) : (
+          <div className="space-y-2">
             <div className="flex gap-2">
-              <Input placeholder="Enter Leader ID…" value={leaderIdInput} onChange={e => setLeaderIdInput(e.target.value.toUpperCase())} className="font-mono" />
+              <Input 
+                placeholder="Enter Leader ID…" 
+                value={leaderIdInput} 
+                onChange={e => setLeaderIdInput(e.target.value.toUpperCase())} 
+                className="font-mono" 
+              />
               <Button onClick={handleSaveLeaderId} disabled={!leaderIdInput.trim() || savingLeader} size="sm">
                 {savingLeader ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Connect'}
               </Button>
             </div>
-          </div>}
+          </div>
+        )}
       </div>
 
       {/* Create Own Format Option */}
-      {!hasLeader && <div className="rounded-2xl p-4 bg-card border border-border/50">
+      {!hasLeader && (
+        <div className="rounded-2xl p-4 bg-card border border-border/50">
           <div className="flex items-center gap-3">
             <div className="text-muted-foreground text-sm">— or —</div>
           </div>
-          <button onClick={() => handleFormatModeChange('own')} className={`mt-3 w-full text-left p-3 rounded-lg border transition-colors ${formatMode === 'own' ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/30'}`}>
+          <button 
+            onClick={() => handleFormatModeChange('own')} 
+            className={`mt-3 w-full text-left p-3 rounded-lg border transition-colors ${formatMode === 'own' ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/30'}`}
+          >
             <p className="font-medium text-sm">Create My Own Tracking Format</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Define your own tracking tags, levels, and become a root leader for your team.
+              Define your own tracking tags, levels, and become a leader for your team.
             </p>
           </button>
-        </div>}
+        </div>
+      )}
 
       {/* Own Format Editor */}
-      {formatMode === 'own' && <div className="rounded-2xl p-4 bg-card border border-border/50 space-y-6">
+      {formatMode === 'own' && (
+        <div className="rounded-2xl p-4 bg-card border border-border/50 space-y-6">
           
           {/* 1. TEAM LEVELS */}
           <div className="space-y-3">
@@ -852,22 +761,45 @@ export function LeaderTrackingFormatSettings({
             </p>
             
             <div className="space-y-2">
-              {ownLevels.map((level, index) => <div key={level.id} className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
+              {ownLevels.map((level, index) => (
+                <div key={level.id} className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
                   <span className="text-xs text-muted-foreground w-16 shrink-0">Level {index + 1}</span>
-                  <Input value={level.label} onChange={e => handleUpdateLevelLabel(level.id, e.target.value)} onBlur={() => handleUpdateLevelLabel(level.id, level.label)} placeholder="Aligned name..." className="flex-1 h-8" />
+                  <Input 
+                    value={level.label} 
+                    onChange={e => handleUpdateLevelLabel(level.id, e.target.value)} 
+                    onBlur={() => handleUpdateLevelLabel(level.id, level.label)} 
+                    placeholder="Aligned name..." 
+                    className="flex-1 h-8" 
+                  />
                   {level.is_default && <Badge variant="outline" className="text-xs shrink-0">Default</Badge>}
-                  {ownLevels.length > 1 && !level.is_default && <Button variant="ghost" size="icon" onClick={() => deleteLevel(level.id)} className="h-7 w-7 text-destructive shrink-0">
+                  {ownLevels.length > 1 && !level.is_default && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => deleteLevel(level.id)} 
+                      className="h-7 w-7 text-destructive shrink-0"
+                    >
                       <Trash2 className="h-3 w-3" />
-                    </Button>}
-                </div>)}
+                    </Button>
+                  )}
+                </div>
+              ))}
             </div>
             
-            {ownLevels.length < 10 && <div className="flex gap-2">
-                <Input value={newLevelLabel} onChange={e => setNewLevelLabel(e.target.value)} placeholder="Add new level..." className="flex-1 h-8" onKeyDown={e => e.key === 'Enter' && handleAddLevel()} />
+            {ownLevels.length < 10 && (
+              <div className="flex gap-2">
+                <Input 
+                  value={newLevelLabel} 
+                  onChange={e => setNewLevelLabel(e.target.value)} 
+                  placeholder="Add new level..." 
+                  className="flex-1 h-8" 
+                  onKeyDown={e => e.key === 'Enter' && handleAddLevel()} 
+                />
                 <Button variant="outline" size="sm" onClick={handleAddLevel} disabled={!newLevelLabel.trim()}>
                   <Plus className="h-3 w-3" />
                 </Button>
-              </div>}
+              </div>
+            )}
           </div>
 
           <Separator />
@@ -879,19 +811,27 @@ export function LeaderTrackingFormatSettings({
                 <Tag className="h-4 w-4 text-primary" />
                 <p className="text-sm font-medium">Leads Tracking Tags (Responses)</p>
               </div>
-              {leadsTrackingTags.length < 4 && <Button variant="outline" size="sm" onClick={handleAddLeadsTag}>
+              {leadsTrackingTags.length < 4 && (
+                <Button variant="outline" size="sm" onClick={handleAddLeadsTag}>
                   <Plus className="h-3 w-3 mr-1" />
                   Add
-                </Button>}
+                </Button>
+              )}
             </div>
             <p className="text-xs text-muted-foreground">
               These tags are used in the Leads tab and are counted in analytics. Mark one as ★ Funnel Tag to move leads to the Funnel tab.
             </p>
             
             <div className="space-y-2">
-              {leadsTrackingTags.map((tag, index) => <div key={index} className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
+              {leadsTrackingTags.map((tag, index) => (
+                <div key={index} className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
                   <span className="text-xs text-muted-foreground w-6">#{index + 1}</span>
-                  <Input value={tag.name} onChange={e => handleLeadsTagChange(index, 'name', e.target.value)} placeholder={`Response ${index + 1}`} className="flex-1 h-8" />
+                  <Input 
+                    value={tag.name} 
+                    onChange={e => handleLeadsTagChange(index, 'name', e.target.value)} 
+                    placeholder={`Response ${index + 1}`} 
+                    className="flex-1 h-8" 
+                  />
                   <div className="flex items-center gap-2 shrink-0">
                     <button 
                       onClick={() => handleLeadsTagChange(index, 'isStageTag', !tag.isStageTag)} 
@@ -902,10 +842,18 @@ export function LeaderTrackingFormatSettings({
                       {tag.isStageTag && <span>Funnel Tag</span>}
                     </button>
                   </div>
-                  {leadsTrackingTags.length > 1 && <Button variant="ghost" size="icon" onClick={() => handleRemoveLeadsTag(index)} className="h-7 w-7 text-destructive">
+                  {leadsTrackingTags.length > 1 && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => handleRemoveLeadsTag(index)} 
+                      className="h-7 w-7 text-destructive"
+                    >
                       <Trash2 className="h-3 w-3" />
-                    </Button>}
-                </div>)}
+                    </Button>
+                  )}
+                </div>
+              ))}
             </div>
             
             {/* Leads Personal Tags */}
@@ -913,15 +861,23 @@ export function LeaderTrackingFormatSettings({
               <p className="text-xs text-muted-foreground mb-1">Leads Personal Tags (not counted)</p>
               <p className="text-[10px] text-muted-foreground/70 mb-2">Personal tags are just for your own use and are not counted in analytics.</p>
               <div className="flex flex-wrap gap-2 mb-2">
-                {leadsNonTrackingTags.map((tag, idx) => <Badge key={idx} variant="outline" className="gap-1 pr-1">
+                {leadsNonTrackingTags.map((tag, idx) => (
+                  <Badge key={idx} variant="outline" className="gap-1 pr-1">
                     {tag}
                     <button onClick={() => handleRemoveLeadsNonTracking(idx)} className="ml-1 hover:text-destructive">
                       <X className="h-3 w-3" />
                     </button>
-                  </Badge>)}
+                  </Badge>
+                ))}
               </div>
               <div className="flex gap-2">
-                <Input value={newLeadsNonTrackingTag} onChange={e => setNewLeadsNonTrackingTag(e.target.value)} placeholder="Add personal tag..." className="flex-1 h-8" onKeyDown={e => e.key === 'Enter' && handleAddLeadsNonTracking()} />
+                <Input 
+                  value={newLeadsNonTrackingTag} 
+                  onChange={e => setNewLeadsNonTrackingTag(e.target.value)} 
+                  placeholder="Add personal tag..." 
+                  className="flex-1 h-8" 
+                  onKeyDown={e => e.key === 'Enter' && handleAddLeadsNonTracking()} 
+                />
                 <Button variant="outline" size="sm" onClick={handleAddLeadsNonTracking} disabled={!newLeadsNonTrackingTag.trim()}>
                   <Plus className="h-3 w-3" />
                 </Button>
@@ -938,26 +894,46 @@ export function LeaderTrackingFormatSettings({
                 <Layers className="h-4 w-4 text-primary" />
                 <p className="text-sm font-medium">Funnel Tracking Tags (Stages)</p>
               </div>
-              {stageTags.length < 10 && <Button variant="outline" size="sm" onClick={handleAddStageTag}>
+              {stageTags.length < 10 && (
+                <Button variant="outline" size="sm" onClick={handleAddStageTag}>
                   <Plus className="h-3 w-3 mr-1" />
                   Add
-                </Button>}
+                </Button>
+              )}
             </div>
             <p className="text-xs text-muted-foreground">
               Define stages for your sales funnel (e.g., DAY1, DAY2, MB, Level Up). Leads move through these stages. Mark one as ★ Final stage.
             </p>
             
             <div className="space-y-2">
-              {stageTags.map((tag, index) => <div key={index} className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
+              {stageTags.map((tag, index) => (
+                <div key={index} className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
                   <span className="text-xs text-muted-foreground w-16 shrink-0">Stage {index + 1}</span>
-                  <Input value={tag.name} onChange={e => handleStageTagChange(index, 'name', e.target.value)} placeholder={`Stage ${index + 1}`} className="flex-1 h-8" />
-                  <button onClick={() => handleStageTagChange(index, 'isFinalTarget', true)} className={`p-1 rounded transition-colors shrink-0 ${tag.isFinalTarget ? 'text-yellow-500' : 'text-muted-foreground hover:text-yellow-500'}`} title="Set as Final Stage">
+                  <Input 
+                    value={tag.name} 
+                    onChange={e => handleStageTagChange(index, 'name', e.target.value)} 
+                    placeholder={`Stage ${index + 1}`} 
+                    className="flex-1 h-8" 
+                  />
+                  <button 
+                    onClick={() => handleStageTagChange(index, 'isFinalTarget', true)} 
+                    className={`p-1 rounded transition-colors shrink-0 ${tag.isFinalTarget ? 'text-yellow-500' : 'text-muted-foreground hover:text-yellow-500'}`} 
+                    title="Set as Final Stage"
+                  >
                     <Star className={`h-4 w-4 ${tag.isFinalTarget ? 'fill-yellow-500' : ''}`} />
                   </button>
-                  {stageTags.length > 1 && <Button variant="ghost" size="icon" onClick={() => handleRemoveStageTag(index)} className="h-7 w-7 text-destructive shrink-0">
+                  {stageTags.length > 1 && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => handleRemoveStageTag(index)} 
+                      className="h-7 w-7 text-destructive shrink-0"
+                    >
                       <Trash2 className="h-3 w-3" />
-                    </Button>}
-                </div>)}
+                    </Button>
+                  )}
+                </div>
+              ))}
             </div>
             
             {/* Funnel Personal Tags */}
@@ -965,22 +941,31 @@ export function LeaderTrackingFormatSettings({
               <p className="text-xs text-muted-foreground mb-1">Funnel Personal Tags (not counted)</p>
               <p className="text-[10px] text-muted-foreground/70 mb-2">Personal tags are just for your own use and are not counted in analytics.</p>
               <div className="flex flex-wrap gap-2 mb-2">
-                {stageNonTrackingTags.map((tag, idx) => <Badge key={idx} variant="outline" className="gap-1 pr-1">
+                {stageNonTrackingTags.map((tag, idx) => (
+                  <Badge key={idx} variant="outline" className="gap-1 pr-1">
                     {tag}
                     <button onClick={() => handleRemoveStageNonTracking(idx)} className="ml-1 hover:text-destructive">
                       <X className="h-3 w-3" />
                     </button>
-                  </Badge>)}
+                  </Badge>
+                ))}
               </div>
               <div className="flex gap-2">
-                <Input value={newStageNonTrackingTag} onChange={e => setNewStageNonTrackingTag(e.target.value)} placeholder="Add personal tag..." className="flex-1 h-8" onKeyDown={e => e.key === 'Enter' && handleAddStageNonTracking()} />
+                <Input 
+                  value={newStageNonTrackingTag} 
+                  onChange={e => setNewStageNonTrackingTag(e.target.value)} 
+                  placeholder="Add personal tag..." 
+                  className="flex-1 h-8" 
+                  onKeyDown={e => e.key === 'Enter' && handleAddStageNonTracking()} 
+                />
                 <Button variant="outline" size="sm" onClick={handleAddStageNonTracking} disabled={!newStageNonTrackingTag.trim()}>
                   <Plus className="h-3 w-3" />
                 </Button>
               </div>
             </div>
           </div>
-        </div>}
+        </div>
+      )}
 
       {/* Switch Confirmation Dialog */}
       <AlertDialog open={showSwitchConfirm} onOpenChange={setShowSwitchConfirm}>
@@ -999,5 +984,6 @@ export function LeaderTrackingFormatSettings({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>;
+    </div>
+  );
 }
