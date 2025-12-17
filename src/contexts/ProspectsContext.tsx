@@ -25,7 +25,7 @@ interface ProspectsContextType {
   bulkDeleteProspects: (ids: string[]) => Promise<{ deleted: number; prospects: Prospect[] }>;
   restoreProspect: (prospect: Prospect) => Promise<Prospect | null>;
   restoreProspects: (prospects: Prospect[]) => Promise<number>;
-  importProspects: (data: Partial<Prospect>[]) => Promise<{ imported: number; skipped: number }>;
+  importProspects: (data: Partial<Prospect>[], onProgress?: (imported: number, total: number) => void) => Promise<{ imported: number; skipped: number }>;
   reorderProspects: (ids: string[]) => Promise<boolean>;
   refetch: () => Promise<void>;
   // Optimistic update for instant UI feedback
@@ -92,12 +92,12 @@ export function ProspectsProvider({ children }: { children: ReactNode }) {
     isRefreshing.current = true;
     
     try {
+      // Stable ordering: date_added ASC ensures new leads go to end and order stays fixed
       const { data, error } = await supabase
         .from('prospects')
         .select('id, name, phone, address, age_or_dob, gender, instagram, profession, why_need, notes, funnel_stage, action_taken, prospect_status, priority, personal_tags, sheet_id, batch_date, date_added, updated_at, sort_order, funnel_stage_at, action_taken_at')
         .eq('user_id', user.id)
-        .order('sort_order', { ascending: true, nullsFirst: false })
-        .order('date_added', { ascending: false });
+        .order('date_added', { ascending: true });
 
       if (error) {
         console.error('Error fetching prospects:', error);
@@ -188,7 +188,8 @@ export function ProspectsProvider({ children }: { children: ReactNode }) {
     }
 
     const newProspect = mapDbProspect({ ...data, phone: prospect.phone });
-    setProspects(prev => [newProspect, ...prev]);
+    // Append to end for stable ordering
+    setProspects(prev => [...prev, newProspect]);
     toast.success('Prospect added');
     return newProspect;
   }, [user, encryptFields]);
@@ -333,7 +334,8 @@ export function ProspectsProvider({ children }: { children: ReactNode }) {
     }
 
     const restoredProspect = mapDbProspect({ ...data, phone: prospect.phone });
-    setProspects(prev => [restoredProspect, ...prev]);
+    // Append to end for stable ordering
+    setProspects(prev => [...prev, restoredProspect]);
     return restoredProspect;
   }, [user, encryptFields]);
 
@@ -347,7 +349,10 @@ export function ProspectsProvider({ children }: { children: ReactNode }) {
     return restored;
   }, [user, restoreProspect]);
 
-  const importProspects = useCallback(async (prospectsData: Partial<Prospect>[]) => {
+  const importProspects = useCallback(async (
+    prospectsData: Partial<Prospect>[],
+    onProgress?: (imported: number, total: number) => void
+  ) => {
     if (!user) return { imported: 0, skipped: 0 };
 
     const validProspects = prospectsData.filter(p => p.name && p.phone);
@@ -370,30 +375,53 @@ export function ProspectsProvider({ children }: { children: ReactNode }) {
       batch_date: p.batch_date || new Date().toISOString().split('T')[0],
     }));
 
-    let encryptedProspects = prospectsToProcess;
-    try {
-      encryptedProspects = await encryptBatch(prospectsToProcess);
-    } catch (err) {
-      console.error('Failed to encrypt batch:', err);
+    // Process in chunks of 50 for better performance and progress feedback
+    const CHUNK_SIZE = 50;
+    const chunks = [];
+    for (let i = 0; i < prospectsToProcess.length; i += CHUNK_SIZE) {
+      chunks.push(prospectsToProcess.slice(i, i + CHUNK_SIZE));
     }
 
-    const { data, error } = await supabase
-      .from('prospects')
-      .insert(encryptedProspects as any)
-      .select();
+    let totalImported = 0;
+    const allImported: Prospect[] = [];
 
-    if (error) {
-      toast.error('Failed to import prospects');
-      return { imported: 0, skipped: prospectsData.length };
+    for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
+      const chunk = chunks[chunkIndex];
+      
+      // Encrypt chunk
+      let encryptedChunk = chunk;
+      try {
+        encryptedChunk = await encryptBatch(chunk);
+      } catch (err) {
+        console.error('Failed to encrypt batch:', err);
+      }
+
+      // Insert chunk
+      const { data, error } = await supabase
+        .from('prospects')
+        .insert(encryptedChunk as any)
+        .select();
+
+      if (error) {
+        console.error('Failed to import chunk:', error);
+        continue;
+      }
+
+      const importedWithDecryptedPhones = (data || []).map((d, i) => ({
+        ...mapDbProspect(d),
+        phone: chunk[i]?.phone || d.phone,
+      }));
+      
+      allImported.push(...importedWithDecryptedPhones);
+      totalImported += data?.length || 0;
+      
+      // Report progress
+      onProgress?.(totalImported, validProspects.length);
     }
-
-    const importedWithDecryptedPhones = (data || []).map((d, i) => ({
-      ...mapDbProspect(d),
-      phone: prospectsToProcess[i]?.phone || d.phone,
-    }));
     
-    setProspects(prev => [...importedWithDecryptedPhones, ...prev]);
-    return { imported: data?.length || 0, skipped };
+    // Append all imported to end for stable ordering
+    setProspects(prev => [...prev, ...allImported]);
+    return { imported: totalImported, skipped };
   }, [user, encryptBatch]);
 
   const reorderProspects = useCallback(async (prospectIds: string[]) => {

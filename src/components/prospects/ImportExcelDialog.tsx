@@ -11,7 +11,7 @@ import { sanitizeImportString, validateImportedProspect } from '@/lib/validation
 import { cn } from '@/lib/utils';
 
 interface ImportExcelDialogProps {
-  onImport: (prospects: Partial<Prospect>[]) => Promise<{ imported: number; skipped: number }>;
+  onImport: (prospects: Partial<Prospect>[], onProgress?: (imported: number, total: number) => void) => Promise<{ imported: number; skipped: number }>;
 }
 
 interface ColumnMapping {
@@ -60,8 +60,8 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
     profession: null,
   });
   const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState<{ current: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Resizable columns state for preview table
   const [previewColumnWidths, setPreviewColumnWidths] = useState<Record<string, number>>({});
@@ -118,7 +118,7 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
     };
   }, [isResizing, handleResizeMove, handleResizeEnd]);
 
-  const getColumnWidth = (idx: number) => previewColumnWidths[`col_${idx}`] ?? 120;
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const resetState = () => {
     setStep('upload');
@@ -135,6 +135,7 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
       profession: null,
     });
     setError(null);
+    setImportProgress(null);
     setPreviewColumnWidths({});
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -217,6 +218,8 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
     }
   };
 
+  const getColumnWidth = (idx: number) => previewColumnWidths[`col_${idx}`] ?? 120;
+
   const handleImport = async () => {
     if (!mapping.name || !mapping.phone) {
       setError('Name and Phone columns are required');
@@ -225,12 +228,12 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
 
     setIsImporting(true);
     setError(null);
+    setImportProgress({ current: 0, total: fullData.length });
 
     let skippedCount = 0;
     const prospects: Partial<Prospect>[] = [];
 
     fullData.forEach((row) => {
-      // Validate and sanitize required fields
       const validation = validateImportedProspect(row, mapping.name!, mapping.phone!);
       
       if (!validation.valid) {
@@ -243,7 +246,6 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
         phone: validation.phone,
       };
 
-      // Handle address from single column
       if (mapping.address && row[mapping.address]) {
         prospect.address = sanitizeImportString(row[mapping.address], 200);
       }
@@ -266,13 +268,19 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
     if (prospects.length === 0) {
       setError('No valid leads found. Please check that Name and Phone columns have valid data.');
       setIsImporting(false);
+      setImportProgress(null);
       return;
     }
 
-    const result = await onImport(prospects);
+    // Import with progress callback
+    const result = await onImport(prospects, (imported, total) => {
+      setImportProgress({ current: imported, total });
+    });
+    
     toast.success(`${result.imported} leads imported, ${result.skipped + skippedCount} rows skipped`);
     
     setIsImporting(false);
+    setImportProgress(null);
     resetState();
     setOpen(false);
   };
@@ -442,7 +450,9 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
                 disabled={isImporting || !mapping.name || !mapping.phone}
                 className="min-w-[120px]"
               >
-                {isImporting ? 'Importing...' : `Import ${fullData.length} rows`}
+                {isImporting && importProgress
+                  ? `Importing ${importProgress.current} of ${importProgress.total}`
+                  : `Import ${fullData.length} rows`}
               </Button>
             </div>
           </div>

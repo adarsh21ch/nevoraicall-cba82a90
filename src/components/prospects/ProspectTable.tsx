@@ -40,7 +40,7 @@ interface ProspectTableProps {
   onAdd: (prospect: Partial<Prospect>) => Promise<Prospect | null>;
   onUpdate: (id: string, updates: Partial<Prospect>) => Promise<Prospect | null>;
   onDelete: (id: string) => Promise<boolean>;
-  onImport: (prospects: Partial<Prospect>[]) => Promise<{
+  onImport: (prospects: Partial<Prospect>[], onProgress?: (imported: number, total: number) => void) => Promise<{
     imported: number;
     skipped: number;
   }>;
@@ -543,14 +543,14 @@ export function ProspectTable({
     return onAdd(prospect);
   };
 
-  const handleImportProspects = async (prospectsData: Partial<Prospect>[]) => {
+  const handleImportProspects = async (prospectsData: Partial<Prospect>[], onProgress?: (imported: number, total: number) => void) => {
     if (selectedSheetId) {
       prospectsData = prospectsData.map(p => ({
         ...p,
         sheet_id: selectedSheetId
       }));
     }
-    return onImport(prospectsData);
+    return onImport(prospectsData, onProgress);
   };
 
   const handleToggleExpand = useCallback((prospectId: string) => {

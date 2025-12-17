@@ -65,12 +65,12 @@ export function useProspects() {
     }
     
     try {
+      // Stable ordering: date_added ASC ensures new leads go to end and order stays fixed
       const { data, error } = await supabase
         .from('prospects')
         .select('*')
         .eq('user_id', user.id)
-        .order('sort_order', { ascending: true, nullsFirst: false })
-        .order('date_added', { ascending: false });
+        .order('date_added', { ascending: true });
 
       if (error) {
         toast.error('Failed to fetch prospects');
@@ -163,9 +163,9 @@ export function useProspects() {
       return null;
     }
 
-    // Store with decrypted phone for display
+    // Append to end for stable ordering
     const newProspect = mapDbProspect({ ...data, phone: prospect.phone });
-    setProspects(prev => [newProspect, ...prev]);
+    setProspects(prev => [...prev, newProspect]);
     toast.success('Prospect added');
     return newProspect;
   };
@@ -318,7 +318,8 @@ export function useProspects() {
     }
 
     const restoredProspect = mapDbProspect({ ...data, phone: prospect.phone });
-    setProspects(prev => [restoredProspect, ...prev]);
+    // Append to end for stable ordering
+    setProspects(prev => [...prev, restoredProspect]);
     return restoredProspect;
   };
 
@@ -377,12 +378,13 @@ export function useProspects() {
     }
 
     // Store with original (decrypted) phone numbers for display
+    // Append to end for stable ordering
     const importedWithDecryptedPhones = (data || []).map((d, i) => ({
       ...mapDbProspect(d),
       phone: prospectsToProcess[i]?.phone || d.phone,
     }));
     
-    setProspects(prev => [...importedWithDecryptedPhones, ...prev]);
+    setProspects(prev => [...prev, ...importedWithDecryptedPhones]);
     return { imported: data?.length || 0, skipped };
   };
 
