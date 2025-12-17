@@ -1,9 +1,9 @@
 // Activity Page - Today's Recent Activities (Personal Data Only)
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProspects } from '@/hooks/useProspects';
-import { useTodos } from '@/hooks/useTodos';
+import { useGlobalProspects } from '@/contexts/ProspectsContext';
+import { useGlobalTodos } from '@/contexts/TodosContext';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { LeaderIdSetupDialog } from '@/components/profile/LeaderIdSetupDialog';
@@ -79,8 +79,8 @@ function usePullToRefresh(onRefresh: () => Promise<void>, threshold = 80) {
 export default function Home() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { prospects, loading: prospectsLoading, refetch } = useProspects();
-  const { todos, refetch: refetchTodos } = useTodos();
+  const { prospects, loading: prospectsLoading, refetch } = useGlobalProspects();
+  const { todos, refetch: refetchTodos } = useGlobalTodos();
   const [activityDate, setActivityDate] = useState<Date>(new Date());
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -114,8 +114,8 @@ export default function Home() {
 
   if (!user) return null;
 
-  // Get personal activities for the selected date (sorted descending - most recent at top)
-  const getActivities = () => {
+  // Get personal activities for the selected date (memoized for performance)
+  const activities = useMemo(() => {
     const prospectActivities = prospects
       .filter(p => isSameDay(parseISO(p.updated_at), activityDate))
       .map(p => ({
@@ -152,9 +152,7 @@ export default function Home() {
       );
     }
     return activitiesList;
-  };
-
-  const activities = getActivities();
+  }, [prospects, todos, activityDate, searchQuery]);
 
   return (
     <div className="app-layout bg-gradient-to-b from-background via-background to-muted/20">

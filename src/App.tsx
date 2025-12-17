@@ -4,6 +4,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { TrackingFormatProvider } from "@/contexts/TrackingFormatContext";
 import { CustomOptionsProvider } from "@/contexts/CustomOptionsContext";
+import { ProspectsProvider } from "@/contexts/ProspectsContext";
+import { TodosProvider } from "@/contexts/TodosContext";
 import { Toaster } from "sonner";
 import { InstallPromptBanner } from "@/components/pwa/InstallPromptBanner";
 import { UpdateBanner } from "@/components/pwa/UpdateBanner";
@@ -72,26 +74,30 @@ function App() {
           <AuthProvider>
             <CustomOptionsProvider>
               <TrackingFormatProvider>
-                <Toaster position="top-center" />
-                <InstallPromptBanner />
-                <UpdateBanner />
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/tracking" element={<Tracking />} />
-                  <Route path="/home" element={<Home />} />
-                  <Route path="/action" element={<TodoUp />} />
-                  <Route path="/listup" element={<ListUp />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/terms" element={<Terms />} />
-                  <Route path="/privacy" element={<Privacy />} />
-                  <Route path="/refund" element={<Refund />} />
-                  <Route path="/admin" element={<Admin />} />
-                  <Route path="/payment-success" element={<PaymentSuccess />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
+                <ProspectsProvider>
+                  <TodosProvider>
+                    <Toaster position="top-center" />
+                    <InstallPromptBanner />
+                    <UpdateBanner />
+                    <Routes>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/auth" element={<Auth />} />
+                      <Route path="/reset-password" element={<ResetPassword />} />
+                      <Route path="/dashboard" element={<Dashboard />} />
+                      <Route path="/tracking" element={<Tracking />} />
+                      <Route path="/home" element={<Home />} />
+                      <Route path="/action" element={<TodoUp />} />
+                      <Route path="/listup" element={<ListUp />} />
+                      <Route path="/profile" element={<Profile />} />
+                      <Route path="/terms" element={<Terms />} />
+                      <Route path="/privacy" element={<Privacy />} />
+                      <Route path="/refund" element={<Refund />} />
+                      <Route path="/admin" element={<Admin />} />
+                      <Route path="/payment-success" element={<PaymentSuccess />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </TodosProvider>
+                </ProspectsProvider>
               </TrackingFormatProvider>
             </CustomOptionsProvider>
           </AuthProvider>

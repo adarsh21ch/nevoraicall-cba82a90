@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProspects } from '@/hooks/useProspects';
+import { useGlobalProspects } from '@/contexts/ProspectsContext';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { Button } from '@/components/ui/button';
@@ -97,7 +97,7 @@ export default function ListUp() {
     prospects,
     loading: prospectsLoading,
     refetch
-  } = useProspects();
+  } = useGlobalProspects();
 
   // Persist filters in sessionStorage so they survive tab switches
   const [selectedResponses, setSelectedResponses] = useState<string[]>(() => {
@@ -236,8 +236,8 @@ export default function ListUp() {
   const handleCall = (phone: string) => {
     window.open(`tel:${phone}`, '_self');
   };
-  const isLoading = authLoading || prospectsLoading;
-  if (isLoading) {
+  // Only show loading on initial auth check - data shows instantly from cache
+  if (authLoading) {
     return <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>;
