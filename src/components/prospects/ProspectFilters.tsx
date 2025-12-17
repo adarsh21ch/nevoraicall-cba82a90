@@ -10,7 +10,6 @@ import { useTrackingFormatContext } from '@/contexts/TrackingFormatContext';
 import { cn } from '@/lib/utils';
 import { ManageResponseTagsDialog } from './ManageResponseTagsDialog';
 import { ManageStageTagsDialog } from './ManageStageTagsDialog';
-
 interface Filters {
   search: string;
   stages: FunnelStage[];
@@ -42,13 +41,13 @@ export function ProspectFilters({
 }: ProspectFiltersProps) {
   const hasFilters = filters.search || filters.stages.length > 0 || filters.actions.length > 0;
   const isMobile = useIsMobile();
-  
+
   // Use TrackingFormatContext for tag options (unified source of truth)
   const {
     leadsTrackingTagNames,
     leadsNonTrackingTags,
     stageTagNames,
-    stageNonTrackingTags,
+    stageNonTrackingTags
   } = useTrackingFormatContext();
 
   // Dialog states
@@ -57,14 +56,9 @@ export function ProspectFilters({
 
   // Build options from TrackingFormatContext (single source of truth)
   const hasLeadsTrackingTags = leadsTrackingTagNames.length > 0;
-  const actionOptions = hasLeadsTrackingTags 
-    ? [...leadsTrackingTagNames, ...leadsNonTrackingTags] as ExtendedActionTaken[]
-    : EXTENDED_ACTIONS as ExtendedActionTaken[];
-    
+  const actionOptions = hasLeadsTrackingTags ? [...leadsTrackingTagNames, ...leadsNonTrackingTags] as ExtendedActionTaken[] : EXTENDED_ACTIONS as ExtendedActionTaken[];
   const hasStageTrackingTags = stageTagNames.length > 0;
-  const stageOptions = hasStageTrackingTags
-    ? [...stageTagNames, ...stageNonTrackingTags] as FunnelStage[]
-    : FUNNEL_STAGES as FunnelStage[];
+  const stageOptions = hasStageTrackingTags ? [...stageTagNames, ...stageNonTrackingTags] as FunnelStage[] : FUNNEL_STAGES as FunnelStage[];
   const clearFilters = () => {
     onFiltersChange({
       search: '',
@@ -98,8 +92,7 @@ export function ProspectFilters({
     if (filters.actions.length === 1) return filters.actions[0];
     return `${filters.actions.length} Responses`;
   };
-  return (
-    <>
+  return <>
       <div className="flex flex-col gap-2 w-full">
         {/* Filters row - includes filter tag button inline */}
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 sm:flex-wrap sm:overflow-visible items-center">
@@ -124,12 +117,7 @@ export function ProspectFilters({
             })}>
                     Clear Stages
                   </Button>}
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="w-full mt-2 h-8 text-xs gap-1 text-muted-foreground" 
-                  onClick={() => setShowStageTagsDialog(true)}
-                >
+                <Button variant="ghost" size="sm" className="w-full mt-2 h-8 text-xs gap-1 text-muted-foreground" onClick={() => setShowStageTagsDialog(true)}>
                   <Settings2 className="h-3 w-3" />
                   Manage Stage Tags
                 </Button>
@@ -137,17 +125,9 @@ export function ProspectFilters({
             </Popover>}
           
           {/* Visible Manage Stage Tags button */}
-          {showStagesFilter && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-10 sm:h-9 w-10 sm:w-9 shrink-0"
-              onClick={() => setShowStageTagsDialog(true)}
-              title="Manage Stage Tags"
-            >
-              <Settings2 className="h-4 w-4" />
-            </Button>
-          )}
+          {showStagesFilter && <Button variant="ghost" size="icon" className="h-10 sm:h-9 w-10 sm:w-9 shrink-0" onClick={() => setShowStageTagsDialog(true)} title="Manage Stage Tags">
+              <Tag className="h-4 w-4" />
+            </Button>}
 
           {/* Multi-select Responses Filter - only show if showResponsesFilter is true */}
           {showResponsesFilter && <Popover>
@@ -170,12 +150,7 @@ export function ProspectFilters({
             })}>
                     Clear Responses
                   </Button>}
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="w-full mt-2 h-8 text-xs gap-1 text-muted-foreground" 
-                  onClick={() => setShowResponseTagsDialog(true)}
-                >
+                <Button variant="ghost" size="sm" className="w-full mt-2 h-8 text-xs gap-1 text-muted-foreground" onClick={() => setShowResponseTagsDialog(true)}>
                   <Settings2 className="h-3 w-3" />
                   Manage Response Tags
                 </Button>
@@ -183,17 +158,9 @@ export function ProspectFilters({
             </Popover>}
 
           {/* Visible Manage Response Tags button */}
-          {showResponsesFilter && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-10 sm:h-9 w-10 sm:w-9 shrink-0"
-              onClick={() => setShowResponseTagsDialog(true)}
-              title="Manage Response Tags"
-            >
+          {showResponsesFilter && <Button variant="ghost" size="icon" className="h-10 sm:h-9 w-10 sm:w-9 shrink-0" onClick={() => setShowResponseTagsDialog(true)} title="Manage Response Tags">
               <Tag className="h-4 w-4" />
-            </Button>
-          )}
+            </Button>}
 
           {/* Funnel Tag button - inline with other controls */}
           {filterTagButton}
@@ -213,6 +180,5 @@ export function ProspectFilters({
       {/* Tag Management Dialogs */}
       <ManageResponseTagsDialog open={showResponseTagsDialog} onOpenChange={setShowResponseTagsDialog} />
       <ManageStageTagsDialog open={showStageTagsDialog} onOpenChange={setShowStageTagsDialog} />
-    </>
-  );
+    </>;
 }
