@@ -60,6 +60,7 @@ export function ManageStageTagsDialog({ open, onOpenChange }: ManageStageTagsDia
     directLeaderName,
     stageTags: leaderStageTags,
     ownStagePersonalTags,
+    setOwnStagePersonalTags,
   } = useTrackingFormatContext();
 
   // Only for root leaders - tracking tag editing
@@ -71,7 +72,10 @@ export function ManageStageTagsDialog({ open, onOpenChange }: ManageStageTagsDia
   const [editingPersonalValue, setEditingPersonalValue] = useState('');
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
+  type PendingSaveSnapshot = { stageTags: StageTagInput[]; personalTags: string[] };
+
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingSaveRef = useRef<PendingSaveSnapshot | null>(null);
   const didInitRef = useRef(false);
 
   const clearPendingSave = useCallback(() => {
@@ -153,90 +157,110 @@ export function ManageStageTagsDialog({ open, onOpenChange }: ManageStageTagsDia
   );
 
   // Auto-save function for personal tags
-  const autoSavePersonalTags = useCallback(async () => {
-    if (!user) return;
+  const autoSavePersonalTags = useCallback(
+    async (snapshot?: PendingSaveSnapshot) => {
+      if (!user) return;
 
-    setAutoSaveStatus('saving');
+      const personalToSave = snapshot?.personalTags ?? personalTags;
 
-    // Preserve current stage tags stored on the user profile (if any)
-    const { data: freshProfile } = await supabase
-      .from('profiles')
-      .select('stage_labels')
-      .eq('user_id', user.id)
-      .maybeSingle();
+      setAutoSaveStatus('saving');
 
-    const existingStages = normalizeStageTracking((freshProfile as any)?.stage_labels);
+      // Preserve current stage tags stored on the user profile (if any)
+      const { data: freshProfile } = await supabase
+        .from('profiles')
+        .select('stage_labels')
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-    const stageLabelsData: StageLabelsJson = {
-      stages: existingStages.map((s) => ({ name: s.name, isFinalTarget: s.isFinalTarget })),
-      nonTracking: personalTags,
-    };
+      const existingStages = normalizeStageTracking((freshProfile as any)?.stage_labels);
 
-    const ok = await saveStageLabels(stageLabelsData);
-    if (!ok) {
-      setAutoSaveStatus('idle');
-      return;
-    }
+      const stageLabelsData: StageLabelsJson = {
+        stages: existingStages.map((s) => ({ name: s.name, isFinalTarget: s.isFinalTarget })),
+        nonTracking: personalToSave,
+      };
 
-    await refreshFormat();
-    setAutoSaveStatus('saved');
-    setTimeout(() => setAutoSaveStatus('idle'), 1500);
-  }, [user, personalTags, saveStageLabels, refreshFormat]);
+      const ok = await saveStageLabels(stageLabelsData);
+      if (!ok) {
+        setAutoSaveStatus('idle');
+        return;
+      }
+
+      await refreshFormat();
+      setAutoSaveStatus('saved');
+      setTimeout(() => setAutoSaveStatus('idle'), 1500);
+    },
+    [user, personalTags, saveStageLabels, refreshFormat]
+  );
 
   // Auto-save function for root leader (tracking + personal)
-  const autoSaveAll = useCallback(async () => {
-    if (!isRootLeader) {
-      await autoSavePersonalTags();
-      return;
-    }
+  const autoSaveAll = useCallback(
+    async (snapshot?: PendingSaveSnapshot) => {
+      if (!isRootLeader) {
+        await autoSavePersonalTags(snapshot);
+        return;
+      }
 
-    setAutoSaveStatus('saving');
+      const personalToSave = snapshot?.personalTags ?? personalTags;
+      const stagesToSave = snapshot?.stageTags ?? stageTags;
 
-    const validTags = stageTags.filter((t) => t.name.trim());
+      setAutoSaveStatus('saving');
 
-    const stageLabelsData: StageLabelsJson = {
-      stages: validTags.map((t) => ({ name: t.name.trim(), isFinalTarget: t.isFinalTarget })),
-      nonTracking: personalTags,
-    };
+      const validTags = stagesToSave.filter((t) => t.name.trim());
 
-    const ok = await saveStageLabels(stageLabelsData);
-    if (!ok) {
-      setAutoSaveStatus('idle');
-      return;
-    }
+      const stageLabelsData: StageLabelsJson = {
+        stages: validTags.map((t) => ({ name: t.name.trim(), isFinalTarget: t.isFinalTarget })),
+        nonTracking: personalToSave,
+      };
 
-    await refreshFormat();
-    setAutoSaveStatus('saved');
-    setTimeout(() => setAutoSaveStatus('idle'), 1500);
-  }, [stageTags, personalTags, isRootLeader, autoSavePersonalTags, saveStageLabels, refreshFormat]);
+      const ok = await saveStageLabels(stageLabelsData);
+      if (!ok) {
+        setAutoSaveStatus('idle');
+        return;
+      }
 
-  // Debounced auto-save
-  const triggerAutoSave = useCallback(() => {
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-    }
-    saveTimerRef.current = setTimeout(() => {
-      autoSaveAll();
-    }, 800);
-  }, [autoSaveAll]);
+      await refreshFormat();
+      setAutoSaveStatus('saved');
+      setTimeout(() => setAutoSaveStatus('idle'), 1500);
+    },
+    [stageTags, personalTags, isRootLeader, autoSavePersonalTags, saveStageLabels, refreshFormat]
+  );
+
+  // Debounced auto-save (IMPORTANT: uses snapshot to avoid stale state)
+  const triggerAutoSave = useCallback(
+    (snapshot?: PendingSaveSnapshot) => {
+      pendingSaveRef.current = snapshot ?? { stageTags, personalTags };
+
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+      saveTimerRef.current = setTimeout(() => {
+        autoSaveAll(pendingSaveRef.current ?? undefined);
+      }, 800);
+    },
+    [autoSaveAll, stageTags, personalTags]
+  );
 
   // === Stage tag handlers (root leader only) ===
   const handleStageTagChange = (index: number, field: keyof StageTagInput, value: any) => {
     if (!isRootLeader) return;
-    
-    setStageTags(prev => {
+
+    setStageTags((prev) => {
       const updated = [...prev];
       if (field === 'isFinalTarget' && value === true) {
         // Only ONE tag can be the Final Target
-        updated.forEach((t, i) => { t.isFinalTarget = i === index; });
+        updated.forEach((t, i) => {
+          t.isFinalTarget = i === index;
+        });
       } else if (field === 'isFinalTarget' && value === false) {
         updated[index] = { ...updated[index], isFinalTarget: false };
       } else {
         updated[index] = { ...updated[index], [field]: value };
       }
+
+      // Save using the updated snapshot (avoids stale state)
+      triggerAutoSave({ stageTags: updated, personalTags });
       return updated;
     });
-    triggerAutoSave();
   };
 
   const handleAddStageTag = () => {
@@ -251,7 +275,7 @@ export function ManageStageTagsDialog({ open, onOpenChange }: ManageStageTagsDia
     if (stageTags.length > 1) {
       const updated = stageTags.filter((_, i) => i !== index);
       setStageTags(updated);
-      triggerAutoSave();
+      triggerAutoSave({ stageTags: updated, personalTags });
     }
   };
 
@@ -259,23 +283,27 @@ export function ManageStageTagsDialog({ open, onOpenChange }: ManageStageTagsDia
   const handleAddPersonalTag = () => {
     const tag = newPersonalTag.trim().toUpperCase();
     if (!tag) return;
-    
+
     // Check if tag already exists in tracking or personal
-    const trackingNames = leaderStageTags.map(t => t.name.toUpperCase());
-    if (personalTags.map(t => t.toUpperCase()).includes(tag) || trackingNames.includes(tag)) {
+    const trackingNames = leaderStageTags.map((t) => t.name.toUpperCase());
+    if (personalTags.map((t) => t.toUpperCase()).includes(tag) || trackingNames.includes(tag)) {
       toast.error('This tag already exists');
       return;
     }
-    
-    setPersonalTags([...personalTags, tag]);
+
+    const next = [...personalTags, tag];
+    setPersonalTags(next);
+    setOwnStagePersonalTags(next);
     setNewPersonalTag('');
-    triggerAutoSave();
+    triggerAutoSave({ stageTags, personalTags: next });
   };
 
   const handleRemovePersonalTag = (index: number) => {
-    setPersonalTags(personalTags.filter((_, i) => i !== index));
+    const next = personalTags.filter((_, i) => i !== index);
+    setPersonalTags(next);
+    setOwnStagePersonalTags(next);
     setEditingPersonalIndex(null);
-    triggerAutoSave();
+    triggerAutoSave({ stageTags, personalTags: next });
   };
 
   const handleStartEditPersonalTag = (index: number) => {
@@ -285,27 +313,30 @@ export function ManageStageTagsDialog({ open, onOpenChange }: ManageStageTagsDia
 
   const handleSaveEditPersonalTag = () => {
     if (editingPersonalIndex === null) return;
-    
+
     const newValue = editingPersonalValue.trim().toUpperCase();
     if (!newValue) {
       toast.error('Tag name cannot be empty');
       return;
     }
-    
+
     // Check for duplicates (excluding current tag)
-    const trackingNames = leaderStageTags.map(t => t.name.toUpperCase());
-    const otherPersonal = personalTags.filter((_, i) => i !== editingPersonalIndex).map(t => t.toUpperCase());
+    const trackingNames = leaderStageTags.map((t) => t.name.toUpperCase());
+    const otherPersonal = personalTags
+      .filter((_, i) => i !== editingPersonalIndex)
+      .map((t) => t.toUpperCase());
     if (otherPersonal.includes(newValue) || trackingNames.includes(newValue)) {
       toast.error('This tag already exists');
       return;
     }
-    
-    const updated = [...personalTags];
-    updated[editingPersonalIndex] = newValue;
-    setPersonalTags(updated);
+
+    const next = [...personalTags];
+    next[editingPersonalIndex] = newValue;
+    setPersonalTags(next);
+    setOwnStagePersonalTags(next);
     setEditingPersonalIndex(null);
     setEditingPersonalValue('');
-    triggerAutoSave();
+    triggerAutoSave({ stageTags, personalTags: next });
   };
 
   const handleCancelEditPersonalTag = () => {

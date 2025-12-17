@@ -7,7 +7,10 @@ interface TrackingFormatContextType {
   loading: boolean;
   refreshFormat: () => void;
   triggerTeamRefresh: () => Promise<boolean>;
-  
+
+  // Optimistic personal-tag updaters (instant dropdown updates)
+  setOwnLeadsPersonalTags: (tags: string[]) => void;
+  setOwnStagePersonalTags: (tags: string[]) => void;
   // Leads (Response) tags
   leadsTrackingTags: TrackingTag[];
   leadsNonTrackingTags: string[];
