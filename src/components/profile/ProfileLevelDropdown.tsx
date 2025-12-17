@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Check, ChevronDown, Loader2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { LeaderLevel } from '@/hooks/useLeaderLevels';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,6 +26,8 @@ export function ProfileLevelDropdown({
   const [saving, setSaving] = useState(false);
   const [open, setOpen] = useState(false);
   const [noLevelsMessage, setNoLevelsMessage] = useState<string | null>(null);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch levels for the leader based on their neverai_id
   useEffect(() => {
@@ -45,6 +48,7 @@ export function ProfileLevelDropdown({
           setNoLevelsMessage(null); // Show default Level 1
         }
         setLoading(false);
+        setLoadingTimeout(false);
         return;
       }
 
@@ -53,8 +57,11 @@ export function ProfileLevelDropdown({
         .rpc('get_user_by_neverai_id', { target_neverai_id: leaderNeveraiId });
 
       if (rpcError || !leaderData || leaderData.length === 0) {
-        setLevels([]);
-        setNoLevelsMessage('Leader not found');
+        // Only show "Leader not found" after timeout
+        if (loadingTimeout) {
+          setLevels([]);
+          setNoLevelsMessage('Leader not found');
+        }
         setLoading(false);
         return;
       }
@@ -71,10 +78,15 @@ export function ProfileLevelDropdown({
       if (levelsError) {
         console.error('Error fetching leader levels:', levelsError);
         setLevels([]);
-        setNoLevelsMessage('Error loading levels');
+        if (loadingTimeout) {
+          setNoLevelsMessage('Error loading levels');
+        }
       } else if (!levelsData || levelsData.length === 0) {
         setLevels([]);
-        setNoLevelsMessage('Your leader has not defined any levels yet');
+        // Only show message after timeout, otherwise keep loading
+        if (loadingTimeout) {
+          setNoLevelsMessage('Your leader has not defined any levels yet');
+        }
       } else {
         setLevels(levelsData as LeaderLevel[]);
         setNoLevelsMessage(null);
@@ -84,7 +96,7 @@ export function ProfileLevelDropdown({
           const defaultLevel = levelsData.find(l => l.is_default) || levelsData[0];
           if (defaultLevel) {
             setSelectedLevelId(defaultLevel.id);
-            // Auto-save the default level
+            // Auto-save the default level (Level 1)
             supabase
               .from('profiles')
               .update({ level_id: defaultLevel.id })
@@ -92,16 +104,30 @@ export function ProfileLevelDropdown({
               .then(({ error }) => {
                 if (!error) {
                   onLevelChange?.(defaultLevel.id);
+                  toast.success('Default level assigned');
                 }
               });
           }
         }
       }
       setLoading(false);
+      setLoadingTimeout(false);
     };
 
     setLoading(true);
+    setLoadingTimeout(false);
+    
+    // Set a 3-second timeout before showing error messages
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      setLoadingTimeout(true);
+    }, 3000);
+    
     fetchLevels();
+    
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
 
     // Set up real-time subscription for level changes
     const channel = supabase
@@ -164,19 +190,27 @@ export function ProfileLevelDropdown({
     }
   };
 
+  // Show skeleton loader while loading
   if (loading) {
     return (
-      <div className="flex items-center gap-1.5 px-2 py-1 bg-muted/50 rounded-full">
-        <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-        <span className="text-xs text-muted-foreground">Loading...</span>
-      </div>
+      <Skeleton className="h-7 w-16 rounded-full" />
     );
   }
 
+  // Only show error message if we have one after timeout
+  if (levels.length === 0 && noLevelsMessage) {
+    return (
+      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-muted text-muted-foreground rounded-full text-xs font-medium">
+        {noLevelsMessage}
+      </div>
+    );
+  }
+  
+  // Show default L1 if no levels and no error message
   if (levels.length === 0) {
     return (
       <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-foreground text-background rounded-full text-xs font-medium">
-        {noLevelsMessage || 'L1'}
+        L1
       </div>
     );
   }
