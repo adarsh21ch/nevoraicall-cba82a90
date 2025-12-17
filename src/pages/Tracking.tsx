@@ -9,7 +9,7 @@ import { UpgradeBar } from '@/components/subscription/UpgradeBar';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { BottomViewToggle } from '@/components/ui/BottomViewToggle';
 import { Day1SetupDialog } from '@/components/trackup/Day1SetupDialog';
-import { Loader2, TrendingUp, Calendar, Lock } from 'lucide-react';
+import { Loader2, TrendingUp, Calendar, Lock, RefreshCw } from 'lucide-react';
 import { useProspects } from '@/hooks/useProspects';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useProspectLimit } from '@/hooks/useProspectLimit';
@@ -169,9 +169,9 @@ export default function Tracking() {
 
           {/* Sync indicator for connected members */}
           {activeTab === 'funnel' && isFunnelReadOnly && funnelLeaderName && (
-            <div className="text-xs text-muted-foreground text-center mb-2 flex items-center justify-center gap-1.5">
-              <Lock className="h-3 w-3" />
-              Using {funnelLeaderName}'s funnel configuration
+            <div className="text-xs text-muted-foreground text-center mb-2 flex items-center justify-center gap-1.5 bg-muted/50 py-1.5 px-3 rounded-full mx-auto w-fit">
+              <RefreshCw className="h-3 w-3" />
+              Synced with {funnelLeaderName}
             </div>
           )}
 
