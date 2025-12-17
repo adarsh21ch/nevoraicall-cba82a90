@@ -421,6 +421,31 @@ export function useTrackingFormat() {
     loadTrackingFormat();
   }, [loadTrackingFormat]);
 
+  // Optimistic updates so dropdowns update instantly (no need to reopen/refresh)
+  const setOwnLeadsPersonalTags = useCallback((tags: string[]) => {
+    setTrackingFormat((prev) =>
+      prev
+        ? {
+            ...prev,
+            leadsNonTrackingTags: tags,
+            ownLeadsPersonalTags: tags,
+          }
+        : prev
+    );
+  }, []);
+
+  const setOwnStagePersonalTags = useCallback((tags: string[]) => {
+    setTrackingFormat((prev) =>
+      prev
+        ? {
+            ...prev,
+            stageNonTrackingTags: tags,
+            ownStagePersonalTags: tags,
+          }
+        : prev
+    );
+  }, []);
+
   // Function for leaders to trigger refresh for all team members
   const triggerTeamRefresh = useCallback(async () => {
     if (!user?.id) return false;
@@ -435,7 +460,7 @@ export function useTrackingFormat() {
     if (!currentProfile?.neverai_id) return false;
 
     const refreshToken = Date.now().toString();
-    
+
     // Update all team members in this leader's tree (and direct followers)
     const { error } = await supabase
       .from('profiles')
@@ -506,6 +531,10 @@ export function useTrackingFormat() {
     loading,
     refreshFormat,
     triggerTeamRefresh,
+
+    // Optimistic personal-tag updaters
+    setOwnLeadsPersonalTags,
+    setOwnStagePersonalTags,
     
     // Leads (Response) tags
     leadsTrackingTags: trackingFormat?.leadsTrackingTags || [],

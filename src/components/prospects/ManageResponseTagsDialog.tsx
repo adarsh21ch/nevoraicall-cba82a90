@@ -62,6 +62,7 @@ export function ManageResponseTagsDialog({ open, onOpenChange }: ManageResponseT
     directLeaderName,
     leadsTrackingTags,
     ownLeadsPersonalTags,
+    setOwnLeadsPersonalTags,
   } = useTrackingFormatContext();
 
   // Only for root leaders - tracking tag editing
@@ -73,7 +74,10 @@ export function ManageResponseTagsDialog({ open, onOpenChange }: ManageResponseT
   const [editingPersonalValue, setEditingPersonalValue] = useState('');
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
+  type PendingSaveSnapshot = { trackingTags: LeadsTagInput[]; personalTags: string[] };
+
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingSaveRef = useRef<PendingSaveSnapshot | null>(null);
   const didInitRef = useRef(false);
 
   const clearPendingSave = useCallback(() => {
@@ -157,98 +161,118 @@ export function ManageResponseTagsDialog({ open, onOpenChange }: ManageResponseT
   );
 
   // Auto-save function for personal tags
-  const autoSavePersonalTags = useCallback(async () => {
-    if (!user) return;
+  const autoSavePersonalTags = useCallback(
+    async (snapshot?: PendingSaveSnapshot) => {
+      if (!user) return;
 
-    setAutoSaveStatus('saving');
+      const personalToSave = snapshot?.personalTags ?? personalTags;
 
-    // Preserve current tracking tags stored on the user profile (if any)
-    const { data: freshProfile } = await supabase
-      .from('profiles')
-      .select('response_labels')
-      .eq('user_id', user.id)
-      .maybeSingle();
+      setAutoSaveStatus('saving');
 
-    const existingTracking = normalizeResponseTracking((freshProfile as any)?.response_labels);
+      // Preserve current tracking tags stored on the user profile (if any)
+      const { data: freshProfile } = await supabase
+        .from('profiles')
+        .select('response_labels')
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-    const responseLabelsData: ResponseLabelsJson = {
-      tracking: existingTracking.map((t) => ({
-        name: t.name,
-        isStageTag: t.isStageTag,
-        isFinalTarget: t.isFinalTarget,
-      })),
-      nonTracking: personalTags,
-    };
+      const existingTracking = normalizeResponseTracking((freshProfile as any)?.response_labels);
 
-    const ok = await saveResponseLabels(responseLabelsData);
-    if (!ok) {
-      setAutoSaveStatus('idle');
-      return;
-    }
+      const responseLabelsData: ResponseLabelsJson = {
+        tracking: existingTracking.map((t) => ({
+          name: t.name,
+          isStageTag: t.isStageTag,
+          isFinalTarget: t.isFinalTarget,
+        })),
+        nonTracking: personalToSave,
+      };
 
-    await refreshFormat();
-    setAutoSaveStatus('saved');
-    setTimeout(() => setAutoSaveStatus('idle'), 1500);
-  }, [user, personalTags, saveResponseLabels, refreshFormat]);
+      const ok = await saveResponseLabels(responseLabelsData);
+      if (!ok) {
+        setAutoSaveStatus('idle');
+        return;
+      }
+
+      await refreshFormat();
+      setAutoSaveStatus('saved');
+      setTimeout(() => setAutoSaveStatus('idle'), 1500);
+    },
+    [user, personalTags, saveResponseLabels, refreshFormat]
+  );
 
   // Auto-save function for root leader (tracking + personal)
-  const autoSaveAll = useCallback(async () => {
-    if (!isRootLeader) {
-      await autoSavePersonalTags();
-      return;
-    }
+  const autoSaveAll = useCallback(
+    async (snapshot?: PendingSaveSnapshot) => {
+      if (!isRootLeader) {
+        await autoSavePersonalTags(snapshot);
+        return;
+      }
 
-    setAutoSaveStatus('saving');
+      const personalToSave = snapshot?.personalTags ?? personalTags;
+      const trackingToSave = snapshot?.trackingTags ?? trackingTags;
 
-    const validTags = trackingTags.filter((t) => t.name.trim());
+      setAutoSaveStatus('saving');
 
-    const responseLabelsData: ResponseLabelsJson = {
-      tracking: validTags.map((t) => ({
-        name: t.name.trim(),
-        isStageTag: t.isStageTag,
-        isFinalTarget: t.isFinalTarget,
-      })),
-      nonTracking: personalTags,
-    };
+      const validTags = trackingToSave.filter((t) => t.name.trim());
 
-    const ok = await saveResponseLabels(responseLabelsData, { stage_count: validTags.length });
-    if (!ok) {
-      setAutoSaveStatus('idle');
-      return;
-    }
+      const responseLabelsData: ResponseLabelsJson = {
+        tracking: validTags.map((t) => ({
+          name: t.name.trim(),
+          isStageTag: t.isStageTag,
+          isFinalTarget: t.isFinalTarget,
+        })),
+        nonTracking: personalToSave,
+      };
 
-    await refreshFormat();
-    setAutoSaveStatus('saved');
-    setTimeout(() => setAutoSaveStatus('idle'), 1500);
-  }, [trackingTags, personalTags, isRootLeader, autoSavePersonalTags, saveResponseLabels, refreshFormat]);
+      const ok = await saveResponseLabels(responseLabelsData, { stage_count: validTags.length });
+      if (!ok) {
+        setAutoSaveStatus('idle');
+        return;
+      }
 
-  // Debounced auto-save
-  const triggerAutoSave = useCallback(() => {
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-    }
-    saveTimerRef.current = setTimeout(() => {
-      autoSaveAll();
-    }, 800);
-  }, [autoSaveAll]);
+      await refreshFormat();
+      setAutoSaveStatus('saved');
+      setTimeout(() => setAutoSaveStatus('idle'), 1500);
+    },
+    [trackingTags, personalTags, isRootLeader, autoSavePersonalTags, saveResponseLabels, refreshFormat]
+  );
+
+  // Debounced auto-save (IMPORTANT: uses snapshot to avoid stale state)
+  const triggerAutoSave = useCallback(
+    (snapshot?: PendingSaveSnapshot) => {
+      pendingSaveRef.current = snapshot ?? { trackingTags, personalTags };
+
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+      saveTimerRef.current = setTimeout(() => {
+        autoSaveAll(pendingSaveRef.current ?? undefined);
+      }, 800);
+    },
+    [autoSaveAll, trackingTags, personalTags]
+  );
 
   // === Tracking tag handlers (root leader only) ===
   const handleTrackingTagChange = (index: number, field: keyof LeadsTagInput, value: any) => {
     if (!isRootLeader) return;
-    
-    setTrackingTags(prev => {
+
+    setTrackingTags((prev) => {
       const updated = [...prev];
       if (field === 'isStageTag' && value === true) {
-        // Only ONE tag can be the Filter Tag
-        updated.forEach((t, i) => { t.isStageTag = i === index; });
+        // Only ONE tag can be the Funnel Tag
+        updated.forEach((t, i) => {
+          t.isStageTag = i === index;
+        });
       } else if (field === 'isStageTag' && value === false) {
         updated[index] = { ...updated[index], isStageTag: false };
       } else {
         updated[index] = { ...updated[index], [field]: value };
       }
+
+      // Save using the updated snapshot (avoids stale state)
+      triggerAutoSave({ trackingTags: updated, personalTags });
       return updated;
     });
-    triggerAutoSave();
   };
 
   const handleAddTrackingTag = () => {
@@ -263,7 +287,7 @@ export function ManageResponseTagsDialog({ open, onOpenChange }: ManageResponseT
     if (trackingTags.length > 1) {
       const updated = trackingTags.filter((_, i) => i !== index);
       setTrackingTags(updated);
-      triggerAutoSave();
+      triggerAutoSave({ trackingTags: updated, personalTags });
     }
   };
 
@@ -271,23 +295,27 @@ export function ManageResponseTagsDialog({ open, onOpenChange }: ManageResponseT
   const handleAddPersonalTag = () => {
     const tag = newPersonalTag.trim().toUpperCase();
     if (!tag) return;
-    
+
     // Check if tag already exists in tracking or personal
-    const trackingNames = leadsTrackingTags.map(t => t.name.toUpperCase());
-    if (personalTags.map(t => t.toUpperCase()).includes(tag) || trackingNames.includes(tag)) {
+    const trackingNames = leadsTrackingTags.map((t) => t.name.toUpperCase());
+    if (personalTags.map((t) => t.toUpperCase()).includes(tag) || trackingNames.includes(tag)) {
       toast.error('This tag already exists');
       return;
     }
-    
-    setPersonalTags([...personalTags, tag]);
+
+    const next = [...personalTags, tag];
+    setPersonalTags(next);
+    setOwnLeadsPersonalTags(next);
     setNewPersonalTag('');
-    triggerAutoSave();
+    triggerAutoSave({ trackingTags, personalTags: next });
   };
 
   const handleRemovePersonalTag = (index: number) => {
-    setPersonalTags(personalTags.filter((_, i) => i !== index));
+    const next = personalTags.filter((_, i) => i !== index);
+    setPersonalTags(next);
+    setOwnLeadsPersonalTags(next);
     setEditingPersonalIndex(null);
-    triggerAutoSave();
+    triggerAutoSave({ trackingTags, personalTags: next });
   };
 
   const handleStartEditPersonalTag = (index: number) => {
@@ -297,27 +325,30 @@ export function ManageResponseTagsDialog({ open, onOpenChange }: ManageResponseT
 
   const handleSaveEditPersonalTag = () => {
     if (editingPersonalIndex === null) return;
-    
+
     const newValue = editingPersonalValue.trim().toUpperCase();
     if (!newValue) {
       toast.error('Tag name cannot be empty');
       return;
     }
-    
+
     // Check for duplicates (excluding current tag)
-    const trackingNames = leadsTrackingTags.map(t => t.name.toUpperCase());
-    const otherPersonal = personalTags.filter((_, i) => i !== editingPersonalIndex).map(t => t.toUpperCase());
+    const trackingNames = leadsTrackingTags.map((t) => t.name.toUpperCase());
+    const otherPersonal = personalTags
+      .filter((_, i) => i !== editingPersonalIndex)
+      .map((t) => t.toUpperCase());
     if (otherPersonal.includes(newValue) || trackingNames.includes(newValue)) {
       toast.error('This tag already exists');
       return;
     }
-    
-    const updated = [...personalTags];
-    updated[editingPersonalIndex] = newValue;
-    setPersonalTags(updated);
+
+    const next = [...personalTags];
+    next[editingPersonalIndex] = newValue;
+    setPersonalTags(next);
+    setOwnLeadsPersonalTags(next);
     setEditingPersonalIndex(null);
     setEditingPersonalValue('');
-    triggerAutoSave();
+    triggerAutoSave({ trackingTags, personalTags: next });
   };
 
   const handleCancelEditPersonalTag = () => {
