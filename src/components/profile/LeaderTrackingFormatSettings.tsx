@@ -81,6 +81,7 @@ export function LeaderTrackingFormatSettings({
     refetchLeaderConnection,
     loading: funnelConfigLoading,
     isReadOnly: isFunnelConfigReadOnly,
+    hasLeaderConfig,
   } = useFunnelConfig();
   
   const [copiedId, setCopiedId] = useState(false);

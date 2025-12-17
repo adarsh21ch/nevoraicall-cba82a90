@@ -204,7 +204,7 @@ export default function Profile() {
                   <div className="p-2 rounded-lg bg-primary/10">
                     <Users className="h-4 w-4 text-primary" />
                   </div>
-                  <span className="font-medium">Leader's Tracking Format</span>
+                  <span className="font-medium">Leader Tracking Format</span>
                 </div>
               </AccordionTrigger>
               <AccordionContent className="px-4 pb-4">

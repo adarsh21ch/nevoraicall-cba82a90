@@ -89,7 +89,7 @@ export function FunnelTracker({
   leaderFunnelConfig 
 }: FunnelTrackerProps) {
   const { prospects, loading: prospectsLoading } = useProspects();
-  const { config, loading: configLoading, saveConfig, getEffectiveConfig, isReadOnly, leaderName } = useFunnelConfig();
+  const { config, loading: configLoading, saveConfig, getEffectiveConfig, isReadOnly, leaderName, hasLeaderConfig } = useFunnelConfig();
   
   const [fromStage, setFromStage] = useState<StageKey>('enrollment');
   const [toStage, setToStage] = useState<StageKey>('day_1');
@@ -126,9 +126,9 @@ export function FunnelTracker({
   const externalProspectsData = isViewingTeam && teamProspects ? teamProspects : undefined;
   const { totals, loading, totalProspects, funnelRows } = useProspectFunnelStats(funnelConfigForStats, externalProspectsData);
 
-  // Save config when Day 1 date changes
+  // Save config when Day 1 date changes - only if NOT in read-only mode
   const handleDateSelect = async (date: Date | undefined) => {
-    if (!date) return;
+    if (!date || isReadOnly) return; // Block saving if read-only
     setSelectedDate(date);
     setDatePickerOpen(false);
     await saveConfig({

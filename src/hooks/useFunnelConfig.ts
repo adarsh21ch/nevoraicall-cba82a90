@@ -250,6 +250,7 @@ export function useFunnelConfig() {
     config, 
     leaderConfig,
     leaderName,
+    leaderUserId,
     loading, 
     saveConfig, 
     refetch: fetchConfig,
@@ -258,6 +259,8 @@ export function useFunnelConfig() {
     getValidStages,
     getEffectiveConfig,
     useLeaderConfig,
-    isReadOnly: useLeaderConfig && !!leaderConfig,
+    // isReadOnly = true if connected to leader AND using their format, even if leader has no config yet
+    isReadOnly: useLeaderConfig,
+    hasLeaderConfig: !!leaderConfig,
   };
 }
