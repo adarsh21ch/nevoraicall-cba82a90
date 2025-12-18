@@ -1,23 +1,39 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus } from 'lucide-react';
+import { Plus, AlertTriangle } from 'lucide-react';
 import { Prospect } from '@/types/prospect';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 interface AddProspectDialogProps {
   onAdd: (prospect: Partial<Prospect>) => Promise<Prospect | null>;
+  existingProspects?: Prospect[];
 }
 
-export function AddProspectDialog({ onAdd }: AddProspectDialogProps) {
+// Normalize phone number for comparison (remove spaces, dashes, parentheses)
+const normalizePhone = (phone: string) => phone.replace(/[\s\-\(\)\.]/g, '');
+
+export function AddProspectDialog({ onAdd, existingProspects = [] }: AddProspectDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; phone?: string }>({});
   const isMobile = useIsMobile();
+
+  // Check for duplicate phone number
+  const duplicateProspect = useMemo(() => {
+    if (!phone.trim() || phone.trim().length < 7) return null;
+    const normalized = normalizePhone(phone.trim());
+    return existingProspects.find(p => 
+      normalizePhone(p.phone) === normalized || 
+      normalizePhone(p.phone).endsWith(normalized) ||
+      normalized.endsWith(normalizePhone(p.phone))
+    );
+  }, [phone, existingProspects]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,18 +106,43 @@ export function AddProspectDialog({ onAdd }: AddProspectDialogProps) {
               onChange={(e) => setPhone(e.target.value)}
               placeholder="Enter phone number"
               maxLength={20}
-              className={errors.phone ? 'border-destructive' : ''}
+              className={cn(
+                errors.phone ? 'border-destructive' : '',
+                duplicateProspect ? 'border-yellow-500 focus-visible:ring-yellow-500' : ''
+              )}
             />
             {errors.phone && (
               <p className="text-xs text-destructive">{errors.phone}</p>
+            )}
+            {/* Duplicate warning */}
+            {duplicateProspect && !errors.phone && (
+              <div className="flex items-start gap-2 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded-md">
+                <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0 mt-0.5" />
+                <div className="text-xs">
+                  <p className="font-medium text-yellow-600">Lead already exists!</p>
+                  <p className="text-muted-foreground">
+                    <span className="font-medium">{duplicateProspect.name}</span>
+                    {duplicateProspect.action_taken && (
+                      <span> • Response: <span className="font-medium">{duplicateProspect.action_taken}</span></span>
+                    )}
+                    {duplicateProspect.funnel_stage && (
+                      <span> • Stage: <span className="font-medium">{duplicateProspect.funnel_stage}</span></span>
+                    )}
+                  </p>
+                </div>
+              </div>
             )}
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Adding...' : 'Add Lead'}
+            <Button 
+              type="submit" 
+              disabled={isSubmitting}
+              variant={duplicateProspect ? 'outline' : 'default'}
+            >
+              {isSubmitting ? 'Adding...' : duplicateProspect ? 'Add Anyway' : 'Add Lead'}
             </Button>
           </div>
         </form>

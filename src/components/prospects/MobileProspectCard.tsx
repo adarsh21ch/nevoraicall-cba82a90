@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Prospect, FunnelStage, ProspectStatus, FUNNEL_STAGES, EXTENDED_ACTIONS, STATUSES, ExtendedActionTaken, ActionTaken } from '@/types/prospect';
 import { InlineSelect } from './InlineSelect';
 import { StatusBadge, StageBadge, ActionBadge } from './StatusBadge';
+import { CallResultModal } from './CallResultModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -30,6 +31,13 @@ export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDel
   // Optimistic state for instant UI updates
   const [optimisticAction, setOptimisticAction] = useState<ExtendedActionTaken | null>(null);
   const [optimisticStage, setOptimisticStage] = useState<string | null>(null);
+  
+  // Call result modal state
+  const [callResultModal, setCallResultModal] = useState<{
+    open: boolean;
+    type: 'call' | 'whatsapp';
+  }>({ open: false, type: 'call' });
+  const pendingContactRef = useRef<'call' | 'whatsapp' | null>(null);
   
 const [localData, setLocalData] = useState({
     name: prospect.name,
@@ -88,31 +96,83 @@ const [localData, setLocalData] = useState({
     setOptimisticStage(null);
   }, [prospect.id]); // Only reset when lead ID changes
 
+  // Visibility change detection for call result modal
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && pendingContactRef.current) {
+        setCallResultModal({ 
+          open: true, 
+          type: pendingContactRef.current 
+        });
+        pendingContactRef.current = null;
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
   const prospectActivities = activities
     .filter(log => log.prospect_id === prospect.id)
     .slice(0, 3);
 
   const cleanPhoneNumber = (phone: string) => phone.replace(/[^0-9+]/g, '');
 
-  const openWhatsApp = (e: React.MouseEvent) => {
+  const openWhatsApp = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     onMarkLastContacted?.();
+    pendingContactRef.current = 'whatsapp';
     window.open(`https://wa.me/${cleanPhoneNumber(prospect.phone)}`, '_blank');
-  };
+  }, [prospect.phone, onMarkLastContacted]);
 
-  const openCall = (e: React.MouseEvent) => {
+  const openCall = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     onMarkLastContacted?.();
+    pendingContactRef.current = 'call';
     window.open(`tel:${cleanPhoneNumber(prospect.phone)}`, '_self');
-  };
+  }, [prospect.phone, onMarkLastContacted]);
 
   const handleDelete = async () => {
     setIsDeleting(true);
     await onDelete(prospect.id);
     setIsDeleting(false);
   };
+
+  // Handle call result submission
+  const handleCallResultSubmit = useCallback(async (result: { outcome: string; notes?: string }) => {
+    const outcomeToTag: Record<string, string> = {
+      'answered': 'Interested',
+      'not_picked': 'Not Picked',
+      'busy': 'Busy',
+      'call_back': 'Call Back',
+      'not_interested': 'Not Interested',
+      'replied': 'Interested',
+      'seen': 'Follow Up',
+      'sent': 'Video Sent',
+    };
+    
+    const updates: Partial<Prospect> = {};
+    
+    if (result.notes) {
+      const existingNotes = prospect.notes || '';
+      const timestamp = new Date().toLocaleDateString();
+      updates.notes = existingNotes 
+        ? `${existingNotes}\n[${timestamp}] ${result.notes}`
+        : `[${timestamp}] ${result.notes}`;
+    }
+    
+    const mappedTag = outcomeToTag[result.outcome];
+    if (mappedTag && actionOptions.includes(mappedTag)) {
+      updates.action_taken = mappedTag as ActionTaken;
+    }
+    
+    if (Object.keys(updates).length > 0) {
+      await onUpdate(prospect.id, updates);
+    }
+  }, [prospect.id, prospect.notes, actionOptions, onUpdate]);
+
 
   // Handle action change with Leads target completion check + optimistic update
   const handleActionChange = async (value: ExtendedActionTaken) => {
@@ -400,6 +460,14 @@ const [localData, setLocalData] = useState({
           </div>
         </div>
       )}
+      {/* Call Result Modal */}
+      <CallResultModal
+        open={callResultModal.open}
+        onOpenChange={(open) => setCallResultModal(prev => ({ ...prev, open }))}
+        contactType={callResultModal.type}
+        prospectName={prospect.name}
+        onSubmit={handleCallResultSubmit}
+      />
     </div>
   );
 }

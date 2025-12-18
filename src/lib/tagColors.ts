@@ -1,31 +1,65 @@
 // Tag color utilities for consistent coloring across the app
 
-// Default colors for different tag types
-export const DEFAULT_TAG_COLORS = {
-  // Quality tags - semantic colors
-  'Good': '#22c55e',      // green-500
-  'Medium': '#eab308',    // yellow-500
-  'Bad': '#ef4444',       // red-500
-  'Hot': '#ef4444',       // red-500
-  'Warm': '#f97316',      // orange-500
-  'Cold': '#3b82f6',      // blue-500
+// Default colors for different tag types - Enhanced with semantic meaning
+export const DEFAULT_TAG_COLORS: Record<string, string> = {
+  // Quality tags - semantic colors (temperature metaphor)
+  'Good': '#22c55e',      // green-500 (positive)
+  'Medium': '#eab308',    // yellow-500 (neutral)
+  'Bad': '#ef4444',       // red-500 (negative)
+  'Hot': '#ef4444',       // red-500 (urgent/ready)
+  'Warm': '#f97316',      // orange-500 (interested)
+  'Cold': '#3b82f6',      // blue-500 (cold/distant)
   
-  // Response tags - blue shades
-  'Video Sent': '#3b82f6',     // blue-500
-  'Not Picked': '#6b7280',     // gray-500
-  'Call Back': '#8b5cf6',      // violet-500
-  'Call Cut': '#dc2626',       // red-600
-  'Enrollment': '#22c55e',     // green-500
-  'Not Interested': '#9ca3af', // gray-400
-  'Interested': '#10b981',     // emerald-500
+  // Response tags - COLORED BY SENTIMENT
+  // Positive responses (green shades)
+  'Interested': '#22c55e',     // green-500
+  'Very Interested': '#16a34a', // green-600
+  'Enrollment': '#10b981',      // emerald-500
+  'Enrolled': '#10b981',        // emerald-500
+  'Confirmed': '#22c55e',       // green-500
+  'Yes': '#22c55e',             // green-500
+  'Positive': '#22c55e',        // green-500
+  '+VE': '#22c55e',             // green-500
+  'Joined': '#14b8a6',          // teal-500
+  'Paid': '#059669',            // emerald-600
   
-  // Stage tags - purple shades
-  'Day 1': '#8b5cf6',    // violet-500
-  'Day 2': '#a855f7',    // purple-500
-  'Day 3': '#c084fc',    // purple-400
-  'Minimum Bill': '#f59e0b', // amber-500
-  'Level Up': '#06b6d4',     // cyan-500
-  '2CC': '#14b8a6',          // teal-500
+  // Neutral responses (blue/purple shades)
+  'Video Sent': '#3b82f6',      // blue-500
+  'Call Back': '#8b5cf6',       // violet-500
+  'Follow Up': '#6366f1',       // indigo-500
+  'Thinking': '#a855f7',        // purple-500
+  'Maybe': '#8b5cf6',           // violet-500
+  '50-50': '#8b5cf6',           // violet-500
+  'Pending': '#6366f1',         // indigo-500
+  'Scheduled': '#0ea5e9',       // sky-500
+  
+  // Negative responses (gray/red shades)
+  'Not Picked': '#6b7280',      // gray-500
+  'Call Cut': '#dc2626',        // red-600
+  'Not Interested': '#9ca3af',  // gray-400
+  'Busy': '#f59e0b',            // amber-500
+  'No': '#ef4444',              // red-500
+  '-VE': '#ef4444',             // red-500
+  'Rejected': '#dc2626',        // red-600
+  'Wrong Number': '#71717a',    // zinc-500
+  'DND': '#64748b',             // slate-500
+  '30-70': '#f97316',           // orange-500 (leaning negative)
+  
+  // Stage tags - purple progression shades
+  'Day 1': '#8b5cf6',           // violet-500
+  'Day 2': '#a855f7',           // purple-500
+  'Day 3': '#c084fc',           // purple-400
+  'Minimum Bill': '#f59e0b',    // amber-500
+  'Level Up': '#06b6d4',        // cyan-500
+  '2CC': '#14b8a6',             // teal-500
+  
+  // Generic stage progression
+  'Stage 1': '#8b5cf6',         // violet-500
+  'Stage 2': '#a855f7',         // purple-500
+  'Stage 3': '#c084fc',         // purple-400
+  'Stage 4': '#d8b4fe',         // purple-300
+  'Complete': '#22c55e',        // green-500
+  'Done': '#22c55e',            // green-500
 };
 
 // Fallback color palettes for new tags

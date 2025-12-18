@@ -863,7 +863,7 @@ export function ProspectTable({
 
               {/* Import & Add buttons */}
               <ImportExcelDialog onImport={handleImportProspects} />
-              <AddProspectDialog onAdd={handleAddProspect} />
+              <AddProspectDialog onAdd={handleAddProspect} existingProspects={prospects} />
             </>
           )}
         </div>
