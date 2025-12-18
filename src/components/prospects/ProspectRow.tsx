@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect, memo, useCallback } from 'react';
 import { Prospect, FunnelStage, ActionTaken, ProspectStatus, FUNNEL_STAGES, EXTENDED_ACTIONS, STATUSES, ExtendedActionTaken } from '@/types/prospect';
 import { InlineSelect } from './InlineSelect';
 import { StatusBadge, StageBadge, ActionBadge } from './StatusBadge';
@@ -8,7 +8,6 @@ import { CallIconButton, WhatsAppIconButton } from '@/components/ui/ActionIcons'
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTrackingFormatContext } from '@/contexts/TrackingFormatContext';
-
 interface DragHandleProps {
   ref: (node: HTMLElement | null) => void;
   style: React.CSSProperties;
@@ -38,7 +37,7 @@ interface ProspectRowProps {
   onMarkLastContacted?: () => void;
 }
 
-export function ProspectRow({ 
+export const ProspectRow = memo(function ProspectRow({ 
   prospect, 
   index, 
   isCalling, 
@@ -100,7 +99,7 @@ export function ProspectRow({
     setOptimisticStage(null);
   }, [prospect.action_taken, prospect.funnel_stage]);
 
-  const handleActionChange = async (value: ExtendedActionTaken) => {
+  const handleActionChange = useCallback(async (value: ExtendedActionTaken) => {
     // Optimistic update - update UI immediately
     setOptimisticAction(value);
     
@@ -117,9 +116,9 @@ export function ProspectRow({
     if (!result) {
       setOptimisticAction(null);
     }
-  };
+  }, [prospect.id, prospect.name, onUpdate, isLeadsFinalTarget, handleTargetComplete]);
 
-  const handleStageChange = async (value: string) => {
+  const handleStageChange = useCallback(async (value: string) => {
     // Optimistic update - update UI immediately
     setOptimisticStage(value);
     
@@ -135,7 +134,7 @@ export function ProspectRow({
     if (!result) {
       setOptimisticStage(null);
     }
-  };
+  }, [prospect.id, prospect.name, onUpdate, isStageFinalTarget, handleTargetComplete]);
 
   const cleanPhoneNumber = (phone: string) => phone.replace(/[^0-9+]/g, '');
 
@@ -336,4 +335,20 @@ export function ProspectRow({
       )}
     </>
   );
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison for memo - only re-render when these specific props change
+  return (
+    prevProps.prospect.id === nextProps.prospect.id &&
+    prevProps.prospect.action_taken === nextProps.prospect.action_taken &&
+    prevProps.prospect.funnel_stage === nextProps.prospect.funnel_stage &&
+    prevProps.prospect.name === nextProps.prospect.name &&
+    prevProps.prospect.phone === nextProps.prospect.phone &&
+    prevProps.index === nextProps.index &&
+    prevProps.isExpanded === nextProps.isExpanded &&
+    prevProps.isEven === nextProps.isEven &&
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.isLastContacted === nextProps.isLastContacted &&
+    prevProps.showSelection === nextProps.showSelection &&
+    prevProps.isMobileTable === nextProps.isMobileTable
+  );
+});
