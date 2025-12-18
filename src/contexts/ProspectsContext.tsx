@@ -42,6 +42,7 @@ interface ProspectsContextType {
   initialLoadDone: boolean;
   addProspect: (prospect: Partial<Prospect>) => Promise<Prospect | null>;
   updateProspect: (id: string, updates: Partial<Prospect>) => Promise<Prospect | null>;
+  batchUpdateProspects: (updates: Array<{ id: string; changes: Partial<Prospect> }>) => Promise<boolean>;
   deleteProspect: (id: string) => Promise<boolean>;
   bulkDeleteProspects: (ids: string[]) => Promise<{ deleted: number; prospects: Prospect[] }>;
   restoreProspect: (prospect: Prospect) => Promise<Prospect | null>;
@@ -234,6 +235,7 @@ export function ProspectsProvider({ children }: { children: ReactNode }) {
     const dbUpdates: Record<string, any> = {};
     
     if (updates.name !== undefined) dbUpdates.name = updates.name;
+    // ONLY encrypt if phone field is being updated (skip encryption for tag updates)
     if (updates.phone !== undefined) {
       try {
         const encrypted = await encryptFields({ phone: updates.phone });
@@ -310,6 +312,69 @@ export function ProspectsProvider({ children }: { children: ReactNode }) {
     
     return updatedProspect as Prospect;
   }, [user, encryptFields, prospects]);
+
+  // Batch update multiple prospects in a single operation (much faster than sequential updates)
+  const batchUpdateProspects = useCallback(async (updates: Array<{ id: string; changes: Partial<Prospect> }>) => {
+    if (!user || updates.length === 0) return false;
+
+    // Store originals for potential revert
+    const originals = new Map<string, Prospect>();
+    updates.forEach(({ id }) => {
+      const p = prospects.find(pr => pr.id === id);
+      if (p) originals.set(id, p);
+    });
+
+    // Optimistic update - update all at once
+    setProspects(prev => prev.map(p => {
+      const update = updates.find(u => u.id === p.id);
+      if (update) {
+        return { ...p, ...update.changes };
+      }
+      return p;
+    }));
+
+    // Execute all updates in parallel (not sequential)
+    const results = await Promise.all(
+      updates.map(async ({ id, changes }) => {
+        const dbUpdates: Record<string, any> = {};
+        
+        if (changes.funnel_stage !== undefined) {
+          dbUpdates.funnel_stage = changes.funnel_stage;
+          dbUpdates.funnel_stage_at = new Date().toISOString();
+        }
+        if (changes.action_taken !== undefined) {
+          dbUpdates.action_taken = changes.action_taken;
+          dbUpdates.action_taken_at = new Date().toISOString();
+        }
+        if (changes.prospect_status !== undefined) dbUpdates.prospect_status = changes.prospect_status;
+        if (changes.priority !== undefined) dbUpdates.priority = changes.priority;
+
+        if (Object.keys(dbUpdates).length === 0) return true;
+
+        const { error } = await supabase
+          .from('prospects')
+          .update(dbUpdates)
+          .eq('id', id)
+          .eq('user_id', user.id);
+
+        return !error;
+      })
+    );
+
+    const allSuccess = results.every(r => r);
+    
+    if (!allSuccess) {
+      // Revert optimistic updates on any failure
+      setProspects(prev => prev.map(p => {
+        const original = originals.get(p.id);
+        return original || p;
+      }));
+      toast.error('Some updates failed');
+      return false;
+    }
+
+    return true;
+  }, [user, prospects]);
 
   const deleteProspect = useCallback(async (id: string) => {
     const { error } = await supabase
@@ -521,6 +586,7 @@ export function ProspectsProvider({ children }: { children: ReactNode }) {
       initialLoadDone,
       addProspect,
       updateProspect,
+      batchUpdateProspects,
       deleteProspect,
       bulkDeleteProspects,
       restoreProspect,

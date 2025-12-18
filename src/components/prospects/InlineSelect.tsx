@@ -1,3 +1,4 @@
+import { memo, useCallback } from 'react';
 import {
   Select,
   SelectContent,
@@ -11,7 +12,6 @@ import {
 import { cn } from '@/lib/utils';
 import { OptionType, CustomOption } from '@/hooks/useCustomOptions';
 import { Star } from 'lucide-react';
-
 interface InlineSelectProps<T extends string> {
   value: T | null | undefined;
   options: readonly T[] | T[];
@@ -35,7 +35,7 @@ interface InlineSelectProps<T extends string> {
   hideAddNew?: boolean;
 }
 
-export function InlineSelect<T extends string>({
+export const InlineSelect = memo(function InlineSelect<T extends string>({
   value,
   options,
   onChange,
@@ -49,14 +49,14 @@ export function InlineSelect<T extends string>({
   stageTag = null,
 }: InlineSelectProps<T>) {
   // Handle selection - allow toggling (selecting same value deselects it)
-  const handleValueChange = (v: string) => {
+  const handleValueChange = useCallback((v: string) => {
     if (v === value) {
       // Toggle off - same value selected again, clear it
       onChange('' as T);
     } else {
       onChange(v as T);
     }
-  };
+  }, [value, onChange]);
 
   // If showing separation, render grouped options
   const renderGroupedOptions = () => {
@@ -171,4 +171,4 @@ export function InlineSelect<T extends string>({
       </Select>
     </div>
   );
-}
+}) as <T extends string>(props: InlineSelectProps<T>) => JSX.Element;
