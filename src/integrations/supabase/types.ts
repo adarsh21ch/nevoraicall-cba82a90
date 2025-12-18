@@ -130,6 +130,36 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_stats: {
+        Row: {
+          breakdown_json: Json | null
+          created_at: string
+          date_logged: string
+          id: string
+          total_leads: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          breakdown_json?: Json | null
+          created_at?: string
+          date_logged?: string
+          id?: string
+          total_leads?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          breakdown_json?: Json | null
+          created_at?: string
+          date_logged?: string
+          id?: string
+          total_leads?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       funnel_configs: {
         Row: {
           created_at: string
