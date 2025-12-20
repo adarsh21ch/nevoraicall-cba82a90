@@ -156,8 +156,8 @@ export function ProfileLevelDropdown({
   }, [currentLevelId]);
 
   const selectedLevel = levels.find(l => l.id === selectedLevelId);
-  // Show code (AS, S, AM) if available, otherwise show label
-  const displayCode = selectedLevel?.code || selectedLevel?.label || (levels.length > 0 ? (levels[0]?.code || levels[0]?.label) : 'Level 1');
+  // Show label (S, AS, AM, M) first, fall back to code if label is missing
+  const displayText = selectedLevel?.label || selectedLevel?.code || (levels.length > 0 ? (levels[0]?.label || levels[0]?.code) : 'Level 1');
 
   const handleSelectLevel = async (level: LeaderLevel) => {
     if (level.id === selectedLevelId) {
@@ -234,7 +234,7 @@ export function ProfileLevelDropdown({
             </>
           ) : (
             <>
-              {displayCode}
+              {displayText}
               <ChevronDown className="h-3 w-3 ml-0.5" />
             </>
           )}
