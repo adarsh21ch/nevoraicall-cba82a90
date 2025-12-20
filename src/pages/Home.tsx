@@ -7,12 +7,11 @@ import { useGlobalTodos } from '@/contexts/TodosContext';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { LeaderIdSetupDialog } from '@/components/profile/LeaderIdSetupDialog';
-import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { Loader2, Clock, CalendarIcon } from 'lucide-react';
+import { CalendarStrip } from '@/components/calendar/CalendarStrip';
+import { useCalendarStrip } from '@/hooks/useCalendarStrip';
+import { Loader2, Clock } from 'lucide-react';
 import { SearchBar } from '@/components/ui/SearchBar';
-import { parseISO, format, isToday, isSameDay } from 'date-fns';
+import { parseISO, format, isSameDay } from 'date-fns';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
 
 // Consistent Call icon
@@ -102,8 +101,10 @@ export default function Home() {
     todos,
     refetch: refetchTodos
   } = useGlobalTodos();
-  const [activityDate, setActivityDate] = useState<Date>(new Date());
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Calendar strip state management
+  const calendar = useCalendarStrip();
 
   // Pull-to-refresh
   const handleRefresh = useCallback(async () => {
@@ -134,9 +135,21 @@ export default function Home() {
   }
   if (!user) return null;
 
+  // Compute dates that have activities (for calendar indicator dots)
+  const datesWithActivities = useMemo(() => {
+    const dateSet = new Set<string>();
+    prospects.forEach(p => {
+      dateSet.add(format(parseISO(p.updated_at), 'yyyy-MM-dd'));
+    });
+    todos.forEach(t => {
+      dateSet.add(format(parseISO(t.updated_at), 'yyyy-MM-dd'));
+    });
+    return dateSet;
+  }, [prospects, todos]);
+
   // Get personal activities for the selected date (memoized for performance)
   const activities = useMemo(() => {
-    const prospectActivities = prospects.filter(p => isSameDay(parseISO(p.updated_at), activityDate)).map(p => ({
+    const prospectActivities = prospects.filter(p => isSameDay(parseISO(p.updated_at), calendar.selectedDate)).map(p => ({
       id: p.id,
       type: 'lead' as const,
       name: p.name,
@@ -145,7 +158,7 @@ export default function Home() {
       action: p.action_taken,
       time: new Date(p.updated_at)
     }));
-    const todoActivities = todos.filter(t => isSameDay(parseISO(t.updated_at), activityDate)).map(t => ({
+    const todoActivities = todos.filter(t => isSameDay(parseISO(t.updated_at), calendar.selectedDate)).map(t => ({
       id: t.id,
       type: 'todo' as const,
       name: t.title,
@@ -164,7 +177,7 @@ export default function Home() {
       activitiesList = activitiesList.filter(a => a.name.toLowerCase().includes(query) || a.phone && a.phone.includes(query));
     }
     return activitiesList;
-  }, [prospects, todos, activityDate, searchQuery]);
+  }, [prospects, todos, calendar.selectedDate, searchQuery]);
   return <div className="app-layout bg-gradient-to-b from-background via-background to-muted/20">
       <header className="fixed-header z-40 bg-card/80 backdrop-blur-xl border-b border-border/50">
         <div className="flex items-center justify-between px-4 py-3">
@@ -178,6 +191,18 @@ export default function Home() {
         </div>
       </header>
 
+      {/* Calendar Strip - Fixed at top */}
+      <CalendarStrip
+        selectedDate={calendar.selectedDate}
+        daysInMonth={calendar.daysInMonth}
+        monthYearLabel={calendar.monthYearLabel}
+        onSelectDate={calendar.selectDate}
+        onPreviousMonth={calendar.goToPreviousMonth}
+        onNextMonth={calendar.goToNextMonth}
+        onTodayClick={calendar.goToToday}
+        datesWithTasks={datesWithActivities}
+      />
+
       <main ref={containerRef} className="scrollable-content relative flex flex-col">
         <PullToRefreshIndicator isRefreshing={isRefreshing} pullDistance={pullDistance} showIndicator={showIndicator} />
         <div className="container py-3 px-3 pb-20 flex-1 flex flex-col">
@@ -186,28 +211,14 @@ export default function Home() {
             <SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="Search name, phone..." />
           </div>
 
-          {/* Today's Recent Activities - Main Focus */}
+          {/* Activities - Main Focus */}
           <div className="bg-card rounded-2xl p-3 border border-border/50 flex-1 flex flex-col min-h-0">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-primary" />
-                <div>
-                  <h3 className="font-semibold text-sm">Today's Recent Activities</h3>
-                  <p className="text-xs text-muted-foreground">All user activities</p>
-                </div>
+            <div className="flex items-center gap-2 mb-3">
+              <Clock className="h-5 w-5 text-primary" />
+              <div>
+                <h3 className="font-semibold text-sm">Activities</h3>
+                <p className="text-xs text-muted-foreground">{activities.length} activities</p>
               </div>
-              {/* Date picker with pill outline style */}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs rounded-full border-border/60 px-3">
-                    <CalendarIcon className="h-3.5 w-3.5" />
-                    {isToday(activityDate) ? 'Today' : format(activityDate, 'dd MMM')}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <Calendar mode="single" selected={activityDate} onSelect={date => date && setActivityDate(date)} initialFocus />
-                </PopoverContent>
-              </Popover>
             </div>
             
             {activities.length === 0 ? <div className="text-center py-12 flex-1 flex flex-col items-center justify-center">
