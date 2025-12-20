@@ -112,31 +112,55 @@ export default function Profile() {
   const [editOpen, setEditOpen] = useState(false);
   const [trackupLoading, setTrackupLoading] = useState(false);
 
-  // Handle TrackUp Dashboard SSO
+  // Fallback URLs for TrackUp Dashboard
+  const TRACKUP_FALLBACK_AUTH = 'https://nevorai.com/auth?redirect=/trackup';
+  const TRACKUP_FALLBACK_DIRECT = 'https://nevorai.com/trackup';
+
+  // Handle TrackUp Dashboard SSO with fallback
   const handleOpenTrackUp = async () => {
     if (!user) return;
     
     setTrackupLoading(true);
+    
+    // Create a timeout promise (8 seconds)
+    const timeoutPromise = new Promise<{ timeout: true }>((resolve) => {
+      setTimeout(() => resolve({ timeout: true }), 8000);
+    });
+    
     try {
-      const { data, error } = await supabase.functions.invoke('trackup-sso-link');
+      // Race between SSO request and timeout
+      const result = await Promise.race([
+        supabase.functions.invoke('trackup-sso-link'),
+        timeoutPromise
+      ]);
       
-      if (error) {
-        console.error('SSO link error:', error);
-        toast.error('Could not generate login link. Opening website...');
-        window.open('https://nevorai.com/trackup', '_blank');
+      // Check if timed out
+      if ('timeout' in result) {
+        console.warn('SSO request timed out, using fallback');
+        window.open(TRACKUP_FALLBACK_AUTH, '_blank');
         return;
       }
       
-      if (data?.action_link) {
+      const { data, error } = result;
+      
+      // Check for errors
+      if (error) {
+        console.error('SSO link error:', error);
+        window.open(TRACKUP_FALLBACK_AUTH, '_blank');
+        return;
+      }
+      
+      // Validate action_link
+      if (data?.action_link && typeof data.action_link === 'string' && data.action_link.startsWith('http')) {
         window.open(data.action_link, '_blank');
       } else {
-        toast.error('Could not generate login link. Opening website...');
-        window.open('https://nevorai.com/trackup', '_blank');
+        console.warn('Invalid or empty action_link, using fallback');
+        window.open(TRACKUP_FALLBACK_AUTH, '_blank');
       }
     } catch (err) {
       console.error('TrackUp SSO error:', err);
-      toast.error('Error connecting. Opening website...');
-      window.open('https://nevorai.com/trackup', '_blank');
+      // On any error, try auth redirect fallback first
+      window.open(TRACKUP_FALLBACK_AUTH, '_blank');
     } finally {
       setTrackupLoading(false);
     }
