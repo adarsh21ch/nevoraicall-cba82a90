@@ -7,12 +7,13 @@ import { BottomNav } from '@/components/layout/BottomNav';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Filter, ChevronDown, ChevronUp, Tags, X } from 'lucide-react';
+import { Loader2, Filter, ChevronDown, ChevronUp, Tags, X, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getTagStyle } from '@/lib/tagColors';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
 import { Prospect } from '@/types/prospect';
+
+type LeadMode = 'funnel' | 'response';
 
 // WhatsApp outline icon
 const WhatsAppIcon = ({
@@ -99,6 +100,15 @@ export default function ListUp() {
     refetch
   } = useGlobalProspects();
 
+  // Lead mode toggle - default to funnel leads
+  const [leadMode, setLeadMode] = useState<LeadMode>(() => {
+    const saved = sessionStorage.getItem('listup-mode');
+    return (saved as LeadMode) || 'funnel';
+  });
+  
+  // Show all tags toggle (including empty ones)
+  const [showAllTags, setShowAllTags] = useState(false);
+
   // Persist filters in sessionStorage so they survive tab switches
   const [selectedResponses, setSelectedResponses] = useState<string[]>(() => {
     const saved = sessionStorage.getItem('listup-responses');
@@ -113,6 +123,11 @@ export default function ListUp() {
     return saved ? JSON.parse(saved) : [];
   });
   const [expandedProspectId, setExpandedProspectId] = useState<string | null>(null);
+
+  // Persist lead mode to sessionStorage
+  useEffect(() => {
+    sessionStorage.setItem('listup-mode', leadMode);
+  }, [leadMode]);
 
   // Persist filter selections to sessionStorage
   useEffect(() => {
@@ -141,12 +156,54 @@ export default function ListUp() {
     }
   }, [user, authLoading, navigate]);
 
-  // Get tags separated into categories
+  // Filter prospects based on lead mode first
+  const modeFilteredProspects = useMemo(() => {
+    if (leadMode === 'funnel') {
+      // Funnel leads: prospects that have a funnel_stage set
+      return prospects.filter(p => p.funnel_stage && p.funnel_stage.trim() !== '');
+    } else {
+      // Response leads: prospects that have action_taken set
+      return prospects.filter(p => p.action_taken && p.action_taken.trim() !== '');
+    }
+  }, [prospects, leadMode]);
+
+  // Get tags separated into categories - with counts
   const {
     responseTags,
     stageTags,
-    qualityTags
+    qualityTags,
+    responseTagCounts,
+    stageTagCounts,
+    qualityTagCounts
   } = useMemo(() => {
+    const responseCounts = new Map<string, number>();
+    const stageCounts = new Map<string, number>();
+    const qualityCounts = new Map<string, number>();
+    
+    modeFilteredProspects.forEach(p => {
+      if (p.action_taken) {
+        responseCounts.set(p.action_taken, (responseCounts.get(p.action_taken) || 0) + 1);
+      }
+      if (p.funnel_stage) {
+        stageCounts.set(p.funnel_stage, (stageCounts.get(p.funnel_stage) || 0) + 1);
+      }
+      if (p.prospect_status) {
+        qualityCounts.set(p.prospect_status, (qualityCounts.get(p.prospect_status) || 0) + 1);
+      }
+    });
+    
+    return {
+      responseTags: Array.from(responseCounts.keys()).sort(),
+      stageTags: Array.from(stageCounts.keys()).sort(),
+      qualityTags: Array.from(qualityCounts.keys()).sort(),
+      responseTagCounts: responseCounts,
+      stageTagCounts: stageCounts,
+      qualityTagCounts: qualityCounts
+    };
+  }, [modeFilteredProspects]);
+
+  // Get all tags (including empty ones from all prospects) for "Show All" option
+  const allTags = useMemo(() => {
     const responses = new Set<string>();
     const stages = new Set<string>();
     const qualities = new Set<string>();
@@ -162,13 +219,17 @@ export default function ListUp() {
     };
   }, [prospects]);
 
+  // Choose which tags to display based on showAllTags toggle
+  const displayResponseTags = showAllTags ? allTags.responseTags : responseTags;
+  const displayStageTags = showAllTags ? allTags.stageTags : stageTags;
+
   // Check if any filters are active
   const hasActiveFilters = selectedResponses.length > 0 || selectedStages.length > 0 || selectedQualities.length > 0;
 
   // Filter prospects by selected tags (AND between categories, OR within category)
   const filteredProspects = useMemo(() => {
-    if (!hasActiveFilters) return prospects;
-    return prospects.filter(p => {
+    if (!hasActiveFilters) return modeFilteredProspects;
+    return modeFilteredProspects.filter(p => {
       // Check responses (OR within category)
       const matchesResponse = selectedResponses.length === 0 || p.action_taken && selectedResponses.includes(p.action_taken);
 
@@ -181,7 +242,7 @@ export default function ListUp() {
       // AND between categories
       return matchesResponse && matchesStage && matchesQuality;
     });
-  }, [prospects, selectedResponses, selectedStages, selectedQualities, hasActiveFilters]);
+  }, [modeFilteredProspects, selectedResponses, selectedStages, selectedQualities, hasActiveFilters]);
 
   // Group prospects by their primary tag for display
   const prospectsByTag = useMemo(() => {
@@ -226,6 +287,15 @@ export default function ListUp() {
     setSelectedStages([]);
     setSelectedQualities([]);
   };
+
+  // Clear filters when mode changes
+  const handleModeChange = (mode: LeadMode) => {
+    setLeadMode(mode);
+    setSelectedResponses([]);
+    setSelectedStages([]);
+    setSelectedQualities([]);
+  };
+
   const toggleProspect = (id: string) => {
     setExpandedProspectId(prev => prev === id ? null : id);
   };
@@ -250,7 +320,9 @@ export default function ListUp() {
             <img src={nevoraLogo} alt="NevorAI Logo" className="h-10 w-10 rounded-xl object-cover shadow-md" />
             <div>
               <h1 className="text-xl font-bold tracking-tight">Follow Up</h1>
-              <p className="text-xs text-muted-foreground font-medium">View by Tags</p>
+              <p className="text-xs text-muted-foreground font-medium">
+                {leadMode === 'funnel' ? 'Funnel Leads' : 'Response Leads'} ({modeFilteredProspects.length})
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -266,43 +338,105 @@ export default function ListUp() {
         <PullToRefreshIndicator isRefreshing={isRefreshing} pullDistance={pullDistance} showIndicator={showIndicator} />
         <div className="container py-3 px-4 space-y-4">
 
+          {/* Lead Mode Toggle */}
+          <div className="bg-card rounded-xl p-3 border border-border/50">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex bg-muted rounded-lg p-1 flex-1">
+                <button
+                  onClick={() => handleModeChange('funnel')}
+                  className={cn(
+                    "flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all",
+                    leadMode === 'funnel'
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Funnel Leads
+                </button>
+                <button
+                  onClick={() => handleModeChange('response')}
+                  className={cn(
+                    "flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all",
+                    leadMode === 'response'
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Response Leads
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Grouped Tag Filters */}
           <div className="bg-card rounded-xl p-4 border border-border/50 space-y-4">
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Filter by Tags</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Filter by Tags</span>
+              </div>
+              <button
+                onClick={() => setShowAllTags(!showAllTags)}
+                className={cn(
+                  "flex items-center gap-1 text-xs transition-colors",
+                  showAllTags ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Eye className="h-3 w-3" />
+                {showAllTags ? 'Hide Empty' : 'Show All'}
+              </button>
             </div>
 
-            {/* Responses Section */}
-            <div className="space-y-2">
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Responses</h4>
-              {responseTags.length === 0 ? <p className="text-xs text-muted-foreground/70">No response tags</p> : <div className="flex flex-wrap gap-1.5">
-                  {responseTags.map(tag => {
-                const isSelected = selectedResponses.includes(tag);
-                const style = getTagStyle(tag, 'response', null, isSelected, true);
-                return <Badge key={`response-${tag}`} variant="outline" className="cursor-pointer text-xs transition-all border" style={style} onClick={() => toggleResponse(tag)}>
-                        {tag}
-                      </Badge>;
-              })}
-                </div>}
-            </div>
-
-            {/* Funnel Stages Section */}
-            <div className="space-y-2">
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Funnel Stages</h4>
-              {stageTags.length === 0 ? <p className="text-xs text-muted-foreground/70">No funnel stages</p> : <div className="flex flex-wrap gap-1.5">
-                  {stageTags.map(tag => {
-                const isSelected = selectedStages.includes(tag);
-                const style = getTagStyle(tag, 'stage', null, isSelected, true);
-                return <Badge key={`stage-${tag}`} variant="outline" className="cursor-pointer text-xs transition-all border" style={style} onClick={() => toggleStage(tag)}>
-                        {tag}
-                      </Badge>;
-              })}
-                </div>}
-            </div>
-
-            {/* Quality Section */}
-            
+            {/* Show tags based on mode */}
+            {leadMode === 'funnel' ? (
+              /* Funnel Stages Section */
+              <div className="space-y-2">
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Funnel Stages</h4>
+                {displayStageTags.length === 0 ? <p className="text-xs text-muted-foreground/70">No funnel stages</p> : <div className="flex flex-wrap gap-1.5">
+                    {displayStageTags.map(tag => {
+                  const isSelected = selectedStages.includes(tag);
+                  const count = stageTagCounts.get(tag) || 0;
+                  const style = getTagStyle(tag, 'stage', null, isSelected, true);
+                  return <Badge 
+                    key={`stage-${tag}`} 
+                    variant="outline" 
+                    className={cn(
+                      "cursor-pointer text-xs transition-all border",
+                      count === 0 && "opacity-50"
+                    )} 
+                    style={style} 
+                    onClick={() => toggleStage(tag)}
+                  >
+                    {tag} {count > 0 && <span className="ml-1 opacity-70">({count})</span>}
+                  </Badge>;
+                })}
+                  </div>}
+              </div>
+            ) : (
+              /* Responses Section */
+              <div className="space-y-2">
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Responses</h4>
+                {displayResponseTags.length === 0 ? <p className="text-xs text-muted-foreground/70">No response tags</p> : <div className="flex flex-wrap gap-1.5">
+                    {displayResponseTags.map(tag => {
+                  const isSelected = selectedResponses.includes(tag);
+                  const count = responseTagCounts.get(tag) || 0;
+                  const style = getTagStyle(tag, 'response', null, isSelected, true);
+                  return <Badge 
+                    key={`response-${tag}`} 
+                    variant="outline" 
+                    className={cn(
+                      "cursor-pointer text-xs transition-all border",
+                      count === 0 && "opacity-50"
+                    )}
+                    style={style} 
+                    onClick={() => toggleResponse(tag)}
+                  >
+                    {tag} {count > 0 && <span className="ml-1 opacity-70">({count})</span>}
+                  </Badge>;
+                })}
+                  </div>}
+              </div>
+            )}
           </div>
 
           {/* Prospects grouped by tags */}
