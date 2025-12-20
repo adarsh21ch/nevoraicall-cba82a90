@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Sheet } from '@/types/prospect';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,6 +14,9 @@ export function useSheets() {
   const [loading, setLoading] = useState(true);
   const [selectedSheetId, setSelectedSheetId] = useState<string | null>(null);
   const [todaySheetId, setTodaySheetId] = useState<string | null>(null);
+  
+  // Lock to prevent concurrent sheet creation
+  const creatingSheetRef = useRef(false);
 
   const fetchSheets = useCallback(async () => {
     if (!user) return;
@@ -33,26 +36,39 @@ export function useSheets() {
     setLoading(false);
   }, [user]);
 
-  // Get or create today's date sheet
+  // Get or create today's date sheet - only when adding/importing leads
   const getOrCreateTodaySheet = useCallback(async (): Promise<string | null> => {
     if (!user) return null;
+    
+    // Prevent concurrent creation
+    if (creatingSheetRef.current) {
+      // Wait a bit and check again
+      await new Promise(resolve => setTimeout(resolve, 500));
+      // Check if sheet was created
+      const todayName = getTodaySheetName();
+      const { data: existingSheet } = await supabase
+        .from('sheets')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('name', todayName)
+        .maybeSingle();
+      
+      if (existingSheet) {
+        setTodaySheetId(existingSheet.id);
+        return existingSheet.id;
+      }
+      return null;
+    }
 
     const todayName = getTodaySheetName();
     
-    // Check if today's sheet already exists in current sheets
-    const existingSheet = sheets.find(s => s.name === todayName);
-    if (existingSheet) {
-      setTodaySheetId(existingSheet.id);
-      return existingSheet.id;
-    }
-
-    // Check database in case sheets aren't loaded yet
+    // Always check database first (most reliable)
     const { data: dbSheet } = await supabase
       .from('sheets')
       .select('*')
       .eq('user_id', user.id)
       .eq('name', todayName)
-      .single();
+      .maybeSingle();
 
     if (dbSheet) {
       setTodaySheetId(dbSheet.id);
@@ -64,25 +80,31 @@ export function useSheets() {
       return dbSheet.id;
     }
 
-    // Create new sheet for today
-    const { data: newSheet, error } = await supabase
-      .from('sheets')
-      .insert({
-        name: todayName,
-        user_id: user.id,
-      })
-      .select()
-      .single();
+    // Sheet doesn't exist - create it with lock
+    creatingSheetRef.current = true;
+    
+    try {
+      const { data: newSheet, error } = await supabase
+        .from('sheets')
+        .insert({
+          name: todayName,
+          user_id: user.id,
+        })
+        .select()
+        .single();
 
-    if (error) {
-      console.error('Error creating today sheet:', error);
-      return null;
+      if (error) {
+        console.error('Error creating today sheet:', error);
+        return null;
+      }
+
+      setSheets(prev => [newSheet as Sheet, ...prev]);
+      setTodaySheetId(newSheet.id);
+      return newSheet.id;
+    } finally {
+      creatingSheetRef.current = false;
     }
-
-    setSheets(prev => [newSheet as Sheet, ...prev]);
-    setTodaySheetId(newSheet.id);
-    return newSheet.id;
-  }, [user, sheets]);
+  }, [user]);
 
   useEffect(() => {
     fetchSheets();

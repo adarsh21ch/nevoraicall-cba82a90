@@ -58,6 +58,8 @@ interface ProspectTableProps {
   onAddSheet: (name: string) => Promise<Sheet | null>;
   onUpdateSheet: (id: string, name: string) => Promise<Sheet | null>;
   onDeleteSheet: (id: string) => Promise<boolean>;
+  // Auto date sheet creation (only for Leads tab)
+  getOrCreateTodaySheet?: () => Promise<string | null>;
   // Filter mode from parent
   filterMode: 'calling' | 'funnel';
   subFilter: 'all' | 'hot' | 'scheduled' | 'day1' | 'progress';
@@ -310,6 +312,7 @@ export function ProspectTable({
   onAddSheet,
   onUpdateSheet,
   onDeleteSheet,
+  getOrCreateTodaySheet,
   filterMode,
   subFilter,
   externalSearch = ''
@@ -555,14 +558,29 @@ export function ProspectTable({
   };
 
   const handleAddProspect = async (prospect: Partial<Prospect>) => {
-    if (selectedSheetId) {
+    // Auto-assign to today's date sheet for Leads tab
+    if (filterMode === 'calling' && getOrCreateTodaySheet) {
+      const todaySheetId = await getOrCreateTodaySheet();
+      if (todaySheetId) {
+        prospect.sheet_id = todaySheetId;
+      }
+    } else if (selectedSheetId) {
       prospect.sheet_id = selectedSheetId;
     }
     return onAdd(prospect);
   };
 
   const handleImportProspects = async (prospectsData: Partial<Prospect>[], onProgress?: (imported: number, total: number) => void) => {
-    if (selectedSheetId) {
+    // Auto-assign to today's date sheet for Leads tab
+    if (filterMode === 'calling' && getOrCreateTodaySheet) {
+      const todaySheetId = await getOrCreateTodaySheet();
+      if (todaySheetId) {
+        prospectsData = prospectsData.map(p => ({
+          ...p,
+          sheet_id: todaySheetId
+        }));
+      }
+    } else if (selectedSheetId) {
       prospectsData = prospectsData.map(p => ({
         ...p,
         sheet_id: selectedSheetId
