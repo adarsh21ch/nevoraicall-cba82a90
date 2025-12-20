@@ -12,6 +12,7 @@ import { ShareProfileDialog } from '@/components/profile/ShareProfileDialog';
 import { LeaderTrackingFormatSettings } from '@/components/profile/LeaderTrackingFormatSettings';
 import { LevelManagement } from '@/components/profile/LevelManagement';
 import { ProfileLevelDropdown } from '@/components/profile/ProfileLevelDropdown';
+import { TrackUpLoadingOverlay } from '@/components/profile/TrackUpLoadingOverlay';
 import { UpgradeCard } from '@/components/subscription/UpgradeCard';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { Button } from '@/components/ui/button';
@@ -110,60 +111,32 @@ export default function Profile() {
     refreshFormat
   } = useTrackingFormatContext();
   const [editOpen, setEditOpen] = useState(false);
-  const [trackupLoading, setTrackupLoading] = useState(false);
+  const [trackupOverlayOpen, setTrackupOverlayOpen] = useState(false);
 
-  // Fallback URLs for TrackUp Dashboard
-  const TRACKUP_FALLBACK_AUTH = 'https://nevorai.com/auth?redirect=/trackup';
-  const TRACKUP_FALLBACK_DIRECT = 'https://nevorai.com/trackup';
+  // TrackUp Dashboard URL
+  const TRACKUP_URL = 'https://nevorai.com/trackup';
 
-  // Handle TrackUp Dashboard SSO with fallback
-  const handleOpenTrackUp = async () => {
+  // Handle TrackUp Dashboard - show overlay and open URL
+  const handleOpenTrackUp = () => {
     if (!user) return;
-    
-    setTrackupLoading(true);
-    
-    // Create a timeout promise (8 seconds)
-    const timeoutPromise = new Promise<{ timeout: true }>((resolve) => {
-      setTimeout(() => resolve({ timeout: true }), 8000);
-    });
-    
-    try {
-      // Race between SSO request and timeout
-      const result = await Promise.race([
-        supabase.functions.invoke('trackup-sso-link'),
-        timeoutPromise
-      ]);
-      
-      // Check if timed out
-      if ('timeout' in result) {
-        console.warn('SSO request timed out, using fallback');
-        window.open(TRACKUP_FALLBACK_AUTH, '_blank');
-        return;
-      }
-      
-      const { data, error } = result;
-      
-      // Check for errors
-      if (error) {
-        console.error('SSO link error:', error);
-        window.open(TRACKUP_FALLBACK_AUTH, '_blank');
-        return;
-      }
-      
-      // Validate action_link
-      if (data?.action_link && typeof data.action_link === 'string' && data.action_link.startsWith('http')) {
-        window.open(data.action_link, '_blank');
-      } else {
-        console.warn('Invalid or empty action_link, using fallback');
-        window.open(TRACKUP_FALLBACK_AUTH, '_blank');
-      }
-    } catch (err) {
-      console.error('TrackUp SSO error:', err);
-      // On any error, try auth redirect fallback first
-      window.open(TRACKUP_FALLBACK_AUTH, '_blank');
-    } finally {
-      setTrackupLoading(false);
-    }
+    setTrackupOverlayOpen(true);
+    window.open(TRACKUP_URL, '_blank');
+  };
+
+  // Retry opening TrackUp
+  const handleRetryTrackUp = () => {
+    window.open(TRACKUP_URL, '_blank');
+  };
+
+  // Open in external browser (same URL, but user can choose browser)
+  const handleOpenInBrowser = () => {
+    setTrackupOverlayOpen(false);
+    window.open(TRACKUP_URL, '_blank');
+  };
+
+  // Close overlay
+  const handleCloseTrackUpOverlay = () => {
+    setTrackupOverlayOpen(false);
   };
 
   // Process pending leader ID from share links
@@ -315,24 +288,18 @@ export default function Profile() {
             {/* TrackUp Dashboard */}
             <button 
               onClick={handleOpenTrackUp}
-              disabled={trackupLoading}
               className={cn(
                 "w-full relative overflow-hidden rounded-xl p-4",
                 "bg-gradient-to-r backdrop-blur-sm",
                 "border border-border/50 shadow-sm",
                 "flex items-center justify-between",
                 "transition-all duration-300 hover:shadow-md hover:scale-[1.01]",
-                "from-emerald-500/20 to-emerald-500/5",
-                trackupLoading && "opacity-70 cursor-wait"
+                "from-emerald-500/20 to-emerald-500/5"
               )}
             >
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-emerald-500/10">
-                  {trackupLoading ? (
-                    <Loader2 className="h-5 w-5 text-emerald-500 animate-spin" />
-                  ) : (
-                    <ExternalLink className="h-5 w-5 text-emerald-500" />
-                  )}
+                  <ExternalLink className="h-5 w-5 text-emerald-500" />
                 </div>
                 <div className="text-left">
                   <span className="font-medium block">TrackUp Dashboard</span>
@@ -416,6 +383,13 @@ export default function Profile() {
       </main>
 
       <EditProfileDialog open={editOpen} onOpenChange={setEditOpen} profile={profile} onSave={updateProfile} updating={updating} />
+      
+      <TrackUpLoadingOverlay
+        isOpen={trackupOverlayOpen}
+        onClose={handleCloseTrackUpOverlay}
+        onRetry={handleRetryTrackUp}
+        onOpenInBrowser={handleOpenInBrowser}
+      />
 
       <BottomNav />
     </div>;
