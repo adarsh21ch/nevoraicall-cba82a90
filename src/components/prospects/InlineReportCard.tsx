@@ -155,8 +155,7 @@ const [localData, setLocalData] = useState<Partial<Prospect>>({});
     e.preventDefault();
     e.stopPropagation();
     const cleanPhone = cleanPhoneNumber(prospect.phone);
-    // Use location.href to avoid webview navigation blink
-    window.location.href = `tel:${cleanPhone}`;
+    window.open(`tel:${cleanPhone}`, '_self');
   };
 
   const openInstagram = () => {
