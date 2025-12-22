@@ -104,34 +104,53 @@ export function DailyTasksView({ selectedDate, selectedDateString }: DailyTasksV
                 </p>
               </div>
 
-              {/* 3-state compact toggle */}
-              <div className="flex items-center bg-muted/50 rounded-full p-0.5 h-7 shrink-0">
-                <button
-                  onClick={() => handleStatusChange(task.id, task.status === 'no' ? null : 'no')}
-                  className={cn(
-                    "px-2.5 py-1 rounded-full text-xs font-medium transition-all",
-                    task.status === 'no' 
-                      ? "bg-red-500 text-white" 
-                      : "text-muted-foreground hover:text-red-500"
-                  )}
-                >
-                  No
-                </button>
-                <div className={cn(
-                  "w-1.5 h-1.5 rounded-full mx-1 transition-all",
-                  task.status === null ? "bg-muted-foreground/50" : "bg-transparent"
-                )} />
-                <button
-                  onClick={() => handleStatusChange(task.id, task.status === 'yes' ? null : 'yes')}
-                  className={cn(
-                    "px-2.5 py-1 rounded-full text-xs font-medium transition-all",
-                    task.status === 'yes' 
-                      ? "bg-green-500 text-white" 
-                      : "text-muted-foreground hover:text-green-500"
-                  )}
-                >
-                  Yes
-                </button>
+              {/* Status indicator + controls */}
+              <div className="flex items-center gap-2 shrink-0">
+                {/* Not marked helper text */}
+                {task.status === null && (
+                  <span className="text-[10px] text-muted-foreground/60 italic hidden sm:inline">
+                    Not marked
+                  </span>
+                )}
+
+                {/* Segmented pill control */}
+                <div className="flex items-center border border-border/50 rounded-lg overflow-hidden h-7">
+                  <button
+                    onClick={() => handleStatusChange(task.id, 'yes')}
+                    className={cn(
+                      "px-3 h-full text-xs font-medium transition-all flex items-center gap-1",
+                      task.status === 'yes' 
+                        ? "bg-green-500 text-white border-r border-green-600" 
+                        : "bg-background hover:bg-green-50 dark:hover:bg-green-950/30 text-muted-foreground hover:text-green-600 border-r border-border/50"
+                    )}
+                  >
+                    <CheckCircle className="h-3 w-3" />
+                    Yes
+                  </button>
+                  <button
+                    onClick={() => handleStatusChange(task.id, 'no')}
+                    className={cn(
+                      "px-3 h-full text-xs font-medium transition-all flex items-center gap-1",
+                      task.status === 'no' 
+                        ? "bg-red-500 text-white" 
+                        : "bg-background hover:bg-red-50 dark:hover:bg-red-950/30 text-muted-foreground hover:text-red-600"
+                    )}
+                  >
+                    <XCircle className="h-3 w-3" />
+                    No
+                  </button>
+                </div>
+
+                {/* Clear button - only show when a status is set */}
+                {task.status !== null && (
+                  <button
+                    onClick={() => handleStatusChange(task.id, null)}
+                    className="h-6 w-6 flex items-center justify-center rounded-full text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/50 transition-all"
+                    title="Clear selection"
+                  >
+                    <Circle className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
             </div>
           ))}
