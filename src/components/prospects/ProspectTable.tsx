@@ -14,8 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Users, Undo2, Redo2, X, Trash2, Edit, Star, Search } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Users, Undo2, Redo2, X, Trash2, Edit, Star } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -303,11 +302,6 @@ export function ProspectTable({
   // Tag management dialogs
   const [responseTagsDialogOpen, setResponseTagsDialogOpen] = useState(false);
   const [stageTagsDialogOpen, setStageTagsDialogOpen] = useState(false);
-  
-  // Search expand state
-  const [searchExpanded, setSearchExpanded] = useState(false);
-  const [localSearch, setLocalSearch] = useState('');
-  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Undo/Redo
   const {
@@ -918,47 +912,6 @@ export function ProspectTable({
                     <Redo2 className="h-4 w-4" />
                   </Button>
                 </div>
-              )}
-
-              {/* Search button/input */}
-              {searchExpanded ? (
-                <div className="flex items-center gap-1 bg-muted rounded-lg px-2 py-1">
-                  <Input
-                    ref={searchInputRef}
-                    value={localSearch}
-                    onChange={(e) => {
-                      setLocalSearch(e.target.value);
-                      setFilters(f => ({ ...f, search: e.target.value }));
-                    }}
-                    placeholder="Search..."
-                    className="h-7 w-32 text-sm border-0 bg-transparent focus-visible:ring-0 px-1"
-                    autoFocus
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => {
-                      setSearchExpanded(false);
-                      setLocalSearch('');
-                      setFilters(f => ({ ...f, search: '' }));
-                    }}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => {
-                    setSearchExpanded(true);
-                    setTimeout(() => searchInputRef.current?.focus(), 50);
-                  }}
-                >
-                  <Search className="h-4 w-4" />
-                </Button>
               )}
 
               {/* Import & Add buttons - same line */}

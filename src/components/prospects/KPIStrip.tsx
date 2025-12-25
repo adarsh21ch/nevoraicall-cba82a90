@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Prospect } from '@/types/prospect';
 import { useTrackingFormatContext } from '@/contexts/TrackingFormatContext';
-import { Users, Star } from 'lucide-react';
+import { Users, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface KPIStripProps {
@@ -65,20 +65,20 @@ export function KPIStrip({ prospects, isCalling }: KPIStripProps) {
             className={cn(
               "flex items-center gap-1.5 shrink-0 rounded-full px-2.5 py-1 transition-colors",
               isFinalTag 
-                ? "bg-amber-500/15 ring-1 ring-amber-500/30" 
+                ? "bg-emerald-500/15 ring-1 ring-emerald-500/30" 
                 : "bg-muted/40"
             )}
           >
-            {isFinalTag && <Star className="h-3 w-3 text-amber-500 fill-amber-500" />}
+            {isFinalTag && <Trophy className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />}
             <span className={cn(
               "text-xs font-medium truncate max-w-[60px]",
-              isFinalTag ? "text-amber-700 dark:text-amber-300" : "text-muted-foreground"
+              isFinalTag ? "text-emerald-700 dark:text-emerald-300" : "text-muted-foreground"
             )}>
               {tag}
             </span>
             <span className={cn(
               "text-xs font-semibold",
-              isFinalTag ? "text-amber-700 dark:text-amber-300" : ""
+              isFinalTag ? "text-emerald-700 dark:text-emerald-300" : ""
             )}>
               {count}
             </span>
