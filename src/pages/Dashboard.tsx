@@ -166,16 +166,17 @@ export default function Dashboard() {
 
       <main 
         ref={containerRef} 
-        className="flex flex-col overflow-hidden" 
+        className="flex flex-col" 
         style={{ 
           touchAction: 'pan-x pan-y', 
           paddingTop: `${headerHeight}px`,
-          height: '100dvh'
+          height: '100dvh',
+          paddingBottom: '64px' // Space for bottom nav
         }}
       >
         <PullToRefreshIndicator isRefreshing={isRefreshing} pullDistance={pullDistance} showIndicator={showIndicator} />
         
-        {/* Search Bar - not sticky, scrolls with content but minimal spacing */}
+        {/* Search Bar */}
         <div className="flex-shrink-0 px-4 pt-2 pb-2">
           <SearchBar 
             value={searchQuery}
@@ -184,8 +185,8 @@ export default function Dashboard() {
           />
         </div>
         
-        {/* Table area - takes remaining space, handles its own scroll + sticky bottom */}
-        <div className="flex-1 overflow-hidden px-4 pb-16">
+        {/* Table area - flex-1 and min-h-0 to allow proper flex shrinking with overflow */}
+        <div className="flex-1 min-h-0 px-4">
           {mainTab === 'leads' ? (
             <ProspectTable
               prospects={prospects}

@@ -848,9 +848,9 @@ export function ProspectTable({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col h-full gap-3">
       {/* Single Action Bar - Filters left, Actions right */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex-shrink-0 flex flex-wrap items-center justify-between gap-2">
         {/* Left side - Filters */}
         <div className="flex items-center gap-2 flex-wrap flex-1">
           <ProspectFilters
@@ -901,7 +901,7 @@ export function ProspectTable({
       </div>
 
       {/* Table */}
-      <div className="bg-card rounded-xl border border-border/50 shadow-sm overflow-hidden flex flex-col" style={{ maxHeight: 'calc(100vh - 280px)' }}>
+      <div className="bg-card rounded-xl border border-border/50 shadow-sm overflow-hidden flex-1 flex flex-col min-h-0">
         {enableDragAndDrop ? (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleRowDragEnd}>
             <SortableContext items={filteredProspects.map(p => p.id)} strategy={verticalListSortingStrategy}>
@@ -978,7 +978,7 @@ export function ProspectTable({
       </div>
 
       {/* Footer info */}
-      <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+      <div className="flex-shrink-0 flex items-center justify-between text-xs text-muted-foreground px-1">
         <span>{filteredProspects.length} leads</span>
         <Button variant="ghost" size="sm" onClick={exportToExcel} disabled={exporting || filteredProspects.length === 0} className="h-7 text-xs">
           {exporting ? 'Exporting...' : 'Export Excel'}
