@@ -145,8 +145,8 @@ export default function Dashboard() {
     { value: 'funnel', label: 'Funnel', icon: Layers },
   ];
 
-  // Calculate header height: more compact (~52px + ~40px + ~36px) = ~128px
-  const headerHeight = 128;
+  // Compact header height: ~52px title + ~40px tabs + ~40px search = ~132px
+  const headerHeight = 108;
   
   return (
     <div className="app-layout bg-gradient-to-b from-background via-background to-muted/20">
@@ -203,7 +203,7 @@ export default function Dashboard() {
         <PullToRefreshIndicator isRefreshing={isRefreshing} pullDistance={pullDistance} showIndicator={showIndicator} />
         
         {/* Table area - flex-1 and min-h-0 to allow proper flex shrinking with overflow */}
-        <div className="flex-1 min-h-0 px-4 pt-2">
+        <div className="flex-1 min-h-0 px-4">
           {mainTab === 'leads' ? (
             <ProspectTable
               prospects={prospects}
