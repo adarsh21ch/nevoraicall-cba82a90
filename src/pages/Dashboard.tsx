@@ -15,7 +15,6 @@ import { SearchBar } from '@/components/ui/SearchBar';
 import { Loader2, Phone, Layers } from 'lucide-react';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
 
-
 // Pull-to-refresh hook - fixed to not interfere with normal scrolling
 function usePullToRefresh(onRefresh: () => Promise<void>, threshold = 100) {
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -24,25 +23,19 @@ function usePullToRefresh(onRefresh: () => Promise<void>, threshold = 100) {
   const startScrollTop = useRef(0);
   const isPulling = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
-
   const handleTouchStart = useCallback((e: TouchEvent) => {
     const container = containerRef.current;
     if (!container) return;
-    
     startY.current = e.touches[0].clientY;
     startScrollTop.current = container.scrollTop;
     isPulling.current = false;
   }, []);
-
   const handleTouchMove = useCallback((e: TouchEvent) => {
     if (!startY.current || isRefreshing) return;
-    
     const container = containerRef.current;
     if (!container) return;
-    
     const currentY = e.touches[0].clientY;
     const diff = currentY - startY.current;
-    
     if (startScrollTop.current <= 0 && container.scrollTop <= 0 && diff > 20) {
       isPulling.current = true;
       setPullDistance(Math.min((diff - 20) * 0.4, threshold * 1.2));
@@ -51,50 +44,87 @@ function usePullToRefresh(onRefresh: () => Promise<void>, threshold = 100) {
       setPullDistance(0);
     }
   }, [isRefreshing, threshold]);
-
   const handleTouchEnd = useCallback(async () => {
     if (pullDistance >= threshold && !isRefreshing && isPulling.current) {
       setIsRefreshing(true);
-      try { await onRefresh(); } finally { setIsRefreshing(false); }
+      try {
+        await onRefresh();
+      } finally {
+        setIsRefreshing(false);
+      }
     }
     setPullDistance(0);
     startY.current = 0;
     startScrollTop.current = 0;
     isPulling.current = false;
   }, [pullDistance, threshold, isRefreshing, onRefresh]);
-
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    
-    container.addEventListener('touchstart', handleTouchStart, { passive: true });
-    container.addEventListener('touchmove', handleTouchMove, { passive: true });
-    container.addEventListener('touchend', handleTouchEnd, { passive: true });
-    
+    container.addEventListener('touchstart', handleTouchStart, {
+      passive: true
+    });
+    container.addEventListener('touchmove', handleTouchMove, {
+      passive: true
+    });
+    container.addEventListener('touchend', handleTouchEnd, {
+      passive: true
+    });
     return () => {
       container.removeEventListener('touchstart', handleTouchStart);
       container.removeEventListener('touchmove', handleTouchMove);
       container.removeEventListener('touchend', handleTouchEnd);
     };
   }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
-
-  return { containerRef, isRefreshing, pullDistance, showIndicator: pullDistance > 30 || isRefreshing };
+  return {
+    containerRef,
+    isRefreshing,
+    pullDistance,
+    showIndicator: pullDistance > 30 || isRefreshing
+  };
 }
-
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
-  const { prospects, loading, addProspect, updateProspect, deleteProspect, bulkDeleteProspects, restoreProspect, restoreProspects, importProspects, reorderProspects, refetch, optimisticUpdate } = useGlobalProspects();
-  const { sheets, selectedSheetId, setSelectedSheetId, addSheet, updateSheet, deleteSheet, refetch: refetchSheets, getOrCreateTodaySheet } = useSheets();
-  
+  const {
+    user,
+    loading: authLoading
+  } = useAuth();
+  const {
+    prospects,
+    loading,
+    addProspect,
+    updateProspect,
+    deleteProspect,
+    bulkDeleteProspects,
+    restoreProspect,
+    restoreProspects,
+    importProspects,
+    reorderProspects,
+    refetch,
+    optimisticUpdate
+  } = useGlobalProspects();
+  const {
+    sheets,
+    selectedSheetId,
+    setSelectedSheetId,
+    addSheet,
+    updateSheet,
+    deleteSheet,
+    refetch: refetchSheets,
+    getOrCreateTodaySheet
+  } = useSheets();
+
   // Main tab state - Calling is default
   const [mainTab, setMainTab] = useState<'leads' | 'funnel'>('leads');
-  
+
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Filter tag setup dialog
-  const { needsSetup, markSetupDone } = useFilterTagSetup();
+  const {
+    needsSetup,
+    markSetupDone
+  } = useFilterTagSetup();
   const [showFilterSetup, setShowFilterSetup] = useState(false);
 
   // Handle tab change - show setup dialog when switching to Stages for first time
@@ -106,23 +136,29 @@ export default function Dashboard() {
   };
 
   // Swipe to switch tabs
-  const { containerRef: swipeRef } = useSwipeTabs({
+  const {
+    containerRef: swipeRef
+  } = useSwipeTabs({
     onSwipeLeft: () => handleTabChange('funnel'),
-    onSwipeRight: () => handleTabChange('leads'),
+    onSwipeRight: () => handleTabChange('leads')
   });
 
   // Pull-to-refresh
   const handleRefresh = useCallback(async () => {
     await Promise.all([refetch?.(), refetchSheets?.()]);
   }, [refetch, refetchSheets]);
-  const { containerRef: pullRef, isRefreshing, pullDistance, showIndicator } = usePullToRefresh(handleRefresh);
+  const {
+    containerRef: pullRef,
+    isRefreshing,
+    pullDistance,
+    showIndicator
+  } = usePullToRefresh(handleRefresh);
 
   // Combine refs for swipe and pull-to-refresh
   const mainRef = useCallback((node: HTMLDivElement | null) => {
     (pullRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
     (swipeRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
   }, [pullRef, swipeRef]);
-
   useEffect(() => {
     if (!user && !authLoading) {
       navigate('/auth');
@@ -131,32 +167,35 @@ export default function Dashboard() {
 
   // Only show loader on initial auth check, not for prospects (they have their own skeleton)
   if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+    return <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+      </div>;
   }
-
   if (!user) return null;
-
-  const toggleOptions: [{ value: string; label: string; icon: typeof Phone }, { value: string; label: string; icon: typeof Layers }] = [
-    { value: 'leads', label: 'Leads', icon: Phone },
-    { value: 'funnel', label: 'Funnel', icon: Layers },
-  ];
-  
-  return (
-    <div className="app-layout bg-gradient-to-b from-background via-background to-muted/20">
+  const toggleOptions: [{
+    value: string;
+    label: string;
+    icon: typeof Phone;
+  }, {
+    value: string;
+    label: string;
+    icon: typeof Layers;
+  }] = [{
+    value: 'leads',
+    label: 'Leads',
+    icon: Phone
+  }, {
+    value: 'funnel',
+    label: 'Funnel',
+    icon: Layers
+  }];
+  return <div className="app-layout bg-gradient-to-b from-background via-background to-muted/20">
       {/* Compact Header - matching To-Do density */}
       <header className="fixed-header z-40 bg-card/80 backdrop-blur-xl border-b border-border/50">
         {/* Row A: Page title - compact */}
-        <div className="flex items-center justify-between px-4 py-2">
+        <div className="flex items-center justify-between px-4 py-[12px]">
           <div className="flex items-center gap-2.5">
-            <img 
-              src={nevoraLogo} 
-              alt="NevorAI Logo" 
-              className="h-9 w-9 rounded-xl object-cover shadow-md"
-            />
+            <img src={nevoraLogo} alt="NevorAI Logo" className="h-9 w-9 rounded-xl object-cover shadow-md" />
             <div>
               <h1 className="text-lg font-bold tracking-tight leading-tight">Follow Up</h1>
               <p className="text-[10px] text-muted-foreground font-medium">
@@ -169,90 +208,29 @@ export default function Dashboard() {
         
         {/* Row B: Segmented control - compact like To-Do */}
         <div className="px-4 pb-1.5">
-          <TopTabBar
-            options={toggleOptions}
-            value={mainTab}
-            onChange={handleTabChange}
-          />
+          <TopTabBar options={toggleOptions} value={mainTab} onChange={handleTabChange} />
         </div>
         
         {/* Row C: Search Bar - more compact */}
         <div className="px-4 pb-2">
-          <SearchBar 
-            value={searchQuery}
-            onChange={setSearchQuery}
-            placeholder="Search name, phone..."
-            className="h-8"
-          />
+          <SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="Search name, phone..." className="h-8" />
         </div>
       </header>
 
-      <main 
-        ref={mainRef} 
-        className="flex-1 flex flex-col min-h-0 overflow-hidden" 
-        style={{ touchAction: 'pan-x pan-y' }}
-      >
+      <main ref={mainRef} className="flex-1 flex flex-col min-h-0 overflow-hidden" style={{
+      touchAction: 'pan-x pan-y'
+    }}>
         <PullToRefreshIndicator isRefreshing={isRefreshing} pullDistance={pullDistance} showIndicator={showIndicator} />
         
         {/* Table area - flex-1 to fill remaining space, pb for bottom nav */}
         <div className="flex-1 min-h-0 px-4 pb-16 overflow-y-auto">
-          {mainTab === 'leads' ? (
-            <ProspectTable
-              prospects={prospects}
-              loading={loading}
-              onAdd={addProspect}
-              onUpdate={updateProspect}
-              onDelete={deleteProspect}
-              onBulkDelete={bulkDeleteProspects}
-              onRestoreProspect={restoreProspect}
-              onRestoreProspects={restoreProspects}
-              onImport={importProspects}
-              onReorderProspects={reorderProspects}
-              sheets={sheets}
-              selectedSheetId={selectedSheetId}
-              onSelectSheet={setSelectedSheetId}
-              onAddSheet={addSheet}
-              onUpdateSheet={updateSheet}
-              onDeleteSheet={deleteSheet}
-              getOrCreateTodaySheet={getOrCreateTodaySheet}
-              filterMode="calling"
-              subFilter="all"
-              externalSearch={searchQuery}
-            />
-          ) : (
-            <ProspectTable
-              prospects={prospects}
-              loading={loading}
-              onAdd={addProspect}
-              onUpdate={updateProspect}
-              onDelete={deleteProspect}
-              onBulkDelete={bulkDeleteProspects}
-              onRestoreProspect={restoreProspect}
-              onRestoreProspects={restoreProspects}
-              onImport={importProspects}
-              onReorderProspects={reorderProspects}
-              sheets={sheets}
-              selectedSheetId={selectedSheetId}
-              onSelectSheet={setSelectedSheetId}
-              onAddSheet={addSheet}
-              onUpdateSheet={updateSheet}
-              onDeleteSheet={deleteSheet}
-              filterMode="funnel"
-              subFilter="all"
-              externalSearch={searchQuery}
-            />
-          )}
+          {mainTab === 'leads' ? <ProspectTable prospects={prospects} loading={loading} onAdd={addProspect} onUpdate={updateProspect} onDelete={deleteProspect} onBulkDelete={bulkDeleteProspects} onRestoreProspect={restoreProspect} onRestoreProspects={restoreProspects} onImport={importProspects} onReorderProspects={reorderProspects} sheets={sheets} selectedSheetId={selectedSheetId} onSelectSheet={setSelectedSheetId} onAddSheet={addSheet} onUpdateSheet={updateSheet} onDeleteSheet={deleteSheet} getOrCreateTodaySheet={getOrCreateTodaySheet} filterMode="calling" subFilter="all" externalSearch={searchQuery} /> : <ProspectTable prospects={prospects} loading={loading} onAdd={addProspect} onUpdate={updateProspect} onDelete={deleteProspect} onBulkDelete={bulkDeleteProspects} onRestoreProspect={restoreProspect} onRestoreProspects={restoreProspects} onImport={importProspects} onReorderProspects={reorderProspects} sheets={sheets} selectedSheetId={selectedSheetId} onSelectSheet={setSelectedSheetId} onAddSheet={addSheet} onUpdateSheet={updateSheet} onDeleteSheet={deleteSheet} filterMode="funnel" subFilter="all" externalSearch={searchQuery} />}
         </div>
       </main>
 
       <BottomNav />
 
       {/* Filter Tag Setup Dialog */}
-      <FilterTagSetupDialog
-        open={showFilterSetup}
-        onOpenChange={setShowFilterSetup}
-        onComplete={markSetupDone}
-      />
-    </div>
-  );
+      <FilterTagSetupDialog open={showFilterSetup} onOpenChange={setShowFilterSetup} onComplete={markSetupDone} />
+    </div>;
 }
