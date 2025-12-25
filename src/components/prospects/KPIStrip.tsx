@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Prospect } from '@/types/prospect';
 import { useTrackingFormatContext } from '@/contexts/TrackingFormatContext';
-import { Star, Users, MessageCircle } from 'lucide-react';
+import { Users, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface KPIStripProps {
@@ -14,6 +14,7 @@ export function KPIStrip({ prospects, isCalling }: KPIStripProps) {
     leadsTrackingTagNames,
     stageTagNames,
     leadsStageTag,
+    handleTargetComplete,
   } = useTrackingFormatContext();
 
   // Calculate KPIs
@@ -32,62 +33,52 @@ export function KPIStrip({ prospects, isCalling }: KPIStripProps) {
       }
     });
 
-    // Count funnel leads (leads with the funnel tag)
-    const funnelLeads = leadsStageTag 
-      ? prospects.filter(p => p.action_taken === leadsStageTag).length 
-      : 0;
+    // Get the final target tag for highlighting
+    const finalTag = isCalling ? leadsStageTag : handleTargetComplete;
 
     return {
       total: totalLeads,
-      funnelLeads,
       tagCounts,
       trackingTags,
+      finalTag,
     };
-  }, [prospects, isCalling, leadsTrackingTagNames, stageTagNames, leadsStageTag]);
+  }, [prospects, isCalling, leadsTrackingTagNames, stageTagNames, leadsStageTag, handleTargetComplete]);
 
   return (
-    <div className="flex items-center gap-3 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+    <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
       {/* Total Leads */}
-      <div className="flex items-center gap-1.5 shrink-0 bg-muted/50 rounded-full px-2.5 py-1">
+      <div className="flex items-center gap-1.5 shrink-0 bg-muted/60 rounded-full px-2.5 py-1">
         <Users className="h-3 w-3 text-muted-foreground" />
         <span className="text-xs font-medium">{kpis.total}</span>
       </div>
 
-      {/* Funnel Leads (only show in Leads view) */}
-      {isCalling && kpis.funnelLeads > 0 && (
-        <div className="flex items-center gap-1.5 shrink-0 bg-yellow-500/10 rounded-full px-2.5 py-1">
-          <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-          <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400">{kpis.funnelLeads}</span>
-        </div>
-      )}
-
-      {/* Tracking Tag Counts */}
+      {/* Tracking Tag Counts - no duplicates */}
       {kpis.trackingTags.map(tag => {
         const count = kpis.tagCounts[tag] || 0;
         if (count === 0) return null;
         
-        const isFunnelTag = tag === leadsStageTag;
+        const isFinalTag = tag === kpis.finalTag;
         
         return (
           <div 
             key={tag}
             className={cn(
-              "flex items-center gap-1.5 shrink-0 rounded-full px-2.5 py-1",
-              isFunnelTag 
-                ? "bg-yellow-500/10" 
-                : "bg-primary/5"
+              "flex items-center gap-1.5 shrink-0 rounded-full px-2.5 py-1 transition-colors",
+              isFinalTag 
+                ? "bg-emerald-500/15 ring-1 ring-emerald-500/30" 
+                : "bg-muted/40"
             )}
           >
-            {isFunnelTag && <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />}
+            {isFinalTag && <Trophy className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />}
             <span className={cn(
               "text-xs font-medium truncate max-w-[60px]",
-              isFunnelTag ? "text-yellow-600 dark:text-yellow-400" : "text-muted-foreground"
+              isFinalTag ? "text-emerald-700 dark:text-emerald-300" : "text-muted-foreground"
             )}>
               {tag}
             </span>
             <span className={cn(
               "text-xs font-semibold",
-              isFunnelTag ? "text-yellow-600 dark:text-yellow-400" : ""
+              isFinalTag ? "text-emerald-700 dark:text-emerald-300" : ""
             )}>
               {count}
             </span>
