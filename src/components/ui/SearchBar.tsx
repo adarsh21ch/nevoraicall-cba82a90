@@ -19,14 +19,14 @@ export function SearchBar({
       "relative w-full",
       className
     )}>
-      <div className="relative flex items-center bg-muted/50 rounded-xl border border-border/30 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+      <div className="relative flex items-center bg-muted/50 rounded-lg border border-border/30 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
         <Search className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none" />
         <input
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full h-10 pl-9 pr-9 bg-transparent text-sm placeholder:text-muted-foreground/60 focus:outline-none rounded-xl"
+          className="w-full h-9 pl-9 pr-9 bg-transparent text-sm placeholder:text-muted-foreground/60 focus:outline-none rounded-lg"
         />
         {value && (
           <button

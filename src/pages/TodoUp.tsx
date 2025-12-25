@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGlobalTodos } from '@/contexts/TodosContext';
+import { useSwipeTabs } from '@/hooks/useSwipeTabs';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { HeaderBellIcon } from '@/components/layout/HeaderBellIcon';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
@@ -81,11 +82,23 @@ export default function TodoUp() {
   // Calendar strip state
   const calendar = useCalendarStrip();
 
+  // Swipe to switch tabs
+  const { containerRef: swipeRef } = useSwipeTabs({
+    onSwipeLeft: () => setViewMode('todo-list'),
+    onSwipeRight: () => setViewMode('daily-tasks'),
+  });
+
   // Pull-to-refresh
   const handleRefresh = useCallback(async () => {
     await refetchTodos?.();
   }, [refetchTodos]);
-  const { containerRef, isRefreshing, pullDistance, showIndicator } = usePullToRefresh(handleRefresh);
+  const { containerRef: pullRef, isRefreshing, pullDistance, showIndicator } = usePullToRefresh(handleRefresh);
+
+  // Combine refs
+  const mainRef = useCallback((node: HTMLDivElement | null) => {
+    (pullRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+    (swipeRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+  }, [pullRef, swipeRef]);
 
   useEffect(() => {
     if (!user && !authLoading) {
@@ -220,7 +233,7 @@ export default function TodoUp() {
         />
       </div>
 
-      <main ref={containerRef} className="scrollable-content relative pb-24 pt-[168px]">
+      <main ref={mainRef} className="scrollable-content relative pb-24 pt-[168px]">
         <PullToRefreshIndicator isRefreshing={isRefreshing} pullDistance={pullDistance} showIndicator={showIndicator} />
         <div className="container py-3 px-4 space-y-4">
           {/* Daily Tasks View */}
