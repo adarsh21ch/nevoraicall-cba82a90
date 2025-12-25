@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGlobalProspects } from '@/contexts/ProspectsContext';
 import { useSheets } from '@/hooks/useSheets';
+import { useSwipeTabs } from '@/hooks/useSwipeTabs';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { HeaderBellIcon } from '@/components/layout/HeaderBellIcon';
 import { ProspectTable } from '@/components/prospects/ProspectTable';
@@ -104,11 +105,23 @@ export default function Dashboard() {
     setMainTab(newTab as 'leads' | 'funnel');
   };
 
+  // Swipe to switch tabs
+  const { containerRef: swipeRef } = useSwipeTabs({
+    onSwipeLeft: () => handleTabChange('funnel'),
+    onSwipeRight: () => handleTabChange('leads'),
+  });
+
   // Pull-to-refresh
   const handleRefresh = useCallback(async () => {
     await Promise.all([refetch?.(), refetchSheets?.()]);
   }, [refetch, refetchSheets]);
-  const { containerRef, isRefreshing, pullDistance, showIndicator } = usePullToRefresh(handleRefresh);
+  const { containerRef: pullRef, isRefreshing, pullDistance, showIndicator } = usePullToRefresh(handleRefresh);
+
+  // Combine refs for swipe and pull-to-refresh
+  const mainRef = useCallback((node: HTMLDivElement | null) => {
+    (pullRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+    (swipeRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+  }, [pullRef, swipeRef]);
 
   useEffect(() => {
     if (!user && !authLoading) {
@@ -132,23 +145,24 @@ export default function Dashboard() {
     { value: 'funnel', label: 'Funnel', icon: Layers },
   ];
 
-  // Calculate header height: logo section (~64px) + tab bar (~44px) = ~108px
-  const headerHeight = 108;
+  // Calculate header height: logo section (~56px) + tab bar (~56px) + search (~48px) = ~160px
+  const headerHeight = 160;
   
   return (
     <div className="app-layout bg-gradient-to-b from-background via-background to-muted/20">
-      {/* Premium Header */}
-      <header className="fixed top-0 left-0 right-0 z-40 bg-card/80 backdrop-blur-xl">
-        <div className="flex items-center justify-between px-4 py-3">
+      {/* Premium Header - Clean stacked rows */}
+      <header className="fixed top-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-xl border-b border-border/30">
+        {/* Row A: Page title */}
+        <div className="flex items-center justify-between px-4 py-2.5">
           <div className="flex items-center gap-3">
             <img 
               src={nevoraLogo} 
               alt="NevorAI Logo" 
-              className="h-10 w-10 rounded-xl object-cover shadow-md"
+              className="h-9 w-9 rounded-xl object-cover shadow-md"
             />
             <div>
-              <h1 className="text-xl font-bold tracking-tight">Follow Up</h1>
-              <p className="text-xs text-muted-foreground font-medium">
+              <h1 className="text-lg font-bold tracking-tight">Follow Up</h1>
+              <p className="text-[11px] text-muted-foreground font-medium">
                 Manage your prospects
               </p>
             </div>
@@ -156,16 +170,26 @@ export default function Dashboard() {
           <HeaderBellIcon />
         </div>
         
-        {/* Sticky Top Tab Bar - Leads / Funnel */}
+        {/* Row B: Segmented control - Leads / Funnel */}
         <TopTabBar
           options={toggleOptions}
           value={mainTab}
           onChange={handleTabChange}
         />
+        
+        {/* Row C: Search Bar - Compact */}
+        <div className="px-4 pb-2">
+          <SearchBar 
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search name, phone..."
+            className="h-9"
+          />
+        </div>
       </header>
 
       <main 
-        ref={containerRef} 
+        ref={mainRef} 
         className="flex flex-col" 
         style={{ 
           touchAction: 'pan-x pan-y', 
@@ -176,17 +200,8 @@ export default function Dashboard() {
       >
         <PullToRefreshIndicator isRefreshing={isRefreshing} pullDistance={pullDistance} showIndicator={showIndicator} />
         
-        {/* Search Bar */}
-        <div className="flex-shrink-0 px-4 pt-2 pb-2">
-          <SearchBar 
-            value={searchQuery}
-            onChange={setSearchQuery}
-            placeholder="Search name, phone..."
-          />
-        </div>
-        
         {/* Table area - flex-1 and min-h-0 to allow proper flex shrinking with overflow */}
-        <div className="flex-1 min-h-0 px-4">
+        <div className="flex-1 min-h-0 px-4 pt-2">
           {mainTab === 'leads' ? (
             <ProspectTable
               prospects={prospects}
