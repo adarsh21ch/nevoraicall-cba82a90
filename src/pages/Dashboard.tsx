@@ -176,14 +176,6 @@ export default function Dashboard() {
       >
         <PullToRefreshIndicator isRefreshing={isRefreshing} pullDistance={pullDistance} showIndicator={showIndicator} />
         
-        {/* Collapsible Search Bar */}
-        <div className="flex-shrink-0 px-4 pt-2 pb-2">
-          <CollapsibleSearchBar 
-            value={searchQuery}
-            onChange={setSearchQuery}
-            placeholder="Search name, phone..."
-          />
-        </div>
         
         {/* Table area - flex-1 and min-h-0 to allow proper flex shrinking with overflow */}
         <div className="flex-1 min-h-0 px-4">
