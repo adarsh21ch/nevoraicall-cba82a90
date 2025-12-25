@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useProfile } from '@/hooks/useProfile';
 import { useCustomOptionsContext } from '@/contexts/CustomOptionsContext';
 
@@ -36,63 +36,45 @@ export function useTrackingTags(): TrackingTags {
   const [stageTrackingTags, setStageTrackingTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Memoize stable values for dependencies
-  const userId = profile?.user_id;
-  const useLeaderStages = profile?.use_leader_stages;
-  const leadersId = profile?.leaders_id_of_my_leader;
-  const responseLabels = profile?.response_labels;
-  const stageLabels = profile?.stage_labels;
-
-  useEffect(() => {
-    if (profileLoading) return;
-    
+  const fetchTrackingTags = useCallback(async () => {
     if (!profile) {
       setLoading(false);
       return;
     }
 
-    let cancelled = false;
+    setLoading(true);
 
-    const fetchTags = async () => {
-      setLoading(true);
-
-      try {
-        // If user uses leader's tracking tags, fetch from leader
-        if (useLeaderStages && leadersId) {
-          const leaderConfig = await getLeaderStageConfig(leadersId);
-          if (cancelled) return;
-          if (leaderConfig) {
-            setCallingTrackingTags(extractTagNames(leaderConfig.response_labels));
-            setStageTrackingTags(extractTagNames(leaderConfig.stage_labels));
-          } else {
-            // Leader not found, fallback to user's own tags
-            setCallingTrackingTags(extractTagNames(responseLabels));
-            setStageTrackingTags(extractTagNames(stageLabels));
-          }
+    try {
+      // If user uses leader's tracking tags, fetch from leader
+      if (profile.use_leader_stages && profile.leaders_id_of_my_leader) {
+        const leaderConfig = await getLeaderStageConfig(profile.leaders_id_of_my_leader);
+        if (leaderConfig) {
+          setCallingTrackingTags(extractTagNames(leaderConfig.response_labels));
+          setStageTrackingTags(extractTagNames(leaderConfig.stage_labels));
         } else {
-          // Use user's own tracking tags
-          setCallingTrackingTags(extractTagNames(responseLabels));
-          setStageTrackingTags(extractTagNames(stageLabels));
+          // Leader not found, fallback to user's own tags
+          setCallingTrackingTags(extractTagNames(profile.response_labels));
+          setStageTrackingTags(extractTagNames(profile.stage_labels));
         }
-      } catch (error) {
-        if (cancelled) return;
-        // Fallback to user's own tags on error silently
-        setCallingTrackingTags(extractTagNames(responseLabels));
-        setStageTrackingTags(extractTagNames(stageLabels));
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+      } else {
+        // Use user's own tracking tags
+        setCallingTrackingTags(extractTagNames(profile.response_labels));
+        setStageTrackingTags(extractTagNames(profile.stage_labels));
       }
-    };
+    } catch (error) {
+      // Fallback to user's own tags on error silently
+      setCallingTrackingTags(extractTagNames(profile.response_labels));
+      setStageTrackingTags(extractTagNames(profile.stage_labels));
+    } finally {
+      setLoading(false);
+    }
+  }, [profile?.user_id, profile?.use_leader_stages, profile?.leaders_id_of_my_leader, getLeaderStageConfig]);
 
-    fetchTags();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [profileLoading, userId, useLeaderStages, leadersId, responseLabels, stageLabels, getLeaderStageConfig]);
-
+  useEffect(() => {
+    if (!profileLoading) {
+      fetchTrackingTags();
+    }
+  }, [profileLoading, fetchTrackingTags]);
 
   // Get custom options for each type
   const customActionOptions = getCustomOptionsForType('action_taken').map(o => o.option_value);

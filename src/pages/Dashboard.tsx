@@ -166,7 +166,7 @@ export default function Dashboard() {
 
       <main 
         ref={containerRef} 
-        className="flex flex-col overflow-y-auto" 
+        className="flex flex-col" 
         style={{ 
           touchAction: 'pan-x pan-y', 
           paddingTop: `${headerHeight}px`,
