@@ -64,6 +64,12 @@ interface ProspectTableProps {
   subFilter: 'all' | 'hot' | 'scheduled' | 'day1' | 'progress';
   // External search from parent (optional - if provided, will be used instead of internal search)
   externalSearch?: string;
+  // Pagination props
+  hasNextPage?: boolean;
+  onLoadMore?: () => void;
+  isLoadingMore?: boolean;
+  totalCount?: number;
+  loadedCount?: number;
 }
 
 // Simplified column configuration - only 3 columns, no horizontal scroll needed
@@ -256,7 +262,12 @@ export function ProspectTable({
   getOrCreateTodaySheet,
   filterMode,
   subFilter,
-  externalSearch = ''
+  externalSearch = '',
+  hasNextPage,
+  onLoadMore,
+  isLoadingMore,
+  totalCount,
+  loadedCount
 }: ProspectTableProps) {
   const [filters, setFilters] = useState<Filters>({
     search: '',
@@ -898,8 +909,30 @@ export function ProspectTable({
           </DndContext> : <TableContent isMobile={isMobile} COLUMN_ORDER={COLUMN_ORDER} selectionMode={selectionMode} selectedIds={selectedIds} selectionProspects={selectionProspects} handleSelectAll={handleSelectAll} sheets={sheets} selectedSheetId={selectedSheetId} onSelectSheet={onSelectSheet} onAddSheet={onAddSheet} handleUpdateSheetWithUndo={handleUpdateSheetWithUndo} onDeleteSheet={onDeleteSheet} handleEnterSelectMode={handleEnterSelectMode} handleDeleteAllInSheet={handleDeleteAllInSheet} filteredProspects={filteredProspects} prospects={prospects} sheetFilteredProspects={sheetFilteredProspects} setFilters={setFilters} isCalling={isCalling} expandedRowId={expandedRowId} handleToggleExpand={handleToggleExpand} handleUpdateWithUndo={handleUpdateWithUndo} handleDeleteWithUndo={handleDeleteWithUndo} handleToggleSelect={handleToggleSelect} enableDragAndDrop={enableDragAndDrop} callingTrackingTags={callingTrackingTags} stageTrackingTags={stageTrackingTags} onOpenResponseTagsDialog={() => setResponseTagsDialogOpen(true)} onOpenStageTagsDialog={() => setStageTagsDialogOpen(true)} lastContactedId={lastContactedId} onMarkLastContacted={handleMarkLastContacted} onExportSheet={exportSheet} onExportAll={exportToExcel} />}
       </div>
 
-      {/* Footer info */}
-      
+      {/* Load More / Pagination */}
+      {hasNextPage && (
+        <div className="flex-shrink-0 py-3 flex flex-col items-center gap-2 border-t border-border/30">
+          <p className="text-xs text-muted-foreground">
+            Showing {loadedCount?.toLocaleString()} of {totalCount?.toLocaleString()} leads
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onLoadMore}
+            disabled={isLoadingMore}
+            className="min-w-[120px]"
+          >
+            {isLoadingMore ? (
+              <>
+                <span className="animate-spin mr-2">⟳</span>
+                Loading...
+              </>
+            ) : (
+              'Load More'
+            )}
+          </Button>
+        </div>
+      )}
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>

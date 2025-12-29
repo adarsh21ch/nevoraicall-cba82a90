@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Prospect, mapOldStatusToNew } from '@/types/prospect';
 import { toast } from 'sonner';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useEffect } from 'react';
 import { useEncryption } from '@/hooks/useEncryption';
 
 const PAGE_SIZE = 50;
@@ -277,15 +277,13 @@ export function useProspectsQuery() {
         sort_order: index + 1,
       }));
 
-      // Use direct update since RPC might not be in types yet
+      // Use batch RPC function for efficiency (single DB call instead of N calls)
       try {
-        for (const update of updates) {
-          await supabase
-            .from('prospects')
-            .update({ sort_order: update.sort_order })
-            .eq('id', update.id)
-            .eq('user_id', user.id);
-        }
+        const { error } = await supabase.rpc('batch_reorder_prospects', {
+          p_user_id: user.id,
+          p_updates: updates,
+        });
+        if (error) throw error;
         return true;
       } catch (err) {
         console.error('Error reordering:', err);
@@ -463,6 +461,32 @@ export function useProspectsQuery() {
     },
     [addMutation]
   );
+
+  // Realtime subscription for cross-tab/device sync
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('prospects-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'prospects',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          // Invalidate cache to refetch on any external change
+          queryClient.invalidateQueries({ queryKey: ['prospects', user.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, queryClient]);
 
   return {
     // Data
