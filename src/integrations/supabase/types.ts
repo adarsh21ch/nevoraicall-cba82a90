@@ -1482,6 +1482,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      batch_reorder_prospects: {
+        Args: { p_updates: Json; p_user_id: string }
+        Returns: boolean
+      }
       can_access_learnup_resource: {
         Args: { p_topic_id: string; p_user_id: string }
         Returns: boolean
