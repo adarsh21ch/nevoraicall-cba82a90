@@ -138,6 +138,10 @@ interface TableContentProps {
   onMarkLastContacted: (id: string) => void;
   onExportSheet?: (sheetId: string | null) => void;
   onExportAll?: () => void;
+  // Infinite scroll props
+  sentinelRef: React.RefObject<HTMLDivElement>;
+  hasNextPage?: boolean;
+  isLoadingMore?: boolean;
 }
 function TableContent({
   isMobile,
@@ -172,7 +176,10 @@ function TableContent({
   lastContactedId,
   onMarkLastContacted,
   onExportSheet,
-  onExportAll
+  onExportAll,
+  sentinelRef,
+  hasNextPage,
+  isLoadingMore
 }: TableContentProps) {
   return <div className="relative flex flex-col h-full">
       {/* Table - scrollable area */}
@@ -231,7 +238,23 @@ function TableContent({
                       </button>}
                   </p>
                 </td>
-              </tr> : filteredProspects.map((prospect, index) => <SortableProspectRow key={prospect.id} prospect={prospect} index={index + 1} isCalling={isCalling} isExpanded={expandedRowId === prospect.id} onToggleExpand={() => handleToggleExpand(prospect.id)} onUpdate={handleUpdateWithUndo} onDelete={handleDeleteWithUndo} isEven={index % 2 === 0} columnOrder={COLUMN_ORDER} isMobileTable={isMobile} selectionModeActive={selectionMode.active} showSelection={selectionMode.active && selectionProspects.some(p => p.id === prospect.id)} isSelected={selectedIds.has(prospect.id)} onToggleSelect={() => handleToggleSelect(prospect.id)} disableDrag={!enableDragAndDrop} isLastContacted={lastContactedId === prospect.id} onMarkLastContacted={() => onMarkLastContacted(prospect.id)} />)}
+              </tr> : (
+                <>
+                  {filteredProspects.map((prospect, index) => <SortableProspectRow key={prospect.id} prospect={prospect} index={index + 1} isCalling={isCalling} isExpanded={expandedRowId === prospect.id} onToggleExpand={() => handleToggleExpand(prospect.id)} onUpdate={handleUpdateWithUndo} onDelete={handleDeleteWithUndo} isEven={index % 2 === 0} columnOrder={COLUMN_ORDER} isMobileTable={isMobile} selectionModeActive={selectionMode.active} showSelection={selectionMode.active && selectionProspects.some(p => p.id === prospect.id)} isSelected={selectedIds.has(prospect.id)} onToggleSelect={() => handleToggleSelect(prospect.id)} disableDrag={!enableDragAndDrop} isLastContacted={lastContactedId === prospect.id} onMarkLastContacted={() => onMarkLastContacted(prospect.id)} />)}
+                  {/* Infinite scroll sentinel */}
+                  {hasNextPage && (
+                    <tr>
+                      <td colSpan={COLUMN_ORDER.length + (selectionMode.active ? 1 : 0)} className="p-0">
+                        <div ref={sentinelRef} className="h-4 flex items-center justify-center">
+                          {isLoadingMore && (
+                            <span className="text-xs text-muted-foreground animate-pulse">Loading more...</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </>
+              )}
           </tbody>
         </table>
       </div>
@@ -302,6 +325,26 @@ export function ProspectTable({
   // Tag management dialogs
   const [responseTagsDialogOpen, setResponseTagsDialogOpen] = useState(false);
   const [stageTagsDialogOpen, setStageTagsDialogOpen] = useState(false);
+
+  // Infinite scroll sentinel ref
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    if (!hasNextPage || isLoadingMore || !sentinelRef.current) return;
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isLoadingMore) {
+          onLoadMore?.();
+        }
+      },
+      { threshold: 0.1, rootMargin: '100px' }
+    );
+    
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [hasNextPage, isLoadingMore, onLoadMore]);
 
   // Undo/Redo
   const {
@@ -904,35 +947,10 @@ export function ProspectTable({
       <div className="bg-card rounded-xl border border-border/50 shadow-sm overflow-hidden flex-1 flex flex-col min-h-0">
         {enableDragAndDrop ? <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleRowDragEnd}>
             <SortableContext items={filteredProspects.map(p => p.id)} strategy={verticalListSortingStrategy}>
-              <TableContent isMobile={isMobile} COLUMN_ORDER={COLUMN_ORDER} selectionMode={selectionMode} selectedIds={selectedIds} selectionProspects={selectionProspects} handleSelectAll={handleSelectAll} sheets={sheets} selectedSheetId={selectedSheetId} onSelectSheet={onSelectSheet} onAddSheet={onAddSheet} handleUpdateSheetWithUndo={handleUpdateSheetWithUndo} onDeleteSheet={onDeleteSheet} handleEnterSelectMode={handleEnterSelectMode} handleDeleteAllInSheet={handleDeleteAllInSheet} filteredProspects={filteredProspects} prospects={prospects} sheetFilteredProspects={sheetFilteredProspects} setFilters={setFilters} isCalling={isCalling} expandedRowId={expandedRowId} handleToggleExpand={handleToggleExpand} handleUpdateWithUndo={handleUpdateWithUndo} handleDeleteWithUndo={handleDeleteWithUndo} handleToggleSelect={handleToggleSelect} enableDragAndDrop={enableDragAndDrop} callingTrackingTags={callingTrackingTags} stageTrackingTags={stageTrackingTags} onOpenResponseTagsDialog={() => setResponseTagsDialogOpen(true)} onOpenStageTagsDialog={() => setStageTagsDialogOpen(true)} lastContactedId={lastContactedId} onMarkLastContacted={handleMarkLastContacted} onExportSheet={exportSheet} onExportAll={exportToExcel} />
+              <TableContent isMobile={isMobile} COLUMN_ORDER={COLUMN_ORDER} selectionMode={selectionMode} selectedIds={selectedIds} selectionProspects={selectionProspects} handleSelectAll={handleSelectAll} sheets={sheets} selectedSheetId={selectedSheetId} onSelectSheet={onSelectSheet} onAddSheet={onAddSheet} handleUpdateSheetWithUndo={handleUpdateSheetWithUndo} onDeleteSheet={onDeleteSheet} handleEnterSelectMode={handleEnterSelectMode} handleDeleteAllInSheet={handleDeleteAllInSheet} filteredProspects={filteredProspects} prospects={prospects} sheetFilteredProspects={sheetFilteredProspects} setFilters={setFilters} isCalling={isCalling} expandedRowId={expandedRowId} handleToggleExpand={handleToggleExpand} handleUpdateWithUndo={handleUpdateWithUndo} handleDeleteWithUndo={handleDeleteWithUndo} handleToggleSelect={handleToggleSelect} enableDragAndDrop={enableDragAndDrop} callingTrackingTags={callingTrackingTags} stageTrackingTags={stageTrackingTags} onOpenResponseTagsDialog={() => setResponseTagsDialogOpen(true)} onOpenStageTagsDialog={() => setStageTagsDialogOpen(true)} lastContactedId={lastContactedId} onMarkLastContacted={handleMarkLastContacted} onExportSheet={exportSheet} onExportAll={exportToExcel} sentinelRef={sentinelRef} hasNextPage={hasNextPage} isLoadingMore={isLoadingMore} />
             </SortableContext>
-          </DndContext> : <TableContent isMobile={isMobile} COLUMN_ORDER={COLUMN_ORDER} selectionMode={selectionMode} selectedIds={selectedIds} selectionProspects={selectionProspects} handleSelectAll={handleSelectAll} sheets={sheets} selectedSheetId={selectedSheetId} onSelectSheet={onSelectSheet} onAddSheet={onAddSheet} handleUpdateSheetWithUndo={handleUpdateSheetWithUndo} onDeleteSheet={onDeleteSheet} handleEnterSelectMode={handleEnterSelectMode} handleDeleteAllInSheet={handleDeleteAllInSheet} filteredProspects={filteredProspects} prospects={prospects} sheetFilteredProspects={sheetFilteredProspects} setFilters={setFilters} isCalling={isCalling} expandedRowId={expandedRowId} handleToggleExpand={handleToggleExpand} handleUpdateWithUndo={handleUpdateWithUndo} handleDeleteWithUndo={handleDeleteWithUndo} handleToggleSelect={handleToggleSelect} enableDragAndDrop={enableDragAndDrop} callingTrackingTags={callingTrackingTags} stageTrackingTags={stageTrackingTags} onOpenResponseTagsDialog={() => setResponseTagsDialogOpen(true)} onOpenStageTagsDialog={() => setStageTagsDialogOpen(true)} lastContactedId={lastContactedId} onMarkLastContacted={handleMarkLastContacted} onExportSheet={exportSheet} onExportAll={exportToExcel} />}
+          </DndContext> : <TableContent isMobile={isMobile} COLUMN_ORDER={COLUMN_ORDER} selectionMode={selectionMode} selectedIds={selectedIds} selectionProspects={selectionProspects} handleSelectAll={handleSelectAll} sheets={sheets} selectedSheetId={selectedSheetId} onSelectSheet={onSelectSheet} onAddSheet={onAddSheet} handleUpdateSheetWithUndo={handleUpdateSheetWithUndo} onDeleteSheet={onDeleteSheet} handleEnterSelectMode={handleEnterSelectMode} handleDeleteAllInSheet={handleDeleteAllInSheet} filteredProspects={filteredProspects} prospects={prospects} sheetFilteredProspects={sheetFilteredProspects} setFilters={setFilters} isCalling={isCalling} expandedRowId={expandedRowId} handleToggleExpand={handleToggleExpand} handleUpdateWithUndo={handleUpdateWithUndo} handleDeleteWithUndo={handleDeleteWithUndo} handleToggleSelect={handleToggleSelect} enableDragAndDrop={enableDragAndDrop} callingTrackingTags={callingTrackingTags} stageTrackingTags={stageTrackingTags} onOpenResponseTagsDialog={() => setResponseTagsDialogOpen(true)} onOpenStageTagsDialog={() => setStageTagsDialogOpen(true)} lastContactedId={lastContactedId} onMarkLastContacted={handleMarkLastContacted} onExportSheet={exportSheet} onExportAll={exportToExcel} sentinelRef={sentinelRef} hasNextPage={hasNextPage} isLoadingMore={isLoadingMore} />}
       </div>
-
-      {/* Load More / Pagination */}
-      {hasNextPage && (
-        <div className="flex-shrink-0 py-3 flex flex-col items-center gap-2 border-t border-border/30">
-          <p className="text-xs text-muted-foreground">
-            Showing {loadedCount?.toLocaleString()} of {totalCount?.toLocaleString()} leads
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onLoadMore}
-            disabled={isLoadingMore}
-            className="min-w-[120px]"
-          >
-            {isLoadingMore ? (
-              <>
-                <span className="animate-spin mr-2">⟳</span>
-                Loading...
-              </>
-            ) : (
-              'Load More'
-            )}
-          </Button>
-        </div>
-      )}
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
