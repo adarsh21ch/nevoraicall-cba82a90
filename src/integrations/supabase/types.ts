@@ -14,6 +14,565 @@ export type Database = {
   }
   public: {
     Tables: {
+      ac_announcements: {
+        Row: {
+          author_user_id: string | null
+          body: string
+          category: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          is_pinned: boolean
+          published_at: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author_user_id?: string | null
+          body: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_pinned?: boolean
+          published_at?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author_user_id?: string | null
+          body?: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_pinned?: boolean
+          published_at?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ac_chat_messages: {
+        Row: {
+          attachments_json: Json | null
+          created_at: string
+          deleted_at: string | null
+          edited_at: string | null
+          id: string
+          is_pinned: boolean
+          mentioned_user_ids: string[] | null
+          message: string
+          message_type: string
+          poll_id: string | null
+          reply_to_id: string | null
+          room_id: string
+          user_id: string
+        }
+        Insert: {
+          attachments_json?: Json | null
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          id?: string
+          is_pinned?: boolean
+          mentioned_user_ids?: string[] | null
+          message: string
+          message_type?: string
+          poll_id?: string | null
+          reply_to_id?: string | null
+          room_id?: string
+          user_id: string
+        }
+        Update: {
+          attachments_json?: Json | null
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          id?: string
+          is_pinned?: boolean
+          mentioned_user_ids?: string[] | null
+          message?: string
+          message_type?: string
+          poll_id?: string | null
+          reply_to_id?: string | null
+          room_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ac_chat_messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "ac_chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ac_chat_poll_options: {
+        Row: {
+          id: string
+          label: string
+          poll_id: string
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          label: string
+          poll_id: string
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          label?: string
+          poll_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ac_chat_poll_options_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "ac_chat_polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ac_chat_poll_votes: {
+        Row: {
+          created_at: string
+          id: string
+          option_id: string
+          poll_id: string
+          voter_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          option_id: string
+          poll_id: string
+          voter_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          option_id?: string
+          poll_id?: string
+          voter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ac_chat_poll_votes_option_id_fkey"
+            columns: ["option_id"]
+            isOneToOne: false
+            referencedRelation: "ac_chat_poll_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ac_chat_poll_votes_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "ac_chat_polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ac_chat_polls: {
+        Row: {
+          closes_at: string | null
+          created_at: string
+          created_by: string
+          id: string
+          is_closed: boolean
+          question: string
+        }
+        Insert: {
+          closes_at?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          is_closed?: boolean
+          question: string
+        }
+        Update: {
+          closes_at?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_closed?: boolean
+          question?: string
+        }
+        Relationships: []
+      }
+      ac_chat_read_status: {
+        Row: {
+          id: string
+          last_read_at: string
+          last_read_message_id: string | null
+          room_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          last_read_at?: string
+          last_read_message_id?: string | null
+          room_id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          last_read_at?: string
+          last_read_message_id?: string | null
+          room_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ac_chat_read_status_last_read_message_id_fkey"
+            columns: ["last_read_message_id"]
+            isOneToOne: false
+            referencedRelation: "ac_chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ac_event_rsvps: {
+        Row: {
+          checked_in_at: string | null
+          created_at: string
+          event_id: string
+          id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          checked_in_at?: string | null
+          created_at?: string
+          event_id: string
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          checked_in_at?: string | null
+          created_at?: string
+          event_id?: string
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ac_event_rsvps_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "ac_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ac_events: {
+        Row: {
+          all_day: boolean | null
+          capacity: number | null
+          category: string | null
+          created_at: string
+          created_by: string
+          deleted_at: string | null
+          description: string | null
+          end_at: string | null
+          host_name: string | null
+          id: string
+          link: string | null
+          location: string | null
+          start_at: string
+          timezone: string | null
+          title: string
+          updated_at: string
+          visibility: string
+        }
+        Insert: {
+          all_day?: boolean | null
+          capacity?: number | null
+          category?: string | null
+          created_at?: string
+          created_by: string
+          deleted_at?: string | null
+          description?: string | null
+          end_at?: string | null
+          host_name?: string | null
+          id?: string
+          link?: string | null
+          location?: string | null
+          start_at: string
+          timezone?: string | null
+          title: string
+          updated_at?: string
+          visibility?: string
+        }
+        Update: {
+          all_day?: boolean | null
+          capacity?: number | null
+          category?: string | null
+          created_at?: string
+          created_by?: string
+          deleted_at?: string | null
+          description?: string | null
+          end_at?: string | null
+          host_name?: string | null
+          id?: string
+          link?: string | null
+          location?: string | null
+          start_at?: string
+          timezone?: string | null
+          title?: string
+          updated_at?: string
+          visibility?: string
+        }
+        Relationships: []
+      }
+      ac_notifications: {
+        Row: {
+          announcement_id: string | null
+          body: string | null
+          created_at: string
+          id: string
+          is_read: boolean
+          link_url: string | null
+          read_at: string | null
+          scheduled_at: string | null
+          status: string
+          title: string
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          announcement_id?: string | null
+          body?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link_url?: string | null
+          read_at?: string | null
+          scheduled_at?: string | null
+          status?: string
+          title: string
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          announcement_id?: string | null
+          body?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link_url?: string | null
+          read_at?: string | null
+          scheduled_at?: string | null
+          status?: string
+          title?: string
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ac_notifications_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "ac_announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ac_resource_groups: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ac_resource_items: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          label: string
+          note: string | null
+          sort_order: number
+          title: string
+          type: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          label: string
+          note?: string | null
+          sort_order?: number
+          title: string
+          type?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          label?: string
+          note?: string | null
+          sort_order?: number
+          title?: string
+          type?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ac_resource_items_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "ac_resource_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ac_todo_completions: {
+        Row: {
+          created_at: string
+          date: string
+          done_at: string | null
+          id: string
+          is_done: boolean
+          template_item_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          done_at?: string | null
+          id?: string
+          is_done?: boolean
+          template_item_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          done_at?: string | null
+          id?: string
+          is_done?: boolean
+          template_item_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ac_todo_completions_template_item_id_fkey"
+            columns: ["template_item_id"]
+            isOneToOne: false
+            referencedRelation: "ac_todo_template_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ac_todo_template_items: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          is_starred: boolean
+          sort_order: number
+          template_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_starred?: boolean
+          sort_order?: number
+          template_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_starred?: boolean
+          sort_order?: number
+          template_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ac_todo_template_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "ac_todo_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ac_todo_templates: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string
+          group_id: string | null
+          id: string
+          scope: string
+          title: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by: string
+          group_id?: string | null
+          id?: string
+          scope?: string
+          title: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string
+          group_id?: string | null
+          id?: string
+          scope?: string
+          title?: string
+        }
+        Relationships: []
+      }
       achievements: {
         Row: {
           achieved_at: string
@@ -1571,6 +2130,8 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_ac_admin: { Args: { user_uuid: string }; Returns: boolean }
+      is_ac_member: { Args: { user_uuid: string }; Returns: boolean }
       is_community_admin: {
         Args: { p_community_id: string; p_user_id: string }
         Returns: boolean
