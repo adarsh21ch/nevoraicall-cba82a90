@@ -327,6 +327,9 @@ export function useProspectsQuery(options: UseProspectsQueryOptions = {}) {
     onSuccess: () => {
       // Invalidate KPI to update count
       queryClient.invalidateQueries({ queryKey: ['prospects-kpi', user?.id] });
+      // Invalidate tracking stats so deleted leads are not counted
+      queryClient.invalidateQueries({ queryKey: ['tracking-leads', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['tracking-funnel', user?.id] });
     },
     onError: (err, id, context) => {
       if (context?.previousData) {
@@ -458,6 +461,9 @@ export function useProspectsQuery(options: UseProspectsQueryOptions = {}) {
       // Invalidate ALL prospect queries to refetch with new data
       queryClient.invalidateQueries({ queryKey: ['prospects', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['prospects-kpi', user?.id] });
+      // Invalidate tracking stats so imported leads are counted
+      queryClient.invalidateQueries({ queryKey: ['tracking-leads', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['tracking-funnel', user?.id] });
 
       return { imported: totalImported, skipped };
     },
