@@ -18,7 +18,7 @@ import { UpgradeCard } from '@/components/subscription/UpgradeCard';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User, LogOut, ChevronRight, Phone, Building2, MapPin, Loader2, FileText, Shield, Receipt, Mail, Settings, Copy, ExternalLink, BarChart3 } from 'lucide-react';
+import { User, LogOut, ChevronRight, Phone, Building2, MapPin, Loader2, FileText, Shield, Receipt, Mail, Settings, Copy, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -254,31 +254,7 @@ export default function Profile() {
 
           {/* Menu Items */}
           <div className="space-y-2">
-            {/* My Tracking / Track Up - Personal tracking page */}
-            <button 
-              onClick={() => navigate('/tracking')}
-              className={cn(
-                "w-full relative overflow-hidden rounded-xl p-4",
-                "bg-gradient-to-r backdrop-blur-sm",
-                "border border-border/50 shadow-sm",
-                "flex items-center justify-between",
-                "transition-all duration-300 hover:shadow-md hover:scale-[1.01]",
-                "from-primary/20 to-primary/5"
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <BarChart3 className="h-5 w-5 text-primary" />
-                </div>
-                <div className="text-left">
-                  <span className="font-medium block">My Tracking / Track Up</span>
-                  <span className="text-xs text-muted-foreground">Personal leads & funnel analytics</span>
-                </div>
-              </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </button>
-
-            {/* TrackUp Dashboard - External for team tracking */}
+            {/* TrackUp Dashboard */}
             <button 
               onClick={handleOpenTrackUp}
               className={cn(
@@ -296,7 +272,7 @@ export default function Profile() {
                 </div>
                 <div className="text-left">
                   <span className="font-medium block">TrackUp Dashboard</span>
-                  <span className="text-xs text-muted-foreground">Team tracking & analytics</span>
+                  <span className="text-xs text-muted-foreground">Open web dashboard</span>
                 </div>
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground" />

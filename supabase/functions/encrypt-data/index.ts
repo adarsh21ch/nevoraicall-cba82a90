@@ -57,8 +57,7 @@ serve(async (req) => {
   }
 
   try {
-    // JWT is already verified by Supabase (verify_jwt = true in config.toml)
-    // No need for manual getUser() call - if we reach here, the request is authenticated
+    // Verify user is authenticated with proper JWT validation
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       console.error('No authorization header provided');
@@ -68,7 +67,24 @@ serve(async (req) => {
       );
     }
 
-    console.log('Processing authenticated request');
+    // Create Supabase client and verify the JWT token
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      console.error('JWT validation failed:', authError?.message || 'No user found');
+      return new Response(
+        JSON.stringify({ error: 'Invalid or expired token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`Authenticated user: ${user.id}`);
 
     const { action, data } = await req.json();
     console.log(`Processing ${action} request`);

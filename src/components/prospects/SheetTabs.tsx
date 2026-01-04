@@ -132,9 +132,9 @@ export function SheetTabs({
           <button
             onClick={() => onSelectSheet(null)}
             className={cn(
-              "px-3 py-2 text-xs font-medium transition-colors rounded-sm",
+              "px-3 py-2 text-xs font-medium transition-colors",
               selectedSheetId === null 
-                ? "bg-foreground text-background" 
+                ? "bg-card text-foreground border-t-2 border-t-primary" 
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
             )}
           >
@@ -153,9 +153,9 @@ export function SheetTabs({
                   <button
                     onClick={() => onSelectSheet(sheet.id)}
                     className={cn(
-                      "px-3 py-2 text-xs font-medium transition-colors rounded-sm",
+                      "px-3 py-2 text-xs font-medium transition-colors",
                       selectedSheetId === sheet.id 
-                        ? "bg-foreground text-background" 
+                        ? "bg-card text-foreground border-t-2 border-t-primary" 
                         : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
                     )}
                   >

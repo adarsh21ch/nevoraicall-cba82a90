@@ -3,14 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { BottomNav } from '@/components/layout/BottomNav';
-import { DynamicFunnelTracker } from '@/components/tracking/DynamicFunnelTracker';
-import { DynamicLeadsTracker } from '@/components/tracking/DynamicLeadsTracker';
+import { FunnelTracker } from '@/components/trackup/FunnelTracker';
+import { LeadsTracker } from '@/components/trackup/LeadsTracker';
 import { UpgradeBar } from '@/components/subscription/UpgradeBar';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
-import { TopTabBar } from '@/components/ui/TopTabBar';
+import { BottomViewToggle } from '@/components/ui/BottomViewToggle';
 import { Day1SetupDialog } from '@/components/trackup/Day1SetupDialog';
-import { Loader2, TrendingUp, Calendar, Lock, RefreshCw, ArrowLeft } from 'lucide-react';
+import { Loader2, TrendingUp, Calendar, Lock, RefreshCw } from 'lucide-react';
+import { useGlobalProspects } from '@/contexts/ProspectsContext';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useProspectLimit } from '@/hooks/useProspectLimit';
 import { useFunnelConfig } from '@/hooks/useFunnelConfig';
 import { cn } from '@/lib/utils';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
@@ -65,7 +67,9 @@ function usePullToRefresh(onRefresh: () => Promise<void>, threshold = 80) {
 export default function Tracking() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { prospects, refetch } = useGlobalProspects();
   const { isPro, loading: subLoading } = useSubscription();
+  const prospectLimit = useProspectLimit(prospects, isPro);
   const { config, loading: configLoading, saveConfig, getEffectiveConfig, isReadOnly: isFunnelReadOnly, leaderName: funnelLeaderName } = useFunnelConfig();
   const effectiveConfig = getEffectiveConfig();
   const [activeTab, setActiveTab] = useState('leads');
@@ -92,11 +96,18 @@ export default function Tracking() {
   // Show Pro gate if user is not Pro
   const showProGate = !isPro;
 
-  // Pull-to-refresh (no-op since dynamic trackers handle their own data)
+  // Pull-to-refresh
   const handleRefresh = useCallback(async () => {
-    // Dynamic trackers handle their own refetch
-  }, []);
+    await refetch?.();
+  }, [refetch]);
   const { containerRef, isRefreshing, pullDistance, showIndicator } = usePullToRefresh(handleRefresh);
+
+  // Calculate Total CC: 2CC counts as 2, Level Up as 1
+  const totalCC = prospects.reduce((sum, p) => {
+    if (p.funnel_stage === '2CC') return sum + 2;
+    if (p.funnel_stage === 'Level Up') return sum + 1;
+    return sum;
+  }, 0);
 
   useEffect(() => {
     if (!user && !authLoading) {
@@ -121,24 +132,10 @@ export default function Tracking() {
 
   return (
     <div className="app-layout bg-gradient-to-b from-background via-background to-muted/20">
-      {/* Premium Header with Back Button + Leads/Funnel Switch */}
+      {/* Premium Header */}
       <header className="fixed-header z-40 bg-card/80 backdrop-blur-xl border-b border-border/50">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            {/* Back Button */}
-            <button
-              onClick={() => {
-                if (window.history.length > 1) {
-                  navigate(-1);
-                } else {
-                  navigate('/profile');
-                }
-              }}
-              className="p-2 -ml-2 rounded-lg hover:bg-muted/50 transition-colors"
-              aria-label="Go back"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
             <img 
               src={nevoraLogo} 
               alt="NevorAI Logo" 
@@ -149,11 +146,6 @@ export default function Tracking() {
               <p className="text-xs text-muted-foreground font-medium">Track Your Numbers</p>
             </div>
           </div>
-        </div>
-        
-        {/* Leads/Funnel Segmented Switch - TOP, sticky in header */}
-        <div className="px-4 pb-2">
-          <TopTabBar options={toggleOptions} value={activeTab} onChange={handleTabChange} />
         </div>
       </header>
 
@@ -183,12 +175,12 @@ export default function Tracking() {
             </div>
           )}
 
-          {/* Content based on active tab - uses dynamic tag-based trackers */}
+          {/* Content based on active tab - always show real data */}
           <div className="flex-1 min-h-0">
             {activeTab === 'funnel' ? (
-              <DynamicFunnelTracker isPro={true} />
+              <FunnelTracker isPro={true} />
             ) : (
-              <DynamicLeadsTracker isPro={true} />
+              <LeadsTracker isPro={true} />
             )}
           </div>
         </div>
@@ -198,6 +190,13 @@ export default function Tracking() {
       <Day1SetupDialog 
         open={showDay1Setup} 
         onSave={handleDay1Save} 
+      />
+
+      {/* Fixed Bottom View Toggle */}
+      <BottomViewToggle
+        options={toggleOptions}
+        value={activeTab}
+        onChange={handleTabChange}
       />
 
       {/* Upgrade Bar only for Free Users */}
