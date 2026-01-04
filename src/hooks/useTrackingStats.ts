@@ -4,12 +4,16 @@
  * 
  * - Leads Tracking: based on Response Tags (action_taken)
  * - Funnel Tracking: based on Stage Tags (funnel_stage) with CUMULATIVE logic
+ * 
+ * Uses React Query for proper cache invalidation after delete/import operations
  */
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTrackingFormat } from '@/hooks/useTrackingFormat';
-import { format, getDaysInMonth, parse, startOfMonth, endOfMonth } from 'date-fns';
+import { format, getDaysInMonth, parse, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
+import { useState } from 'react';
 
 // 5-second confirmation window
 const FIVE_SECONDS_MS = 5 * 1000;
@@ -46,11 +50,9 @@ export interface TrackingStatsResult {
  */
 export function useLeadsTrackingStats(): TrackingStatsResult {
   const { user } = useAuth();
-  const { leadsTrackingTagNames, leadsFinalTargetTag } = useTrackingFormat();
-  const [loading, setLoading] = useState(true);
+  const { leadsTrackingTagNames } = useTrackingFormat();
+  const queryClient = useQueryClient();
   const [monthYear, setMonthYear] = useState(() => format(new Date(), 'yyyy-MM'));
-  const [dailyMetrics, setDailyMetrics] = useState<DailyTagMetrics[]>([]);
-  const [totals, setTotals] = useState<TagTotals>({ leads: 0, responses: 0, tagCounts: {} });
 
   const daysInMonth = useMemo(() => {
     const date = parse(monthYear, 'yyyy-MM', new Date());
@@ -64,20 +66,18 @@ export function useLeadsTrackingStats(): TrackingStatsResult {
     return daysInMonth - now.getDate();
   }, [monthYear, daysInMonth]);
 
-  const fetchData = useCallback(async () => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+  // Use react-query for proper cache invalidation
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['tracking-leads', user?.id, monthYear, leadsTrackingTagNames],
+    queryFn: async () => {
+      if (!user) return { dailyMetrics: [], totals: { leads: 0, responses: 0, tagCounts: {} } };
 
-    setLoading(true);
-    try {
       const monthDate = parse(monthYear, 'yyyy-MM', new Date());
       const monthStart = startOfMonth(monthDate);
       const monthEnd = endOfMonth(monthDate);
 
-      // Fetch ALL prospects in month (no pagination limit)
-      const { data, error } = await supabase
+      // Fetch ALL prospects in month (no soft-delete column - hard delete only)
+      const { data: prospects, error } = await supabase
         .from('prospects')
         .select('id, date_added, action_taken, action_taken_at')
         .eq('user_id', user.id)
@@ -86,17 +86,16 @@ export function useLeadsTrackingStats(): TrackingStatsResult {
 
       if (error) {
         console.error('Error fetching prospects for leads tracking:', error);
-        setLoading(false);
-        return;
+        return { dailyMetrics: [], totals: { leads: 0, responses: 0, tagCounts: {} } };
       }
 
-      const prospects = data || [];
       const now = new Date();
       const tags = leadsTrackingTagNames.length > 0 ? leadsTrackingTagNames : [];
+      const numDays = getDaysInMonth(monthDate);
 
       // Initialize daily metrics
       const metrics: DailyTagMetrics[] = [];
-      for (let day = 1; day <= daysInMonth; day++) {
+      for (let day = 1; day <= numDays; day++) {
         const dateObj = new Date(monthDate.getFullYear(), monthDate.getMonth(), day);
         const tagCounts: Record<string, number> = {};
         tags.forEach(tag => { tagCounts[tag] = 0; });
@@ -111,7 +110,7 @@ export function useLeadsTrackingStats(): TrackingStatsResult {
       }
 
       // Aggregate by day
-      prospects.forEach((p) => {
+      (prospects || []).forEach((p) => {
         const addedDate = new Date(p.date_added);
         const dayIndex = addedDate.getDate() - 1;
         
@@ -139,8 +138,6 @@ export function useLeadsTrackingStats(): TrackingStatsResult {
         }
       });
 
-      setDailyMetrics(metrics);
-
       // Calculate totals
       const monthlyTotals = metrics.reduce(
         (acc, day) => {
@@ -156,38 +153,33 @@ export function useLeadsTrackingStats(): TrackingStatsResult {
         },
         { leads: 0, responses: 0, tagCounts: {} as Record<string, number> }
       );
-      setTotals(monthlyTotals);
-    } catch (err) {
-      console.error('Error in leads tracking fetchData:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [user, monthYear, daysInMonth, leadsTrackingTagNames]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+      return { dailyMetrics: metrics, totals: monthlyTotals };
+    },
+    enabled: !!user,
+    staleTime: 30000, // 30 seconds
+  });
 
-  const changeMonth = (direction: 'prev' | 'next') => {
+  const changeMonth = useCallback((direction: 'prev' | 'next') => {
     const date = parse(monthYear, 'yyyy-MM', new Date());
-    if (direction === 'prev') {
-      date.setMonth(date.getMonth() - 1);
-    } else {
-      date.setMonth(date.getMonth() + 1);
-    }
-    setMonthYear(format(date, 'yyyy-MM'));
-  };
+    const newDate = direction === 'prev' ? subMonths(date, 1) : addMonths(date, 1);
+    setMonthYear(format(newDate, 'yyyy-MM'));
+  }, [monthYear]);
+
+  const handleRefetch = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   return {
-    dailyMetrics,
-    totals,
-    loading,
+    dailyMetrics: data?.dailyMetrics || [],
+    totals: data?.totals || { leads: 0, responses: 0, tagCounts: {} },
+    loading: isLoading,
     monthYear,
     changeMonth,
     daysInMonth,
     daysRemaining,
     tags: leadsTrackingTagNames,
-    refetch: fetchData,
+    refetch: handleRefetch,
   };
 }
 
@@ -199,10 +191,8 @@ export function useLeadsTrackingStats(): TrackingStatsResult {
 export function useFunnelTrackingStats(): TrackingStatsResult {
   const { user } = useAuth();
   const { stageTagNames } = useTrackingFormat();
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [monthYear, setMonthYear] = useState(() => format(new Date(), 'yyyy-MM'));
-  const [dailyMetrics, setDailyMetrics] = useState<DailyTagMetrics[]>([]);
-  const [totals, setTotals] = useState<TagTotals>({ leads: 0, responses: 0, tagCounts: {} });
 
   const daysInMonth = useMemo(() => {
     const date = parse(monthYear, 'yyyy-MM', new Date());
@@ -216,20 +206,18 @@ export function useFunnelTrackingStats(): TrackingStatsResult {
     return daysInMonth - now.getDate();
   }, [monthYear, daysInMonth]);
 
-  const fetchData = useCallback(async () => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+  // Use react-query for proper cache invalidation
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['tracking-funnel', user?.id, monthYear, stageTagNames],
+    queryFn: async () => {
+      if (!user) return { dailyMetrics: [], totals: { leads: 0, responses: 0, tagCounts: {} } };
 
-    setLoading(true);
-    try {
       const monthDate = parse(monthYear, 'yyyy-MM', new Date());
       const monthStart = startOfMonth(monthDate);
       const monthEnd = endOfMonth(monthDate);
 
-      // Fetch ALL prospects in month
-      const { data, error } = await supabase
+      // Fetch ALL prospects in month (hard delete - no deleted_at column)
+      const { data: prospects, error } = await supabase
         .from('prospects')
         .select('id, date_added, funnel_stage, funnel_stage_at')
         .eq('user_id', user.id)
@@ -238,13 +226,12 @@ export function useFunnelTrackingStats(): TrackingStatsResult {
 
       if (error) {
         console.error('Error fetching prospects for funnel tracking:', error);
-        setLoading(false);
-        return;
+        return { dailyMetrics: [], totals: { leads: 0, responses: 0, tagCounts: {} } };
       }
 
-      const prospects = data || [];
       const stages = stageTagNames.length > 0 ? stageTagNames : [];
       const now = new Date();
+      const numDays = getDaysInMonth(monthDate);
 
       // Build stage index map for cumulative logic
       const stageIndexMap: Record<string, number> = {};
@@ -254,7 +241,7 @@ export function useFunnelTrackingStats(): TrackingStatsResult {
 
       // Initialize daily metrics
       const metrics: DailyTagMetrics[] = [];
-      for (let day = 1; day <= daysInMonth; day++) {
+      for (let day = 1; day <= numDays; day++) {
         const dateObj = new Date(monthDate.getFullYear(), monthDate.getMonth(), day);
         const tagCounts: Record<string, number> = {};
         stages.forEach(stage => { tagCounts[stage] = 0; });
@@ -269,7 +256,7 @@ export function useFunnelTrackingStats(): TrackingStatsResult {
       }
 
       // Aggregate by day with CUMULATIVE counting
-      prospects.forEach((p) => {
+      (prospects || []).forEach((p) => {
         const addedDate = new Date(p.date_added);
         const dayIndex = addedDate.getDate() - 1;
         
@@ -304,8 +291,6 @@ export function useFunnelTrackingStats(): TrackingStatsResult {
         }
       });
 
-      setDailyMetrics(metrics);
-
       // Calculate totals with cumulative logic
       const monthlyTotals = metrics.reduce(
         (acc, day) => {
@@ -321,37 +306,32 @@ export function useFunnelTrackingStats(): TrackingStatsResult {
         },
         { leads: 0, responses: 0, tagCounts: {} as Record<string, number> }
       );
-      setTotals(monthlyTotals);
-    } catch (err) {
-      console.error('Error in funnel tracking fetchData:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [user, monthYear, daysInMonth, stageTagNames]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+      return { dailyMetrics: metrics, totals: monthlyTotals };
+    },
+    enabled: !!user,
+    staleTime: 30000, // 30 seconds
+  });
 
-  const changeMonth = (direction: 'prev' | 'next') => {
+  const changeMonth = useCallback((direction: 'prev' | 'next') => {
     const date = parse(monthYear, 'yyyy-MM', new Date());
-    if (direction === 'prev') {
-      date.setMonth(date.getMonth() - 1);
-    } else {
-      date.setMonth(date.getMonth() + 1);
-    }
-    setMonthYear(format(date, 'yyyy-MM'));
-  };
+    const newDate = direction === 'prev' ? subMonths(date, 1) : addMonths(date, 1);
+    setMonthYear(format(newDate, 'yyyy-MM'));
+  }, [monthYear]);
+
+  const handleRefetch = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   return {
-    dailyMetrics,
-    totals,
-    loading,
+    dailyMetrics: data?.dailyMetrics || [],
+    totals: data?.totals || { leads: 0, responses: 0, tagCounts: {} },
+    loading: isLoading,
     monthYear,
     changeMonth,
     daysInMonth,
     daysRemaining,
     tags: stageTagNames,
-    refetch: fetchData,
+    refetch: handleRefetch,
   };
 }

@@ -9,7 +9,7 @@ import { UpgradeBar } from '@/components/subscription/UpgradeBar';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { BottomViewToggle } from '@/components/ui/BottomViewToggle';
 import { Day1SetupDialog } from '@/components/trackup/Day1SetupDialog';
-import { Loader2, TrendingUp, Calendar, Lock, RefreshCw } from 'lucide-react';
+import { Loader2, TrendingUp, Calendar, Lock, RefreshCw, ArrowLeft } from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useFunnelConfig } from '@/hooks/useFunnelConfig';
 import { cn } from '@/lib/utils';
@@ -121,10 +121,24 @@ export default function Tracking() {
 
   return (
     <div className="app-layout bg-gradient-to-b from-background via-background to-muted/20">
-      {/* Premium Header */}
+      {/* Premium Header with Back Button */}
       <header className="fixed-header z-40 bg-card/80 backdrop-blur-xl border-b border-border/50">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
+            {/* Back Button */}
+            <button
+              onClick={() => {
+                if (window.history.length > 1) {
+                  navigate(-1);
+                } else {
+                  navigate('/profile');
+                }
+              }}
+              className="p-2 -ml-2 rounded-lg hover:bg-muted/50 transition-colors"
+              aria-label="Go back"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
             <img 
               src={nevoraLogo} 
               alt="NevorAI Logo" 
