@@ -2,7 +2,6 @@ import { useAdminAnalytics } from '@/hooks/useAdminAnalytics';
 import { StatsGrid } from './StatsGrid';
 import { SignupTrendChart } from './SignupTrendChart';
 import { SubscriptionPieChart } from './SubscriptionPieChart';
-import { PaymentHistoryTable } from './PaymentHistoryTable';
 import { Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -28,14 +27,12 @@ export function AdminAnalyticsDashboard() {
   return (
     <div className="space-y-4">
       <StatsGrid
-        neveraiTotalUsers={analytics.neveraiTotalUsers}
+        totalSignups={analytics.totalSignups}
+        activeProUsers={analytics.activeProUsers}
         neveraiTodayActive={analytics.neveraiTodayActive}
         neveraiWeekActive={analytics.neveraiWeekActive}
-        activeProUsers={analytics.activeProUsers}
         totalLeads={analytics.totalLeads}
         todayLeads={analytics.todayLeads}
-        weekLeads={analytics.weekLeads}
-        totalSignups={analytics.totalSignups}
       />
 
       <Tabs defaultValue="signups" className="w-full">
