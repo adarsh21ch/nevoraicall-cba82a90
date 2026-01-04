@@ -50,7 +50,7 @@ export interface TrackingStatsResult {
  */
 export function useLeadsTrackingStats(): TrackingStatsResult {
   const { user } = useAuth();
-  const { leadsTrackingTagNames, loading: formatLoading } = useTrackingFormat();
+  const { leadsTrackingTagNames } = useTrackingFormat();
   const queryClient = useQueryClient();
   const [monthYear, setMonthYear] = useState(() => format(new Date(), 'yyyy-MM'));
 
@@ -156,7 +156,7 @@ export function useLeadsTrackingStats(): TrackingStatsResult {
 
       return { dailyMetrics: metrics, totals: monthlyTotals };
     },
-    enabled: !!user && !formatLoading,
+    enabled: !!user,
     staleTime: 30000, // 30 seconds
   });
 
@@ -190,7 +190,7 @@ export function useLeadsTrackingStats(): TrackingStatsResult {
  */
 export function useFunnelTrackingStats(): TrackingStatsResult {
   const { user } = useAuth();
-  const { stageTagNames, loading: formatLoading } = useTrackingFormat();
+  const { stageTagNames } = useTrackingFormat();
   const queryClient = useQueryClient();
   const [monthYear, setMonthYear] = useState(() => format(new Date(), 'yyyy-MM'));
 
@@ -309,7 +309,7 @@ export function useFunnelTrackingStats(): TrackingStatsResult {
 
       return { dailyMetrics: metrics, totals: monthlyTotals };
     },
-    enabled: !!user && !formatLoading,
+    enabled: !!user,
     staleTime: 30000, // 30 seconds
   });
 
