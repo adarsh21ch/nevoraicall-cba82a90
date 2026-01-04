@@ -39,23 +39,24 @@ export function useProspectsQuery(options: UseProspectsQueryOptions = {}) {
   const queryClient = useQueryClient();
   const { decryptBatch, encryptFields, encryptBatch } = useEncryption();
 
-  // Query key includes sheetId, search, filterMode for cache separation
+  // Query key includes sheetId, search, filterMode for PROPER cache separation per sheet
+  // This ensures each sheet has its own cached pages - switching sheets starts fresh
   const queryKey = ['prospects', user?.id, sheetId, search, filterMode];
 
   // Separate query for TOTAL count (doesn't change on scroll)
-  // This fetches just the count, no data
+  // Uses SERVER-SIDE filtering for accurate sheet-specific counts
   const { data: kpiData } = useQuery({
     queryKey: ['prospects-kpi', user?.id, sheetId, search, filterMode],
     queryFn: async () => {
       if (!user) return { total: 0 };
 
-      // Build query for count only
+      // Build query for count only WITH SHEET FILTER
       let query = supabase
         .from('prospects')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id);
 
-      // Apply sheet filter
+      // Apply sheet filter SERVER-SIDE
       if (sheetId) {
         query = query.eq('sheet_id', sheetId);
       }
@@ -79,7 +80,7 @@ export function useProspectsQuery(options: UseProspectsQueryOptions = {}) {
     gcTime: 300000, // 5 minutes
   });
 
-  // Infinite query for paginated prospects
+  // Infinite query for paginated prospects WITH SERVER-SIDE sheet filtering
   const {
     data,
     fetchNextPage,
@@ -98,43 +99,48 @@ export function useProspectsQuery(options: UseProspectsQueryOptions = {}) {
 
       const offset = pageParam as number;
 
-      // Use the paginated function
-      const { data, error } = await supabase.rpc('get_prospects_paginated', {
-        p_user_id: user.id,
-        p_limit: PAGE_SIZE,
-        p_offset: offset,
-      });
+      // Use DIRECT query with server-side filtering instead of RPC
+      // This ensures pagination applies AFTER sheet filter
+      let query = supabase
+        .from('prospects')
+        .select('*', { count: 'exact' })
+        .eq('user_id', user.id);
+
+      // Apply sheet filter SERVER-SIDE (before pagination)
+      if (sheetId) {
+        query = query.eq('sheet_id', sheetId);
+      }
+
+      // Apply search filter SERVER-SIDE
+      if (search) {
+        query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%,notes.ilike.%${search}%`);
+      }
+
+      // Stable ordering
+      query = query
+        .order('sort_order', { ascending: true, nullsFirst: false })
+        .order('date_added', { ascending: false })
+        .order('id', { ascending: true });
+
+      // Pagination: range AFTER filters
+      query = query.range(offset, offset + PAGE_SIZE - 1);
+
+      const { data: rawProspects, count, error } = await query;
 
       if (error) {
         console.error('Error fetching prospects:', error);
         throw error;
       }
 
-      let rawProspects = data || [];
-      const totalCount = rawProspects.length > 0 ? (rawProspects[0] as any).total_count : 0;
-
-      // Apply client-side sheet filter (until backend supports it)
-      if (sheetId) {
-        rawProspects = rawProspects.filter((p: any) => p.sheet_id === sheetId);
-      }
-
-      // Apply client-side search filter
-      if (search) {
-        const searchLower = search.toLowerCase();
-        rawProspects = rawProspects.filter((p: any) => 
-          p.name?.toLowerCase().includes(searchLower) ||
-          p.phone?.toLowerCase().includes(searchLower) ||
-          p.notes?.toLowerCase().includes(searchLower)
-        );
-      }
+      const totalCount = count || 0;
 
       // Decrypt phone numbers in batch
-      const decryptedProspects = await decryptBatch(rawProspects);
+      const decryptedProspects = await decryptBatch(rawProspects || []);
       const mappedProspects = decryptedProspects.map(mapDbProspect);
 
       return {
         prospects: mappedProspects,
-        totalCount: Number(totalCount),
+        totalCount: totalCount,
         nextOffset: offset + PAGE_SIZE < totalCount ? offset + PAGE_SIZE : null,
       };
     },
