@@ -26,7 +26,7 @@ export interface AdminAnalytics {
   dailySignups: DailySignup[];
   subscriptionBreakdown: SubscriptionBreakdown[];
   recentPayments: PaymentLog[];
-  // Core metrics from single source of truth
+  // Core metrics
   neveraiTotalUsers: number;
   neveraiTodayActive: number;
   neveraiWeekActive: number;
@@ -35,6 +35,7 @@ export interface AdminAnalytics {
   todayLeads: number;
   weekLeads: number;
   monthLeads: number;
+  totalSignups: number;
 }
 
 export function useAdminAnalytics() {
@@ -47,7 +48,7 @@ export function useAdminAnalytics() {
       const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
       // Fetch all data in parallel
-      const [analyticsRes, profilesRes, subscriptionsRes, paymentsRes] = await Promise.all([
+      const [analyticsRes, profilesRes, subscriptionsRes, paymentsRes, totalSignupsRes] = await Promise.all([
         // Get core metrics from single source of truth function
         supabase.rpc('admin_get_analytics'),
         
@@ -63,12 +64,17 @@ export function useAdminAnalytics() {
           .from('user_subscriptions')
           .select('plan, expires_at'),
         
-        // Get recent payments (empty for now - payments not enabled)
+        // Get recent payments
         supabase
           .from('payments_log')
           .select('id, created_at, user_email, amount, status, event_type')
           .order('created_at', { ascending: false })
           .limit(20),
+        
+        // Get total signups count
+        supabase
+          .from('profiles')
+          .select('id', { count: 'exact', head: true }),
       ]);
 
       // Extract core metrics from single source
@@ -84,7 +90,6 @@ export function useAdminAnalytics() {
       };
 
       // Process daily signups for chart
-      const today = now.toISOString().split('T')[0];
       const signupsByDate: Record<string, number> = {};
 
       if (profilesRes.data) {
@@ -133,14 +138,16 @@ export function useAdminAnalytics() {
         ([plan, data]) => ({ plan, ...data })
       );
 
-      // Recent payments (empty or actual)
+      // Recent payments
       const recentPayments: PaymentLog[] = (paymentsRes.data || []) as PaymentLog[];
+
+      // Total signups from count query
+      const totalSignups = totalSignupsRes.count || 0;
 
       return {
         dailySignups,
         subscriptionBreakdown,
         recentPayments,
-        // Core metrics from single source of truth
         neveraiTotalUsers: Number(metrics.neverai_total_users) || 0,
         neveraiTodayActive: Number(metrics.neverai_today_active) || 0,
         neveraiWeekActive: Number(metrics.neverai_week_active) || 0,
@@ -149,10 +156,11 @@ export function useAdminAnalytics() {
         todayLeads: Number(metrics.today_leads) || 0,
         weekLeads: Number(metrics.week_leads) || 0,
         monthLeads: Number(metrics.month_leads) || 0,
+        totalSignups,
       };
     },
     enabled: !!user,
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 }

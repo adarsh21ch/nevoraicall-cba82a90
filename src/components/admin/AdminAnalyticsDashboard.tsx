@@ -35,6 +35,7 @@ export function AdminAnalyticsDashboard() {
         totalLeads={analytics.totalLeads}
         todayLeads={analytics.todayLeads}
         weekLeads={analytics.weekLeads}
+        totalSignups={analytics.totalSignups}
       />
 
       <Tabs defaultValue="signups" className="w-full">

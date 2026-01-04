@@ -1,4 +1,4 @@
-import { Users, TrendingUp, Calendar, Target, Activity, Database } from 'lucide-react';
+import { Users, TrendingUp, Calendar, Target, Activity, Database, UserPlus, Crown } from 'lucide-react';
 
 interface StatsGridProps {
   neveraiTotalUsers: number;
@@ -8,6 +8,7 @@ interface StatsGridProps {
   totalLeads: number;
   todayLeads: number;
   weekLeads: number;
+  totalSignups: number;
 }
 
 export function StatsGrid({
@@ -18,14 +19,29 @@ export function StatsGrid({
   totalLeads,
   todayLeads,
   weekLeads,
+  totalSignups,
 }: StatsGridProps) {
   const stats = [
+    {
+      label: 'Total Signups',
+      value: totalSignups,
+      icon: UserPlus,
+      color: 'text-primary',
+      bgColor: 'bg-primary/10',
+    },
+    {
+      label: 'Total Pro',
+      value: activeProUsers,
+      icon: Crown,
+      color: 'text-amber-600',
+      bgColor: 'bg-amber-500/10',
+    },
     {
       label: 'Total Users',
       value: neveraiTotalUsers,
       icon: Users,
-      color: 'text-primary',
-      bgColor: 'bg-primary/10',
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-500/10',
     },
     {
       label: 'DAU',
@@ -38,15 +54,8 @@ export function StatsGrid({
       label: 'WAU',
       value: neveraiWeekActive,
       icon: TrendingUp,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-500/10',
-    },
-    {
-      label: 'Active Pro',
-      value: activeProUsers,
-      icon: Target,
-      color: 'text-amber-600',
-      bgColor: 'bg-amber-500/10',
+      color: 'text-cyan-600',
+      bgColor: 'bg-cyan-500/10',
     },
     {
       label: 'Total Leads',
@@ -59,23 +68,30 @@ export function StatsGrid({
       label: 'Today Leads',
       value: todayLeads,
       icon: Calendar,
-      color: 'text-cyan-600',
-      bgColor: 'bg-cyan-500/10',
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-500/10',
+    },
+    {
+      label: 'Week Leads',
+      value: weekLeads,
+      icon: Target,
+      color: 'text-pink-600',
+      bgColor: 'bg-pink-500/10',
     },
   ];
 
   return (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="grid grid-cols-4 gap-2">
       {stats.map((stat) => (
         <div
           key={stat.label}
-          className="flex flex-col items-center justify-center p-3 rounded-xl bg-card border border-border/50"
+          className="flex flex-col items-center justify-center p-2 rounded-xl bg-card border border-border/50"
         >
-          <div className={`p-2 rounded-lg ${stat.bgColor} mb-2`}>
-            <stat.icon className={`h-4 w-4 ${stat.color}`} />
+          <div className={`p-1.5 rounded-lg ${stat.bgColor} mb-1`}>
+            <stat.icon className={`h-3.5 w-3.5 ${stat.color}`} />
           </div>
-          <span className="text-lg font-bold">{stat.value.toLocaleString()}</span>
-          <span className="text-[10px] text-muted-foreground text-center">{stat.label}</span>
+          <span className="text-sm font-bold">{stat.value.toLocaleString()}</span>
+          <span className="text-[9px] text-muted-foreground text-center leading-tight">{stat.label}</span>
         </div>
       ))}
     </div>
