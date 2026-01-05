@@ -2191,7 +2191,35 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      ac_user_full_profile: {
+        Row: {
+          avatar_url: string | null
+          city: string | null
+          created_at: string | null
+          dob: string | null
+          email: string | null
+          full_name: string | null
+          leader_id: string | null
+          leaders_id_of_my_leader: string | null
+          level_id: string | null
+          mobile: string | null
+          nevorai_display_name: string | null
+          onboarding_completed_at: string | null
+          root_leader_id: string | null
+          state: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "leader_levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       admin_get_analytics: {
@@ -2335,6 +2363,8 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: string
       }
+      get_user_leader_id: { Args: { user_uuid: string }; Returns: string }
+      has_nevorai_profile: { Args: { user_uuid: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
