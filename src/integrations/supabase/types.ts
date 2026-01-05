@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      ac_announcement_media: {
+        Row: {
+          announcement_id: string
+          created_at: string
+          id: string
+          media_type: string
+          media_url: string
+          sort_order: number
+        }
+        Insert: {
+          announcement_id: string
+          created_at?: string
+          id?: string
+          media_type?: string
+          media_url: string
+          sort_order?: number
+        }
+        Update: {
+          announcement_id?: string
+          created_at?: string
+          id?: string
+          media_type?: string
+          media_url?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ac_announcement_media_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "ac_announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ac_announcements: {
         Row: {
           author_user_id: string | null
