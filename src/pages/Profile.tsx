@@ -10,7 +10,6 @@ import { BottomNav } from '@/components/layout/BottomNav';
 import { HeaderBellIcon } from '@/components/layout/HeaderBellIcon';
 import { EditProfileDialog } from '@/components/profile/EditProfileDialog';
 import { ShareProfileDialog } from '@/components/profile/ShareProfileDialog';
-import { ChangePasswordDialog } from '@/components/profile/ChangePasswordDialog';
 import { LeaderTrackingFormatDrawer } from '@/components/profile/LeaderTrackingFormatDrawer';
 import { LevelManagement } from '@/components/profile/LevelManagement';
 import { ProfileLevelDropdown } from '@/components/profile/ProfileLevelDropdown';
@@ -315,9 +314,6 @@ export default function Profile() {
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </button>
-
-            {/* Change Password */}
-            <ChangePasswordDialog />
 
             {/* Admin Panel Link - Only visible to admin */}
             {isAdmin && <Link to="/admin" className={cn("w-full relative overflow-hidden rounded-xl p-4", "bg-gradient-to-r backdrop-blur-sm", "border border-destructive/30 shadow-sm", "flex items-center justify-between", "transition-all duration-300 hover:shadow-md hover:scale-[1.01]", "from-destructive/20 to-destructive/5")}>
