@@ -72,22 +72,25 @@ export function useProfile() {
       }
 
       if (!data) {
-        // Create profile if doesn't exist
-        const { data: newProfile, error: insertError } = await supabase
+        // Profile should be auto-created by database trigger on signup
+        // Retry once after a short delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const { data: retryData, error: retryError } = await supabase
           .from('profiles')
-          .insert({ user_id: user.id })
-          .select()
-          .single();
-
-        if (insertError) {
-          console.error('Error creating profile:', insertError);
-          throw insertError;
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+          
+        if (retryError || !retryData) {
+          console.error('Profile not found after retry');
+          return null;
         }
 
         return {
-          ...newProfile,
-          stage_labels: newProfile.stage_labels || [],
-          response_labels: newProfile.response_labels || [],
+          ...retryData,
+          stage_labels: retryData.stage_labels || [],
+          response_labels: retryData.response_labels || [],
         } as Profile;
       }
 
@@ -129,16 +132,7 @@ export function useProfile() {
         }
       }
 
-      // Ensure profile exists
-      const { data: existing } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (!existing) {
-        await supabase.from('profiles').insert({ user_id: user.id });
-      }
+      // Profile is auto-created by database trigger, no need to check/insert
 
       const { error } = await supabase
         .from('profiles')
