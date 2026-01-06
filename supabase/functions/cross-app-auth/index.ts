@@ -40,17 +40,9 @@ serve(async (req) => {
     console.log('cross-app-auth called with action:', action);
 
     // Validate action
-    if (action !== 'get_leader_ids') {
+    if (action !== 'get_leader_ids' && action !== 'provision_leader_id') {
       return new Response(
-        JSON.stringify({ success: false, error: 'Invalid action. Only "get_leader_ids" is supported.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Validate input - need either email, emails array, or nevorai_user_id
-    if (!email && !nevorai_user_id && (!emails || !Array.isArray(emails) || emails.length === 0)) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Either email, emails array, or nevorai_user_id is required' }),
+        JSON.stringify({ success: false, error: 'Invalid action. Supported: "get_leader_ids", "provision_leader_id"' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -59,6 +51,126 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+    // PROVISION_LEADER_ID: Create or return leader_id for a user
+    if (action === 'provision_leader_id') {
+      const { email: provisionEmail, display_name } = body;
+      
+      if (!provisionEmail) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Email required for provision_leader_id' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      const normalizedEmail = provisionEmail.toLowerCase().trim();
+      console.log('provision_leader_id called for:', normalizedEmail);
+      
+      // Step 1: Check if profile exists by email with a leader_id
+      const { data: existingProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('user_id, neverai_id, email, display_name')
+        .eq('email', normalizedEmail)
+        .maybeSingle();
+      
+      if (existingProfile?.neverai_id) {
+        console.log('Found existing profile with leader_id:', existingProfile.neverai_id);
+        return new Response(
+          JSON.stringify({
+            success: true,
+            leader_id: existingProfile.neverai_id,
+            nevorai_user_id: existingProfile.user_id,
+            is_new: false
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Step 2: Try to create new auth user (trigger will create profile with neverai_id)
+      const tempPassword = crypto.randomUUID();
+      
+      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email: normalizedEmail,
+        password: tempPassword,
+        email_confirm: true,
+        user_metadata: {
+          display_name: display_name || null,
+          provisioned_by: 'achievers_club'
+        }
+      });
+      
+      if (createError) {
+        console.error('Error creating user:', createError.message);
+        
+        // User might already exist in auth but profile email doesn't match
+        if (createError.message?.includes('already been registered')) {
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: 'User exists in auth but profile not linked by email. User should sign in to NevorAI first.' 
+            }),
+            { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        return new Response(
+          JSON.stringify({ success: false, error: 'Failed to create user: ' + createError.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      if (!newUser?.user) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'No user returned after creation' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Step 3: Fetch the newly created profile (trigger auto-creates it with neverai_id)
+      await new Promise(resolve => setTimeout(resolve, 100)); // Brief delay for trigger
+      
+      const { data: newProfile, error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .select('user_id, neverai_id')
+        .eq('user_id', newUser.user.id)
+        .single();
+      
+      if (profileError || !newProfile?.neverai_id) {
+        console.error('Failed to fetch new profile:', profileError);
+        return new Response(
+          JSON.stringify({ success: false, error: 'Profile creation failed' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Step 4: Update profile with email and display_name
+      const { error: updateError } = await supabaseAdmin
+        .from('profiles')
+        .update({ 
+          email: normalizedEmail,
+          display_name: display_name || null
+        })
+        .eq('user_id', newUser.user.id);
+      
+      if (updateError) {
+        console.error('Failed to update profile:', updateError);
+        // Still return success since the leader_id was created
+      }
+      
+      console.log('Provisioned new leader_id for:', normalizedEmail, '->', newProfile.neverai_id);
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          leader_id: newProfile.neverai_id,
+          nevorai_user_id: newUser.user.id,
+          is_new: true
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // GET_LEADER_IDS: Lookup leader IDs for emails
 
     // BATCH MODE: Process multiple emails
     if (emails && Array.isArray(emails) && emails.length > 0) {
