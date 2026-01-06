@@ -65,9 +65,8 @@ export function LeaderStagesSettings({
   }, [profile, onGetLeaderStageConfig]);
 
   const handleCopyLeaderId = async () => {
-    const leaderId = profile?.leader_id || profile?.neverai_id;
-    if (leaderId) {
-      await navigator.clipboard.writeText(formatLeaderId(leaderId, profile?.leader_code_seq));
+    if (profile?.neverai_id) {
+      await navigator.clipboard.writeText(formatLeaderId(profile.neverai_id, profile.leader_code_seq));
       setCopiedId(true);
       toast.success('Leader ID copied');
       setTimeout(() => setCopiedId(false), 2000);

@@ -48,7 +48,7 @@ serve(async (req) => {
         
         const { data, error } = await supabase
           .from('profiles')
-          .select('email, leader_id')
+          .select('email, neverai_id')
           .in('email', normalizedEmails);
 
         if (error) {
@@ -56,9 +56,10 @@ serve(async (req) => {
           return jsonResponse({ success: false, error: error.message }, 500);
         }
 
+        // Map neverai_id to leader_id for Achievers Club compatibility
         const leader_ids = (data || []).map(p => ({
           email: p.email,
-          leader_id: p.leader_id
+          leader_id: p.neverai_id
         }));
 
         console.log(`Found ${leader_ids.length}/${emails.length} leader_ids`);
@@ -75,24 +76,24 @@ serve(async (req) => {
 
         const normalizedEmail = email.toLowerCase().trim();
 
-        // Check if exists - use leader_id as canonical field
+        // Check if exists
         const { data: existing } = await supabase
           .from('profiles')
-          .select('leader_id, user_id, display_name')
+          .select('neverai_id, user_id, display_name')
           .eq('email', normalizedEmail)
           .maybeSingle();
 
-        if (existing?.leader_id) {
-          console.log('Existing leader_id for', normalizedEmail, ':', existing.leader_id);
+        if (existing?.neverai_id) {
+          console.log('Existing leader_id for', normalizedEmail, ':', existing.neverai_id);
           return jsonResponse({ 
             success: true, 
-            leader_id: existing.leader_id, 
+            leader_id: existing.neverai_id, 
             is_new: false 
           });
         }
 
-        // Generate new leader_id using canonical function
-        const { data: newId, error: genError } = await supabase.rpc('generate_leader_id');
+        // Generate new neverai_id
+        const { data: newId, error: genError } = await supabase.rpc('generate_neverai_id');
         
         if (genError || !newId) {
           console.error('ID generation failed:', genError);
@@ -100,12 +101,11 @@ serve(async (req) => {
         }
 
         if (existing) {
-          // Profile exists but no leader_id - update it
+          // Profile exists but no neverai_id - update it
           const { error: updateError } = await supabase
             .from('profiles')
             .update({ 
-              leader_id: newId,
-              neverai_id: newId, // Keep deprecated column in sync
+              neverai_id: newId,
               display_name: display_name || existing.display_name,
               source_app: 'achievers_club'
             })
@@ -118,7 +118,7 @@ serve(async (req) => {
           
           console.log('Updated existing profile with leader_id:', normalizedEmail, '->', newId);
         } else {
-          // No profile - create auth user (trigger will create profile with leader_id)
+          // No profile - create auth user (trigger will create profile)
           const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
             email: normalizedEmail,
             password: crypto.randomUUID(),
@@ -131,13 +131,14 @@ serve(async (req) => {
             return jsonResponse({ success: false, error: createError.message }, 500);
           }
 
-          // Wait for trigger to create profile, then update with additional fields
+          // Wait for trigger to create profile, then update it
           await new Promise(r => setTimeout(r, 100));
           
           const { error: profileUpdateError } = await supabase
             .from('profiles')
             .update({ 
               email: normalizedEmail,
+              neverai_id: newId,
               display_name,
               source_app: 'achievers_club'
             })
@@ -146,16 +147,8 @@ serve(async (req) => {
           if (profileUpdateError) {
             console.error('Profile update after creation failed:', profileUpdateError);
           }
-
-          // Get the generated leader_id from the trigger
-          const { data: createdProfile } = await supabase
-            .from('profiles')
-            .select('leader_id')
-            .eq('user_id', newUser.user!.id)
-            .single();
           
-          console.log('Created new user with leader_id:', normalizedEmail, '->', createdProfile?.leader_id);
-          return jsonResponse({ success: true, leader_id: createdProfile?.leader_id || newId, is_new: true });
+          console.log('Created new user with leader_id:', normalizedEmail, '->', newId);
         }
 
         return jsonResponse({ success: true, leader_id: newId, is_new: true });

@@ -139,8 +139,7 @@ export function useSharedProspects() {
           const owners = profiles.map(p => ({
             user_id: p.user_id,
             display_name: p.display_name || 'Unknown',
-            // Use leader_id (canonical) if available, fallback to neverai_id (deprecated)
-            nevorid: (p as any).leader_id || p.neverai_id
+            nevorid: p.neverai_id
           }));
           setSharedOwners(owners);
           setSessionCache(OWNERS_CACHE_KEY, owners);
