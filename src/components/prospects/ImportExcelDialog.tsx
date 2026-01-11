@@ -322,7 +322,7 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".xlsx,.xls,.csv"
+              accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
               onChange={handleFileUpload}
               className="hidden"
             />
