@@ -70,19 +70,23 @@ export function validateImportedProspect(row: Record<string, unknown>, nameCol: 
   errors: string[];
 } {
   const name = sanitizeImportString(row[nameCol], 100);
-  const phone = sanitizeImportString(row[phoneCol], 20);
+  const rawPhone = sanitizeImportString(row[phoneCol], 20);
   const errors: string[] = [];
 
   if (!name || name.length < 1) {
     errors.push('Name is required');
   }
   
-  if (!phone || phone.length < 7) {
-    errors.push('Valid phone number is required');
+  // Clean phone number to only valid characters first
+  const cleanedPhone = rawPhone.replace(/[^\d\s\-+()]/g, '');
+  
+  // Extract only digits for length validation (ignore spaces, dashes etc)
+  const digitsOnly = cleanedPhone.replace(/\D/g, '');
+  
+  // Require at least 4 digits (more lenient for local/short numbers)
+  if (!digitsOnly || digitsOnly.length < 4) {
+    errors.push('Valid phone number is required (minimum 4 digits)');
   }
-
-  // Clean phone number to only valid characters
-  const cleanedPhone = phone.replace(/[^\d\s\-+()]/g, '');
 
   return {
     valid: errors.length === 0,
