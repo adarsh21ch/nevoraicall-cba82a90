@@ -73,25 +73,18 @@ export function validateImportedProspect(row: Record<string, unknown>, nameCol: 
   const rawPhone = sanitizeImportString(row[phoneCol], 20);
   const errors: string[] = [];
 
+  // Only require name - phone is optional
   if (!name || name.length < 1) {
     errors.push('Name is required');
   }
   
-  // Clean phone number to only valid characters first
+  // Clean phone number to only valid characters, but don't reject if empty
   const cleanedPhone = rawPhone.replace(/[^\d\s\-+()]/g, '');
-  
-  // Extract only digits for length validation (ignore spaces, dashes etc)
-  const digitsOnly = cleanedPhone.replace(/\D/g, '');
-  
-  // Require at least 4 digits (more lenient for local/short numbers)
-  if (!digitsOnly || digitsOnly.length < 4) {
-    errors.push('Valid phone number is required (minimum 4 digits)');
-  }
 
   return {
     valid: errors.length === 0,
     name,
-    phone: cleanedPhone,
+    phone: cleanedPhone || '', // Allow empty phone
     errors,
   };
 }
