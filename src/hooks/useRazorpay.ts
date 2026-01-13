@@ -23,9 +23,9 @@ const TEST_MODE = false;
 
 const PLAN_CONFIG = {
   mini: {
-    amount: TEST_MODE ? 100 : 2900, // ₹1 test or ₹29 production (in paise)
+    amount: TEST_MODE ? 100 : 9900, // ₹1 test or ₹99 production (in paise)
     duration_days: 30,
-    description: TEST_MODE ? `${PLAN_NAME_MINI} – ₹1 (TEST)` : `${PLAN_NAME_MINI} – ₹29 / month`,
+    description: TEST_MODE ? `${PLAN_NAME_MINI} – ₹1 (TEST)` : `${PLAN_NAME_MINI} – ₹99 / month`,
   },
   pro: {
     amount: TEST_MODE ? 100 : 29900, // ₹1 test or ₹299 production (in paise)

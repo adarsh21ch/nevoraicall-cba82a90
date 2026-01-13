@@ -16,14 +16,14 @@ export interface PlanConfig {
 }
 
 export const PAYMENT_LINKS = {
-  mini: 'https://rzp.io/rzp/SKlPxwfs',
+  mini: 'https://rzp.io/rzp/HhAdokE',
   pro: 'https://rzp.io/rzp/CPQRHdp',
 } as const;
 
 export const PLAN_CONFIG: Record<PlanType, PlanConfig> = {
   mini: {
     name: PLAN_NAME_MINI,
-    price: 29,
+    price: 99,
     paymentLink: PAYMENT_LINKS.mini,
     description: 'Manual personal & team tracking',
     features: [
