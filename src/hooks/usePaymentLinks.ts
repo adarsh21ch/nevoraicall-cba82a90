@@ -51,7 +51,8 @@ export const FREE_LEAD_LIMIT = 500;
 export function usePaymentLinks() {
   const openPaymentLink = (plan: PlanType) => {
     const link = PAYMENT_LINKS[plan];
-    window.open(link, '_blank');
+    // Open in same tab - Razorpay will redirect back after payment
+    window.location.href = link;
   };
 
   return {
