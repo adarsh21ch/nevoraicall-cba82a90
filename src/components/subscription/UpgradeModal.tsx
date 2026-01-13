@@ -1,10 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Crown, Zap, Check, AlertTriangle } from 'lucide-react';
-import { PLAN_CONFIG, PlanType, FREE_LEAD_LIMIT } from '@/hooks/usePaymentLinks';
-import { useRazorpay } from '@/hooks/useRazorpay';
-import { useToast } from '@/hooks/use-toast';
-import { useSubscription } from '@/hooks/useSubscription';
+import { Crown, Zap, Check, ExternalLink, AlertTriangle } from 'lucide-react';
+import { usePaymentLinks, PlanType, FREE_LEAD_LIMIT } from '@/hooks/usePaymentLinks';
 
 interface UpgradeModalProps {
   open: boolean;
@@ -30,29 +27,15 @@ export function UpgradeModal({
   title,
   description,
 }: UpgradeModalProps) {
-  const { initiatePayment, loading: paymentLoading } = useRazorpay();
-  const { toast } = useToast();
-  const { refetch } = useSubscription();
+  const { openPaymentLink, PLAN_CONFIG } = usePaymentLinks();
   
   const isAtLimit = currentLeadCount !== undefined && currentLeadCount >= FREE_LEAD_LIMIT;
   const showMini = appContext === 'trackup' && !hasTeamFeatures;
   const suggestedPlan: PlanType = hasTeamFeatures ? 'pro' : (showMini ? 'mini' : 'pro');
 
   const handleUpgrade = (plan: PlanType) => {
-    initiatePayment({
-      planType: plan,
-      onSuccess: () => {
-        toast({
-          title: "Pro Activated 🎉",
-          description: "Welcome to premium! All features are now unlocked.",
-        });
-        refetch();
-        onClose();
-      },
-      onError: (error) => {
-        console.error('Payment error:', error);
-      }
-    });
+    openPaymentLink(plan);
+    onClose();
   };
 
   const modalTitle = title || (isAtLimit ? 'Lead Limit Reached' : 'Unlock Premium Features');
@@ -112,9 +95,9 @@ export function UpgradeModal({
             <Button 
               onClick={() => handleUpgrade(suggestedPlan)} 
               className="w-full"
-              disabled={paymentLoading}
             >
-              {paymentLoading ? 'Opening payment...' : `Get ${PLAN_CONFIG[suggestedPlan].name}`}
+              Get {PLAN_CONFIG[suggestedPlan].name}
+              <ExternalLink className="h-4 w-4 ml-2" />
             </Button>
           </div>
 
@@ -124,10 +107,10 @@ export function UpgradeModal({
               variant="outline" 
               onClick={() => handleUpgrade('pro')} 
               className="w-full"
-              disabled={paymentLoading}
             >
               <Crown className="h-4 w-4 mr-2" />
               Or get NeverAI Pro – ₹299/mo
+              <ExternalLink className="h-4 w-4 ml-2" />
             </Button>
           )}
 
@@ -136,10 +119,10 @@ export function UpgradeModal({
               variant="outline" 
               onClick={() => handleUpgrade('mini')} 
               className="w-full"
-              disabled={paymentLoading}
             >
               <Zap className="h-4 w-4 mr-2" />
               Just need basics? TrackUp Mini – ₹29/mo
+              <ExternalLink className="h-4 w-4 ml-2" />
             </Button>
           )}
 

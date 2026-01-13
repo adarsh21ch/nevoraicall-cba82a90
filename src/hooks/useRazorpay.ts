@@ -9,24 +9,27 @@ declare global {
   }
 }
 
-export type PlanType = 'mini' | 'pro';
+export type PlanType = 'monthly' | 'yearly';
 
 interface RazorpayOptions {
   planType?: PlanType;
+  couponCode?: string;
   onSuccess?: () => void;
   onError?: (error: string) => void;
 }
 
 const PLAN_CONFIG = {
-  mini: {
-    amount: 2900, // ₹29 in paise
+  monthly: {
+    amount: 24900, // ₹249 in paise
     duration_days: 30,
-    description: 'TrackUp Mini – ₹29 / month',
+    description: 'NevorAI Pro Monthly – ₹249 / month',
   },
-  pro: {
-    amount: 29900, // ₹299 in paise
-    duration_days: 30,
-    description: 'NeverAI Pro – ₹299 / month',
+  yearly: {
+    amount: 299900, // ₹2,999 in paise
+    discountedAmount: 199900, // ₹1,999 in paise (with coupon)
+    duration_days: 365,
+    description: 'NevorAI Pro Yearly – ₹2,999 / year',
+    discountedDescription: 'NevorAI Pro Yearly – ₹1,999 / year',
   },
 };
 
@@ -54,15 +57,20 @@ export function useRazorpay() {
     if (!user) {
       toast({
         title: "Login Required",
-        description: "Please login to upgrade.",
+        description: "Please login to upgrade to Pro.",
         variant: "destructive",
       });
       return;
     }
 
-    const planType = options?.planType || 'pro';
+    const planType = options?.planType || 'monthly';
+    const couponCode = options?.couponCode;
+    const hasCoupon = planType === 'yearly' && couponCode;
+    
     const planConfig = PLAN_CONFIG[planType];
-    const description = planConfig.description;
+    const description = planType === 'yearly' && hasCoupon 
+      ? PLAN_CONFIG.yearly.discountedDescription 
+      : planConfig.description;
 
     setLoading(true);
 
@@ -79,6 +87,7 @@ export function useRazorpay() {
           user_id: user.id,
           user_email: user.email,
           plan_type: planType,
+          coupon_code: couponCode,
         },
       });
 

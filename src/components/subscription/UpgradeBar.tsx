@@ -1,9 +1,7 @@
-import { Lock, Crown, Zap } from 'lucide-react';
+import { Lock, Crown, Zap, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
-import { PLAN_CONFIG, PlanType } from '@/hooks/usePaymentLinks';
-import { useRazorpay } from '@/hooks/useRazorpay';
-import { useToast } from '@/hooks/use-toast';
+import { usePaymentLinks, PlanType } from '@/hooks/usePaymentLinks';
 
 interface UpgradeBarProps {
   /** Which app context - affects messaging and plan suggestion */
@@ -14,26 +12,13 @@ interface UpgradeBarProps {
 }
 
 export function UpgradeBar({ appContext = 'neverai', suggestPro = true, onUpgrade }: UpgradeBarProps) {
-  const { isPaid, loading, refetch } = useSubscription();
-  const { initiatePayment, loading: paymentLoading } = useRazorpay();
-  const { toast } = useToast();
+  const { isPaid, loading } = useSubscription();
+  const { openPaymentLink, PLAN_CONFIG } = usePaymentLinks();
 
   const handleSubscribe = () => {
     const plan: PlanType = suggestPro || appContext === 'neverai' ? 'pro' : 'mini';
-    initiatePayment({
-      planType: plan,
-      onSuccess: () => {
-        toast({
-          title: "Pro Activated 🎉",
-          description: "Welcome to premium! All features are now unlocked.",
-        });
-        refetch();
-        onUpgrade?.();
-      },
-      onError: (error) => {
-        console.error('Payment error:', error);
-      }
-    });
+    openPaymentLink(plan);
+    onUpgrade?.();
   };
 
   if (loading || isPaid) return null;
@@ -64,10 +49,10 @@ export function UpgradeBar({ appContext = 'neverai', suggestPro = true, onUpgrad
             variant="secondary"
             size="sm"
             className="shrink-0 font-semibold"
-            disabled={paymentLoading}
           >
             <PlanIcon className="h-4 w-4 mr-1" />
-            {paymentLoading ? '...' : 'Unlock'}
+            Unlock
+            <ExternalLink className="h-3 w-3 ml-1" />
           </Button>
         </div>
       </div>
