@@ -207,8 +207,7 @@ export default function Profile() {
           </div>
 
           {/* Upgrade Card - Shows subscription status and upgrade options */}
-          {/* Only show when user has 500+ leads */}
-          {totalLeads >= UPGRADE_UI_LEAD_THRESHOLD && <UpgradeCard appContext="nevorai" />}
+          <UpgradeCard appContext="nevorai" />
 
           {/* Leader & Tracking Format Settings - Opens in Sidebar */}
           <LeaderTrackingFormatDrawer
