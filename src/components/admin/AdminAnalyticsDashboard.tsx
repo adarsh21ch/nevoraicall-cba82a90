@@ -1,7 +1,9 @@
 import { useAdminAnalytics } from '@/hooks/useAdminAnalytics';
-import { StatsGrid } from './StatsGrid';
+import { EnhancedStatsGrid } from './EnhancedStatsGrid';
 import { SignupTrendChart } from './SignupTrendChart';
 import { SubscriptionPieChart } from './SubscriptionPieChart';
+import { RevenueAnalytics } from './RevenueAnalytics';
+import { UsageAnalytics } from './UsageAnalytics';
 import { Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -26,27 +28,41 @@ export function AdminAnalyticsDashboard() {
 
   return (
     <div className="space-y-4">
-      <StatsGrid
+      {/* Enhanced Stats Grid with clickable KPIs */}
+      <EnhancedStatsGrid
         totalSignups={analytics.totalSignups}
         activeProUsers={analytics.activeProUsers}
+        freeUsersCount={analytics.freeUsersCount}
         neveraiTodayActive={analytics.neveraiTodayActive}
         neveraiWeekActive={analytics.neveraiWeekActive}
         totalLeads={analytics.totalLeads}
         todayLeads={analytics.todayLeads}
+        revenue={analytics.revenue}
+        activeUsage={analytics.activeUsage}
       />
 
-      <Tabs defaultValue="signups" className="w-full">
-        <TabsList className="w-full grid grid-cols-2">
-          <TabsTrigger value="signups" className="text-xs">Signups</TabsTrigger>
-          <TabsTrigger value="subscriptions" className="text-xs">Plans</TabsTrigger>
+      {/* Analytics Tabs */}
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="w-full grid grid-cols-3">
+          <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
+          <TabsTrigger value="revenue" className="text-xs">Revenue</TabsTrigger>
+          <TabsTrigger value="usage" className="text-xs">Usage</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="signups" className="mt-3">
+        <TabsContent value="overview" className="mt-3 space-y-4">
           <SignupTrendChart data={analytics.dailySignups} />
+          <SubscriptionPieChart data={analytics.subscriptionBreakdown} />
         </TabsContent>
 
-        <TabsContent value="subscriptions" className="mt-3">
-          <SubscriptionPieChart data={analytics.subscriptionBreakdown} />
+        <TabsContent value="revenue" className="mt-3">
+          <RevenueAnalytics 
+            revenue={analytics.revenue} 
+            recentPayments={analytics.recentPayments}
+          />
+        </TabsContent>
+
+        <TabsContent value="usage" className="mt-3">
+          <UsageAnalytics activeUsage={analytics.activeUsage} />
         </TabsContent>
       </Tabs>
     </div>
