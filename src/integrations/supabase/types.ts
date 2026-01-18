@@ -2560,6 +2560,15 @@ export type Database = {
       }
     }
     Functions: {
+      admin_get_active_usage_stats: {
+        Args: never
+        Returns: {
+          active_callers_today: number
+          active_callers_week: number
+          leads_importers_today: number
+          leads_importers_week: number
+        }[]
+      }
       admin_get_analytics: {
         Args: never
         Returns: {
@@ -2580,6 +2589,81 @@ export type Database = {
           today_active: number
           total_users: number
           week_active: number
+        }[]
+      }
+      admin_get_expiring_subscriptions: {
+        Args: { days_ahead?: number }
+        Returns: {
+          days_remaining: number
+          display_name: string
+          email: string
+          expires_at: string
+          neverai_id: string
+          plan: string
+          user_id: string
+        }[]
+      }
+      admin_get_free_users: {
+        Args: never
+        Returns: {
+          created_at: string
+          display_name: string
+          email: string
+          last_active: string
+          leads_count: number
+          neverai_id: string
+          user_id: string
+        }[]
+      }
+      admin_get_power_users: {
+        Args: { limit_count?: number }
+        Returns: {
+          display_name: string
+          email: string
+          last_active: string
+          leads_this_week: number
+          neverai_id: string
+          total_leads: number
+          user_id: string
+        }[]
+      }
+      admin_get_pro_users: {
+        Args: never
+        Returns: {
+          days_remaining: number
+          display_name: string
+          email: string
+          expires_at: string
+          is_admin_override: boolean
+          is_expired: boolean
+          neverai_id: string
+          payment_amount: number
+          plan: string
+          subscribed_at: string
+          user_id: string
+        }[]
+      }
+      admin_get_revenue_stats: {
+        Args: never
+        Returns: {
+          failed_payments: number
+          last_month_revenue: number
+          mini_plan_count: number
+          mini_plan_revenue: number
+          pro_plan_count: number
+          pro_plan_revenue: number
+          successful_payments: number
+          this_month_revenue: number
+          total_payments: number
+          total_revenue: number
+        }[]
+      }
+      admin_get_revenue_trend: {
+        Args: { days_back?: number }
+        Returns: {
+          date: string
+          payment_count: number
+          revenue: number
         }[]
       }
       admin_get_stats: {

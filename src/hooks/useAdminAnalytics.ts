@@ -22,6 +22,76 @@ export interface PaymentLog {
   event_type: string;
 }
 
+export interface RevenueStats {
+  totalRevenue: number;
+  thisMonthRevenue: number;
+  lastMonthRevenue: number;
+  totalPayments: number;
+  successfulPayments: number;
+  failedPayments: number;
+  miniPlanRevenue: number;
+  proPlanRevenue: number;
+  miniPlanCount: number;
+  proPlanCount: number;
+}
+
+export interface ProUser {
+  user_id: string;
+  display_name: string | null;
+  email: string | null;
+  neverai_id: string | null;
+  plan: string;
+  subscribed_at: string | null;
+  expires_at: string | null;
+  is_admin_override: boolean;
+  is_expired: boolean;
+  days_remaining: number | null;
+  payment_amount: number | null;
+}
+
+export interface FreeUser {
+  user_id: string;
+  display_name: string | null;
+  email: string | null;
+  neverai_id: string | null;
+  leads_count: number;
+  last_active: string | null;
+  created_at: string;
+}
+
+export interface ActiveUsageStats {
+  leadsImportersToday: number;
+  leadsImportersWeek: number;
+  activeCallersToday: number;
+  activeCallersWeek: number;
+}
+
+export interface ExpiringSubscription {
+  user_id: string;
+  display_name: string | null;
+  email: string | null;
+  neverai_id: string | null;
+  plan: string;
+  expires_at: string;
+  days_remaining: number;
+}
+
+export interface RevenueTrend {
+  date: string;
+  revenue: number;
+  payment_count: number;
+}
+
+export interface PowerUser {
+  user_id: string;
+  display_name: string | null;
+  email: string | null;
+  neverai_id: string | null;
+  leads_this_week: number;
+  total_leads: number;
+  last_active: string | null;
+}
+
 export interface AdminAnalytics {
   dailySignups: DailySignup[];
   subscriptionBreakdown: SubscriptionBreakdown[];
@@ -36,6 +106,11 @@ export interface AdminAnalytics {
   weekLeads: number;
   monthLeads: number;
   totalSignups: number;
+  freeUsersCount: number;
+  // Active usage stats
+  activeUsage: ActiveUsageStats;
+  // Revenue stats
+  revenue: RevenueStats;
 }
 
 export function useAdminAnalytics() {
@@ -48,7 +123,7 @@ export function useAdminAnalytics() {
       const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
       // Fetch all data in parallel
-      const [analyticsRes, profilesRes, subscriptionsRes, paymentsRes, totalSignupsRes] = await Promise.all([
+      const [analyticsRes, profilesRes, subscriptionsRes, paymentsRes, totalSignupsRes, revenueRes, usageRes] = await Promise.all([
         // Get core metrics from single source of truth function
         supabase.rpc('admin_get_analytics'),
         
@@ -69,12 +144,18 @@ export function useAdminAnalytics() {
           .from('payments_log')
           .select('id, created_at, user_email, amount, status, event_type')
           .order('created_at', { ascending: false })
-          .limit(20),
+          .limit(50),
         
         // Get total signups count
         supabase
           .from('profiles')
           .select('id', { count: 'exact', head: true }),
+
+        // Get revenue stats
+        supabase.rpc('admin_get_revenue_stats'),
+
+        // Get active usage stats
+        supabase.rpc('admin_get_active_usage_stats'),
       ]);
 
       // Extract core metrics from single source
@@ -115,8 +196,11 @@ export function useAdminAnalytics() {
       // Process subscription breakdown
       const breakdown: Record<string, { count: number; active_count: number }> = {
         free: { count: 0, active_count: 0 },
+        mini: { count: 0, active_count: 0 },
         pro: { count: 0, active_count: 0 }
       };
+
+      let freeUsersCount = 0;
 
       if (subscriptionsRes.data) {
         subscriptionsRes.data.forEach(sub => {
@@ -126,13 +210,20 @@ export function useAdminAnalytics() {
           }
           breakdown[plan].count++;
           
-          if (plan === 'pro' && sub.expires_at && new Date(sub.expires_at) > now) {
+          const planStr = plan as string;
+          if ((planStr === 'pro' || planStr === 'mini') && sub.expires_at && new Date(sub.expires_at) > now) {
             breakdown[plan].active_count++;
-          } else if (plan === 'free') {
+          } else if (planStr === 'free') {
             breakdown[plan].active_count++;
+            freeUsersCount++;
           }
         });
       }
+
+      // Calculate free users (total users minus paid users)
+      const totalSignups = totalSignupsRes.count || 0;
+      const paidUsersCount = (breakdown.pro?.count || 0) + (breakdown.mini?.count || 0);
+      freeUsersCount = totalSignups - paidUsersCount;
 
       const subscriptionBreakdown: SubscriptionBreakdown[] = Object.entries(breakdown).map(
         ([plan, data]) => ({ plan, ...data })
@@ -141,8 +232,29 @@ export function useAdminAnalytics() {
       // Recent payments
       const recentPayments: PaymentLog[] = (paymentsRes.data || []) as PaymentLog[];
 
-      // Total signups from count query
-      const totalSignups = totalSignupsRes.count || 0;
+      // Revenue stats
+      const revenueData = (revenueRes.data?.[0] || {}) as Record<string, unknown>;
+      const revenue: RevenueStats = {
+        totalRevenue: Number(revenueData.total_revenue) || 0,
+        thisMonthRevenue: Number(revenueData.this_month_revenue) || 0,
+        lastMonthRevenue: Number(revenueData.last_month_revenue) || 0,
+        totalPayments: Number(revenueData.total_payments) || 0,
+        successfulPayments: Number(revenueData.successful_payments) || 0,
+        failedPayments: Number(revenueData.failed_payments) || 0,
+        miniPlanRevenue: Number(revenueData.mini_plan_revenue) || 0,
+        proPlanRevenue: Number(revenueData.pro_plan_revenue) || 0,
+        miniPlanCount: Number(revenueData.mini_plan_count) || 0,
+        proPlanCount: Number(revenueData.pro_plan_count) || 0,
+      };
+
+      // Active usage stats
+      const usageData = (usageRes.data?.[0] || {}) as Record<string, unknown>;
+      const activeUsage: ActiveUsageStats = {
+        leadsImportersToday: Number(usageData.leads_importers_today) || 0,
+        leadsImportersWeek: Number(usageData.leads_importers_week) || 0,
+        activeCallersToday: Number(usageData.active_callers_today) || 0,
+        activeCallersWeek: Number(usageData.active_callers_week) || 0,
+      };
 
       return {
         dailySignups,
@@ -157,10 +269,99 @@ export function useAdminAnalytics() {
         weekLeads: Number(metrics.week_leads) || 0,
         monthLeads: Number(metrics.month_leads) || 0,
         totalSignups,
+        freeUsersCount,
+        activeUsage,
+        revenue,
       };
     },
     enabled: !!user,
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
+  });
+}
+
+// Hook for Pro Users list
+export function useProUsers() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['admin-pro-users', user?.id],
+    queryFn: async (): Promise<ProUser[]> => {
+      const { data, error } = await supabase.rpc('admin_get_pro_users');
+      if (error) throw error;
+      return (data || []) as ProUser[];
+    },
+    enabled: !!user,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+// Hook for Free Users list
+export function useFreeUsers() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['admin-free-users', user?.id],
+    queryFn: async (): Promise<FreeUser[]> => {
+      const { data, error } = await supabase.rpc('admin_get_free_users');
+      if (error) throw error;
+      return (data || []) as FreeUser[];
+    },
+    enabled: !!user,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+// Hook for Expiring Subscriptions
+export function useExpiringSubscriptions(daysAhead: number = 7) {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['admin-expiring-subscriptions', user?.id, daysAhead],
+    queryFn: async (): Promise<ExpiringSubscription[]> => {
+      const { data, error } = await supabase.rpc('admin_get_expiring_subscriptions', { 
+        days_ahead: daysAhead 
+      });
+      if (error) throw error;
+      return (data || []) as ExpiringSubscription[];
+    },
+    enabled: !!user,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+// Hook for Revenue Trend
+export function useRevenueTrend(daysBack: number = 30) {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['admin-revenue-trend', user?.id, daysBack],
+    queryFn: async (): Promise<RevenueTrend[]> => {
+      const { data, error } = await supabase.rpc('admin_get_revenue_trend', { 
+        days_back: daysBack 
+      });
+      if (error) throw error;
+      return (data || []) as RevenueTrend[];
+    },
+    enabled: !!user,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+// Hook for Power Users
+export function usePowerUsers(limit: number = 10) {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['admin-power-users', user?.id, limit],
+    queryFn: async (): Promise<PowerUser[]> => {
+      const { data, error } = await supabase.rpc('admin_get_power_users', { 
+        limit_count: limit 
+      });
+      if (error) throw error;
+      return (data || []) as PowerUser[];
+    },
+    enabled: !!user,
+    staleTime: 2 * 60 * 1000,
   });
 }
