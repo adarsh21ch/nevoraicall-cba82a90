@@ -82,7 +82,7 @@ export function ProspectFilters({
     });
   };
   const getStagesLabel = () => {
-    if (filters.stages.length === 0) return 'All Stages';
+    if (filters.stages.length === 0) return 'Retargeting';
     if (filters.stages.length === 1) return filters.stages[0];
     return `${filters.stages.length} Stages`;
   };
