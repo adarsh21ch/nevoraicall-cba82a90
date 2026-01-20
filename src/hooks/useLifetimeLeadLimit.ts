@@ -15,10 +15,11 @@ export const LEAD_WARNING_THRESHOLD = 950;
  */
 export function useLifetimeLeadLimit() {
   const { user } = useAuth();
-  const { profile, refetch: refetchProfile } = useProfile();
-  const { isPaid, plan } = useSubscription();
+  const { profile, loading: profileLoading, refetch: refetchProfile } = useProfile();
+  const { isPaid, plan, loading: subLoading } = useSubscription();
 
   const totalLeadsAdded = profile?.total_leads_added ?? 0;
+  const isLoading = profileLoading || subLoading;
 
   const limitInfo = useMemo(() => {
     // Paid users have no limit
@@ -88,6 +89,7 @@ export function useLifetimeLeadLimit() {
     ...limitInfo,
     plan,
     isPaid,
+    isLoading,
     incrementLeadCount,
   };
 }

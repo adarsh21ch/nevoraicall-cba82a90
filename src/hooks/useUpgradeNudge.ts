@@ -34,12 +34,14 @@ export type NudgeStage = 'none' | 'stage1' | 'stage2' | 'stage3' | 'stage4';
  * Implements non-spammy, value-based messaging with proper dismissal tracking.
  */
 export function useUpgradeNudge() {
-  const { lifetimeCount, isPaid, isAtLimit } = useLifetimeLeadLimit();
+  const { lifetimeCount, isPaid, isAtLimit, isLoading } = useLifetimeLeadLimit();
 
   /**
    * Determine the current nudge stage based on prospect count.
    */
   const currentStage = useMemo((): NudgeStage => {
+    // Don't show any nudges while still loading subscription status
+    if (isLoading) return 'none';
     if (isPaid) return 'none';
     
     if (lifetimeCount >= NUDGE_THRESHOLDS.STAGE_4) return 'stage4';
@@ -48,7 +50,7 @@ export function useUpgradeNudge() {
     if (lifetimeCount >= NUDGE_THRESHOLDS.STAGE_1) return 'stage1';
     
     return 'none';
-  }, [lifetimeCount, isPaid]);
+  }, [lifetimeCount, isPaid, isLoading]);
 
   /**
    * Check if Stage 1 banner should be shown.
@@ -151,6 +153,7 @@ export function useUpgradeNudge() {
     lifetimeCount,
     isPaid,
     isAtLimit,
+    isLoading,
     remainingToLimit,
     
     // Visibility flags
