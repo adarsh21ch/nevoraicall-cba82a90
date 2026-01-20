@@ -159,11 +159,17 @@ export function ProspectFilters({
           Clear
         </Button>}
 
-        {/* Export button - desktop only, moved to sheet menu on mobile */}
-        {!isMobile && <Button variant="outline" size="sm" onClick={onExport} disabled={exporting || filteredCount === 0} className="h-9 gap-1.5 shrink-0">
-            {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-            {exporting ? 'Exporting...' : `Export${filteredCount > 0 ? ` (${filteredCount})` : ''}`}
-          </Button>}
+        {/* Export button - show on both mobile and desktop */}
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={onExport} 
+          disabled={exporting || filteredCount === 0} 
+          className="h-9 gap-1.5 shrink-0"
+        >
+          {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+          {isMobile ? '' : (exporting ? 'Exporting...' : `Export${filteredCount > 0 ? ` (${filteredCount})` : ''}`)}
+        </Button>
       </div>
     </div>
 

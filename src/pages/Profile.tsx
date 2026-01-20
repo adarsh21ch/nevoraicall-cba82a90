@@ -20,7 +20,7 @@ import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { User, LogOut, ChevronRight, ChevronDown, Phone, Building2, MapPin, Loader2, FileText, Shield, Receipt, Mail, Settings, Copy, ExternalLink, BarChart3, Lock } from 'lucide-react';
+import { User, LogOut, ChevronRight, ChevronDown, Phone, Building2, MapPin, Loader2, FileText, Shield, Receipt, Mail, Settings, Copy, ExternalLink, BarChart3, Lock, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { formatLeaderId } from '@/lib/leaderIdFormat';
@@ -182,8 +182,9 @@ export default function Profile() {
                     <div className="flex items-center gap-2">
                       <p className="font-semibold text-lg truncate">{displayName}</p>
                       {isPro && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/30">
-                          PRO
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                          <Crown className="h-3 w-3" />
+                          Pro
                         </span>
                       )}
                     </div>
