@@ -31,7 +31,7 @@ export function ProspectDistributionDrawer({
           </DrawerTitle>
         </DrawerHeader>
         
-        <ScrollArea className="flex-1 p-4">
+        <ScrollArea className="h-[calc(85vh-80px)] p-4">
           {isLoading ? (
             <div className="space-y-3">
               {[...Array(5)].map((_, i) => (
