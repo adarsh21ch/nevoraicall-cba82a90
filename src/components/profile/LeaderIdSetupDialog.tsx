@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Users, Loader2, CheckCircle2 } from 'lucide-react';
+import { Users, Loader2, CheckCircle2, Mail } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTrackingFormatContext } from '@/contexts/TrackingFormatContext';
@@ -15,11 +15,11 @@ interface LeaderIdSetupDialogProps {
 
 export function LeaderIdSetupDialog({ onComplete }: LeaderIdSetupDialogProps) {
   const { user } = useAuth();
-  const { profile, loading: profileLoading, updateLeaderHierarchy, updateProfile } = useProfile();
+  const { profile, loading: profileLoading, updateUplineByEmail, updateProfile } = useProfile();
   const { refreshFormat } = useTrackingFormatContext();
   
   const [open, setOpen] = useState(false);
-  const [leaderIdInput, setLeaderIdInput] = useState('');
+  const [uplineEmailInput, setUplineEmailInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const checkedRef = useRef(false);
@@ -29,21 +29,28 @@ export function LeaderIdSetupDialog({ onComplete }: LeaderIdSetupDialogProps) {
     if (!user || profileLoading || !profile || checkedRef.current) return;
     checkedRef.current = true;
     
-    // Don't show if user already has a leader
-    if (profile.leaders_id_of_my_leader) return;
+    // Don't show if user already has an upline
+    if (profile.upline_email || profile.leaders_id_of_my_leader) return;
     
     // Don't show if user already completed/skipped the prompt (persisted in DB)
     if (profile.leader_prompt_completed) return;
     
-    // Show the dialog for first-time users without a leader
+    // Show the dialog for first-time users without an upline
     setOpen(true);
   }, [user, profileLoading, profile]);
 
   const handleConnect = async () => {
-    if (!leaderIdInput.trim()) return;
+    if (!uplineEmailInput.trim()) return;
+    
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(uplineEmailInput.trim())) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
     
     setSaving(true);
-    const result = await updateLeaderHierarchy(leaderIdInput.trim().toUpperCase());
+    const result = await updateUplineByEmail(uplineEmailInput.trim().toLowerCase());
     
     if (result.success) {
       // Set use_leader_stages to true AND mark prompt as completed
@@ -53,7 +60,7 @@ export function LeaderIdSetupDialog({ onComplete }: LeaderIdSetupDialogProps) {
       });
       refreshFormat();
       setSuccess(true);
-      toast.success('Connected to your leader. Using their tracking format.');
+      toast.success(`Connected to ${result.uplineName || uplineEmailInput}`);
       
       // Close after a brief delay to show success
       setTimeout(() => {
@@ -61,7 +68,7 @@ export function LeaderIdSetupDialog({ onComplete }: LeaderIdSetupDialogProps) {
         onComplete?.();
       }, 1500);
     } else {
-      toast.error(result.error || 'Leader ID not found. Please check with your leader.');
+      toast.error(result.error || 'No user found with this email address');
     }
     
     setSaving(false);
@@ -88,10 +95,10 @@ export function LeaderIdSetupDialog({ onComplete }: LeaderIdSetupDialogProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />
-            Do you have a Leader ID?
+            Connect with your Upline
           </DialogTitle>
           <DialogDescription>
-            If your leader shared their ID with you, enter it below to use their tracking format (tags, levels, and funnel settings).
+            If you have an upline, enter their email address below to connect and sync their tracking format (tags, levels, and funnel settings).
           </DialogDescription>
         </DialogHeader>
 
@@ -105,17 +112,21 @@ export function LeaderIdSetupDialog({ onComplete }: LeaderIdSetupDialogProps) {
           <>
             <div className="py-4 space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="leader-id">Enter your Leader's ID</Label>
-                <Input
-                  id="leader-id"
-                  value={leaderIdInput}
-                  onChange={(e) => setLeaderIdInput(e.target.value.toUpperCase())}
-                  placeholder="NVR000123"
-                  className="font-mono"
-                  disabled={saving}
-                />
+                <Label htmlFor="upline-email">Enter your Upline's Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="upline-email"
+                    type="email"
+                    value={uplineEmailInput}
+                    onChange={(e) => setUplineEmailInput(e.target.value.toLowerCase())}
+                    placeholder="upline@gmail.com"
+                    className="pl-10"
+                    disabled={saving}
+                  />
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  Your leader's ID looks like NVR000123. Ask your leader if you don't have it.
+                  Enter the email address your upline uses to sign in.
                 </p>
               </div>
             </div>
@@ -125,7 +136,7 @@ export function LeaderIdSetupDialog({ onComplete }: LeaderIdSetupDialogProps) {
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 Skip for now
               </Button>
-              <Button onClick={handleConnect} disabled={saving || !leaderIdInput.trim()}>
+              <Button onClick={handleConnect} disabled={saving || !uplineEmailInput.trim()}>
                 {saving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

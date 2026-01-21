@@ -13,6 +13,7 @@ interface TeamMember {
   user_id: string;
   display_name: string | null;
   nevorid: string | null;
+  email: string | null;
   status: string;
   allowed_tabs: TabPermission[] | null; // null means all tabs
 }
@@ -25,6 +26,7 @@ interface SharedAccess {
   status: string;
   owner_display_name?: string;
   owner_nevorid?: string;
+  owner_email?: string;
   allowed_tabs: TabPermission[] | null; // null means all tabs
 }
 
@@ -77,7 +79,7 @@ const [myNevorId, setMyNevorId] = useState<string | null>(null);
       const userIds = accessRecords.map(r => r.shared_with_user_id);
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('user_id, display_name, neverai_id')
+        .select('user_id, display_name, neverai_id, email')
         .in('user_id', userIds);
       
       if (profiles) {
@@ -88,6 +90,7 @@ const [myNevorId, setMyNevorId] = useState<string | null>(null);
             user_id: p.user_id,
             display_name: p.display_name,
             nevorid: p.neverai_id,
+            email: p.email,
             status: record?.status || 'active',
             allowed_tabs: record?.allowed_tabs as TabPermission[] | null
           };
@@ -112,7 +115,7 @@ const [myNevorId, setMyNevorId] = useState<string | null>(null);
       const ownerIds = accessRecords.map(r => r.owner_user_id);
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('user_id, display_name, neverai_id')
+        .select('user_id, display_name, neverai_id, email')
         .in('user_id', ownerIds);
       
       if (profiles) {
@@ -121,6 +124,7 @@ const [myNevorId, setMyNevorId] = useState<string | null>(null);
           shared_with_user_id: user.id,
           owner_display_name: profiles.find(p => p.user_id === r.owner_user_id)?.display_name || 'Unknown',
           owner_nevorid: profiles.find(p => p.user_id === r.owner_user_id)?.neverai_id || '',
+          owner_email: profiles.find(p => p.user_id === r.owner_user_id)?.email || '',
           allowed_tabs: r.allowed_tabs as TabPermission[] | null
         })));
       }
@@ -369,6 +373,69 @@ const [myNevorId, setMyNevorId] = useState<string | null>(null);
     return true;
   };
 
+  // Share with upline by email (NEW - preferred method)
+  const shareWithUpline = async (uplineEmail: string, allowedTabs?: TabPermission[] | null) => {
+    if (!user) return { success: false, error: 'Not authenticated' };
+    
+    // Look up upline by email
+    const { data: foundUser, error: lookupError } = await supabase
+      .rpc('get_user_by_email', { target_email: uplineEmail.trim().toLowerCase() });
+    
+    if (lookupError || !foundUser || foundUser.length === 0) {
+      return { success: false, error: 'No user found with this email address' };
+    }
+
+    const uplineUserId = foundUser[0].user_id;
+    const uplineName = foundUser[0].display_name || uplineEmail;
+    
+    if (uplineUserId === user.id) {
+      return { success: false, error: 'Cannot share with yourself' };
+    }
+
+    // Check if already exists
+    const { data: existing } = await supabase
+      .from('team_access')
+      .select('id, status')
+      .eq('owner_user_id', user.id)
+      .eq('shared_with_user_id', uplineUserId)
+      .maybeSingle();
+    
+    if (existing) {
+      if (existing.status === 'active') {
+        return { success: false, error: 'Already sharing with this upline' };
+      }
+      // If pending or revoked, update to active
+      const { error } = await supabase
+        .from('team_access')
+        .update({ status: 'active', allowed_tabs: allowedTabs === undefined ? null : allowedTabs })
+        .eq('id', existing.id);
+      
+      if (error) return { success: false, error: 'Failed to connect with upline' };
+      
+      await sendConnectionNotification(uplineUserId);
+      await fetchTeamMembers();
+      toast.success(`Connected with ${uplineName}`);
+      return { success: true };
+    }
+
+    // Create new share
+    const { error } = await supabase
+      .from('team_access')
+      .insert({
+        owner_user_id: user.id,
+        shared_with_user_id: uplineUserId,
+        status: 'active',
+        allowed_tabs: allowedTabs === undefined ? null : allowedTabs
+      });
+
+    if (error) return { success: false, error: 'Failed to connect with upline' };
+
+    await sendConnectionNotification(uplineUserId);
+    await fetchTeamMembers();
+    toast.success(`Connected with ${uplineName}`);
+    return { success: true };
+  };
+
   return {
     myNevorId,
     myDisplayName,
@@ -378,6 +445,7 @@ const [myNevorId, setMyNevorId] = useState<string | null>(null);
     pendingRequests,
     loading,
     shareWithLeader,
+    shareWithUpline,
     acceptShareRequest,
     rejectShareRequest,
     stopSharingWithLeader,

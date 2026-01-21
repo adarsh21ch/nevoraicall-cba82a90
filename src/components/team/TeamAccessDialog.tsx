@@ -3,48 +3,41 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Users, Copy, Check, X, UserPlus, Eye, EyeOff } from 'lucide-react';
+import { Users, X, UserPlus, Eye, EyeOff, Mail, Loader2 } from 'lucide-react';
 import { useTeamAccess } from '@/hooks/useTeamAccess';
 import { toast } from 'sonner';
 import { Separator } from '@/components/ui/separator';
-import { formatLeaderId } from '@/lib/leaderIdFormat';
 
 export function TeamAccessDialog() {
   const { 
-    myNevorId, 
-    myDisplayName,
-    myLeaderCodeSeq,
     teamMembers, 
     sharedWithMe, 
     loading, 
-    shareWithLeader,
+    shareWithUpline,
     stopSharingWithLeader,
     removeFromTeam
   } = useTeamAccess();
   
   const [open, setOpen] = useState(false);
-  const [leaderTrackUpId, setLeaderTrackUpId] = useState('');
+  const [uplineEmail, setUplineEmail] = useState('');
   const [sharing, setSharing] = useState(false);
-  const [copied, setCopied] = useState(false);
 
-  const handleCopyId = async () => {
-    if (myNevorId) {
-      await navigator.clipboard.writeText(formatLeaderId(myNevorId, myLeaderCodeSeq));
-      setCopied(true);
-      toast.success('Leader ID copied');
-      setTimeout(() => setCopied(false), 2000);
+  const handleShareWithUpline = async () => {
+    if (!uplineEmail.trim()) return;
+    
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(uplineEmail.trim())) {
+      toast.error('Please enter a valid email address');
+      return;
     }
-  };
-
-  const handleShareWithLeader = async () => {
-    if (!leaderTrackUpId.trim()) return;
     
     setSharing(true);
-    const result = await shareWithLeader(leaderTrackUpId.trim().toUpperCase());
+    const result = await shareWithUpline(uplineEmail.trim().toLowerCase());
     setSharing(false);
     
     if (result.success) {
-      setLeaderTrackUpId('');
+      setUplineEmail('');
     } else {
       toast.error(result.error);
     }
@@ -76,52 +69,33 @@ export function TeamAccessDialog() {
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* My Leader ID */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Your Leader ID</Label>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 px-3 py-2 bg-muted rounded-md font-mono text-sm">
-                {formatLeaderId(myNevorId, myLeaderCodeSeq) || 'Loading...'}
-              </div>
-              <Button 
-                variant="outline" 
-                size="icon" 
-                onClick={handleCopyId}
-                disabled={!myNevorId}
-              >
-                {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Share this Leader ID with your team so they can share their Follow Up lists with you.
-            </p>
-          </div>
-
-          <Separator />
-
-          {/* Share with Leader */}
+          {/* Share with Upline */}
           <div className="space-y-2">
             <Label className="text-sm font-medium flex items-center gap-2">
               <UserPlus className="h-4 w-4" />
-              Share with Leader
+              Share with Upline
             </Label>
             <div className="flex items-center gap-2">
-              <Input
-                placeholder="Enter Leader's ID (e.g., NVR000123)"
-                value={leaderTrackUpId}
-                onChange={(e) => setLeaderTrackUpId(e.target.value.toUpperCase())}
-                className="flex-1 font-mono"
-              />
+              <div className="relative flex-1">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="email"
+                  placeholder="Enter upline's email address"
+                  value={uplineEmail}
+                  onChange={(e) => setUplineEmail(e.target.value.toLowerCase())}
+                  className="pl-10"
+                />
+              </div>
               <Button 
-                onClick={handleShareWithLeader}
-                disabled={sharing || !leaderTrackUpId.trim()}
+                onClick={handleShareWithUpline}
+                disabled={sharing || !uplineEmail.trim()}
                 size="sm"
               >
-                Share
+                {sharing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Share'}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Share your Follow Up list with your leader. They will be able to view your data immediately (read-only).
+              Share your Follow Up list with your upline. They will be able to view your data immediately (read-only).
             </p>
           </div>
 
@@ -140,7 +114,7 @@ export function TeamAccessDialog() {
                     <div key={access.id} className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
                       <div>
                         <p className="text-sm font-medium">{access.owner_display_name}</p>
-                        <p className="text-xs text-muted-foreground font-mono">{access.owner_nevorid}</p>
+                        <p className="text-xs text-muted-foreground">{access.owner_email || access.owner_nevorid}</p>
                       </div>
                       <Button 
                         variant="ghost" 
@@ -160,7 +134,7 @@ export function TeamAccessDialog() {
             </>
           )}
 
-          {/* Leaders I'm Sharing With */}
+          {/* Uplines I'm Sharing With */}
           {teamMembers.filter(m => m.status === 'active').length > 0 && (
             <>
               <Separator />
@@ -176,7 +150,7 @@ export function TeamAccessDialog() {
                         <p className="text-sm font-medium">
                           {member.display_name || 'Unknown'}
                         </p>
-                        <p className="text-xs text-muted-foreground font-mono">{member.nevorid}</p>
+                        <p className="text-xs text-muted-foreground">{member.email || member.nevorid}</p>
                         <p className="text-xs text-muted-foreground">Can view your Follow Up list</p>
                       </div>
                       <Button 
@@ -202,7 +176,7 @@ export function TeamAccessDialog() {
             <div className="text-center py-4 text-muted-foreground">
               <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
               <p className="text-sm">No team connections yet</p>
-              <p className="text-xs">Share your Leader ID with your team or enter a leader's ID to get started.</p>
+              <p className="text-xs">Enter your upline's email to share your data with them.</p>
             </div>
           )}
         </div>
