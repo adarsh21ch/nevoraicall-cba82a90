@@ -66,9 +66,12 @@ export function useAdmin() {
     }
     
     try {
+      // Use the paginated version with all parameters to avoid function overloading conflict
       const { data, error } = await supabase.rpc('admin_search_users', {
         search_query: searchQuery,
-        plan_filter: planFilter === 'all' ? null : planFilter
+        plan_filter: planFilter === 'all' ? null : planFilter,
+        page_size: 1000,
+        page_offset: 0
       });
 
       if (error) {
