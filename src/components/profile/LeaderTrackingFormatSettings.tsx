@@ -129,7 +129,7 @@ export function LeaderTrackingFormatSettings({
     if (profile && !initializedRef.current) {
       initializedRef.current = true;
       
-      const isUsingLeaderFormat = profile.use_leader_stages && !!profile.leaders_id_of_my_leader;
+      const isUsingLeaderFormat = profile.use_leader_stages && !!profile.upline_email;
       setFormatMode(isUsingLeaderFormat ? 'leader' : 'own');
 
       // Parse leads tracking tags from response_labels
@@ -392,8 +392,8 @@ export function LeaderTrackingFormatSettings({
       refreshFormat();
       toast.success('You can now create your own tracking format');
     } else if (mode === 'leader' && formatMode === 'own') {
-      if (!profile?.leaders_id_of_my_leader) {
-        toast.error('Please enter a Leader ID first');
+      if (!profile?.upline_email) {
+        toast.error('Please connect to an upline first');
         return;
       }
       setShowSwitchConfirm(true);
@@ -527,7 +527,7 @@ export function LeaderTrackingFormatSettings({
     });
   };
 
-  const hasLeader = !!profile?.leaders_id_of_my_leader;
+  const hasLeader = !!profile?.upline_email;
   const displayLevels = formatMode === 'own' ? ownLevels : inheritedLevels;
 
   return (
@@ -591,7 +591,7 @@ export function LeaderTrackingFormatSettings({
               <div>
                 <p className="text-xs text-muted-foreground">Connected to Upline</p>
                 <div className="flex items-center gap-2">
-                  <p className="font-semibold text-primary">{profile?.upline_email || profile?.leaders_id_of_my_leader}</p>
+                  <p className="font-semibold text-primary">{profile?.upline_email}</p>
                   {directLeaderName && (
                     <span className="text-sm text-foreground font-medium">({directLeaderName})</span>
                   )}
@@ -641,7 +641,7 @@ export function LeaderTrackingFormatSettings({
             <Separator />
             <div className="space-y-4">
               <p className="text-xs text-muted-foreground font-medium">
-                Inherited Tracking Format from {trackingFormat?.rootLeaderName || directLeaderName || 'Leader'} ({trackingFormat?.rootLeaderId || directLeaderId || '—'})
+                Inherited Tracking Format from {trackingFormat?.rootLeaderName || directLeaderName || 'Upline'}
               </p>
               
               {/* Inherited Team Levels */}

@@ -30,17 +30,18 @@ export function useDailyTasks(selectedDate: string) {
     if (!user) return null;
 
     try {
-      // Get user's profile to find their leader
+      // Get user's profile to find their upline
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('leaders_id_of_my_leader, root_leader_id, level_id')
+        .select('upline_email, leaders_id_of_my_leader, root_leader_id, level_id')
         .eq('user_id', user.id)
         .maybeSingle();
 
       if (profileError || !profile) return null;
 
+      // Use upline_email as the primary check, fall back to legacy ID for lookups
       const leaderNeveraiId = profile.leaders_id_of_my_leader || profile.root_leader_id;
-      if (!leaderNeveraiId) return null;
+      if (!leaderNeveraiId && !profile.upline_email) return null;
 
       // Get leader's user_id from their neverai_id
       const { data: leaderProfile, error: leaderError } = await supabase

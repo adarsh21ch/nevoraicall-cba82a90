@@ -9,14 +9,14 @@ import { toast } from 'sonner';
 
 interface ProfileLevelDropdownProps {
   currentLevelId: string | null;
-  leaderNeveraiId: string | null; // The Leader ID (NVR-XXXXX format)
+  uplineEmail: string | null; // The upline's email address
   userId: string;
   onLevelChange?: (levelId: string) => void;
 }
 
 export function ProfileLevelDropdown({ 
   currentLevelId, 
-  leaderNeveraiId, 
+  uplineEmail, 
   userId,
   onLevelChange 
 }: ProfileLevelDropdownProps) {
@@ -29,11 +29,11 @@ export function ProfileLevelDropdown({
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch levels for the leader based on their neverai_id
+  // Fetch levels for the leader based on their email
   useEffect(() => {
     const fetchLevels = async () => {
-      if (!leaderNeveraiId) {
-        // No leader set - fetch own levels (user is their own leader)
+      if (!uplineEmail) {
+        // No upline set - fetch own levels (user is their own leader)
         const { data, error } = await supabase
           .from('leader_levels')
           .select('*')
@@ -52,31 +52,31 @@ export function ProfileLevelDropdown({
         return;
       }
 
-      // Find the leader's user_id from their neverai_id using RPC (bypasses RLS)
-      const { data: leaderData, error: rpcError } = await supabase
-        .rpc('get_user_by_neverai_id', { target_neverai_id: leaderNeveraiId });
+      // Find the upline's user_id from their email using RPC (bypasses RLS)
+      const { data: uplineData, error: rpcError } = await supabase
+        .rpc('get_user_by_email', { target_email: uplineEmail });
 
-      if (rpcError || !leaderData || leaderData.length === 0) {
-        // Only show "Leader not found" after timeout
+      if (rpcError || !uplineData || uplineData.length === 0) {
+        // Only show "Upline not found" after timeout
         if (loadingTimeout) {
           setLevels([]);
-          setNoLevelsMessage('Leader not found');
+          setNoLevelsMessage('Upline not found');
         }
         setLoading(false);
         return;
       }
 
-      const leaderUserId = leaderData[0].user_id;
+      const uplineUserId = uplineData[0].user_id;
 
-      // Fetch levels for this leader
+      // Fetch levels for this upline
       const { data: levelsData, error: levelsError } = await supabase
         .from('leader_levels')
         .select('*')
-        .eq('leader_id', leaderUserId)
+        .eq('leader_id', uplineUserId)
         .order('position', { ascending: true });
 
       if (levelsError) {
-        console.error('Error fetching leader levels:', levelsError);
+        console.error('Error fetching upline levels:', levelsError);
         setLevels([]);
         if (loadingTimeout) {
           setNoLevelsMessage('Error loading levels');
@@ -85,7 +85,7 @@ export function ProfileLevelDropdown({
         setLevels([]);
         // Only show message after timeout, otherwise keep loading
         if (loadingTimeout) {
-          setNoLevelsMessage('Your leader has not defined any levels yet');
+          setNoLevelsMessage('Your upline has not defined any levels yet');
         }
       } else {
         setLevels(levelsData as LeaderLevel[]);
@@ -149,7 +149,7 @@ export function ProfileLevelDropdown({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [leaderNeveraiId, userId, currentLevelId, onLevelChange]);
+  }, [uplineEmail, userId, currentLevelId, onLevelChange]);
 
   useEffect(() => {
     setSelectedLevelId(currentLevelId);

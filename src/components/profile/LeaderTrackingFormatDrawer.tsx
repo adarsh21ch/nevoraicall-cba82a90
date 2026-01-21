@@ -33,7 +33,7 @@ export function LeaderTrackingFormatDrawer({
           <Users className="h-5 w-5 text-primary" />
         </div>
         <div className="text-left">
-          <span className="font-medium block">Leader Tracking Format</span>
+          <span className="font-medium block">Upline Tracking Format</span>
           <span className="text-xs text-muted-foreground">Tags, levels & funnel settings</span>
         </div>
       </div>
@@ -66,7 +66,7 @@ export function LeaderTrackingFormatDrawer({
           <DrawerHeader className="border-b border-border/50 pb-4">
             <DrawerTitle className="flex items-center gap-2">
               <Users className="h-5 w-5 text-primary" />
-              Leader Tracking Format
+              Upline Tracking Format
             </DrawerTitle>
           </DrawerHeader>
           {Content}
@@ -85,7 +85,7 @@ export function LeaderTrackingFormatDrawer({
         <SheetHeader className="px-6 py-4 border-b border-border/50">
           <SheetTitle className="flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />
-            Leader Tracking Format
+            Upline Tracking Format
           </SheetTitle>
         </SheetHeader>
         {Content}

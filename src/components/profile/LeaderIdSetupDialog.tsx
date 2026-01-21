@@ -30,7 +30,7 @@ export function LeaderIdSetupDialog({ onComplete }: LeaderIdSetupDialogProps) {
     checkedRef.current = true;
     
     // Don't show if user already has an upline
-    if (profile.upline_email || profile.leaders_id_of_my_leader) return;
+    if (profile.upline_email) return;
     
     // Don't show if user already completed/skipped the prompt (persisted in DB)
     if (profile.leader_prompt_completed) return;

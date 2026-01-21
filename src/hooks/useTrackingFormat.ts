@@ -238,8 +238,8 @@ export function useTrackingFormat() {
       const { leadsNonTracking: ownLeadsPersonal } = parseResponseLabels(freshProfile.response_labels);
       const { stageNonTracking: ownStagePersonal } = parseStageLabels(freshProfile.stage_labels);
 
-      // If user creates their own format (is root leader / no leader)
-      if (!freshProfile.use_leader_stages || !freshProfile.leaders_id_of_my_leader) {
+      // If user creates their own format (is root leader / no upline)
+      if (!freshProfile.use_leader_stages || !freshProfile.upline_email) {
         // User is their own root leader - use their own tracking tags
         const { data: levels } = await supabase
           .from('leader_levels')
@@ -276,12 +276,14 @@ export function useTrackingFormat() {
           rootLeaderId: freshProfile.neverai_id,
         });
       } else {
-        // User uses leader's format - ALWAYS inherit from the ROOT leader of the tree
+        // User uses upline's format - fetch using email-based lookup
+        // For now, we still need the legacy neverai_id fields for the RPC calls
+        // TODO: Update RPCs to support email-based lookup
         const directLeaderNeveraiId = freshProfile.leaders_id_of_my_leader;
         const rootLeaderNeveraiId = freshProfile.root_leader_id || directLeaderNeveraiId;
 
         const [directLeaderMeta, rootLeaderData] = await Promise.all([
-          fetchLeaderMeta(directLeaderNeveraiId),
+          directLeaderNeveraiId ? fetchLeaderMeta(directLeaderNeveraiId) : Promise.resolve(null),
           rootLeaderNeveraiId ? fetchLeaderFormat(rootLeaderNeveraiId) : Promise.resolve(null),
         ]);
 

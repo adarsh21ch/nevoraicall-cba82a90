@@ -48,20 +48,20 @@ export function useFunnelConfig() {
     setLoading(false);
   }, [user]);
 
-  // Fetch user profile to check leader connection and use_leader_stages
+  // Fetch user profile to check upline connection and use_leader_stages
   const checkLeaderConnection = useCallback(async () => {
     if (!user) return;
     
     const { data: profile } = await supabase
       .from('profiles')
-      .select('leaders_id_of_my_leader, root_leader_id, use_leader_stages')
+      .select('upline_email, leaders_id_of_my_leader, root_leader_id, use_leader_stages')
       .eq('user_id', user.id)
       .maybeSingle();
     
-    // Use root_leader_id first, fallback to direct leader
+    // Use root_leader_id first, fallback to direct leader (still using legacy IDs for RPC)
     const configLeaderId = profile?.root_leader_id || profile?.leaders_id_of_my_leader;
     
-    if (configLeaderId && profile?.use_leader_stages) {
+    if (configLeaderId && profile?.use_leader_stages && profile?.upline_email) {
       setUseLeaderConfig(true);
       await fetchLeaderConfigInternal(configLeaderId);
     } else {
