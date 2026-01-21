@@ -20,7 +20,7 @@ export function useLeaderSetup() {
     if (!pendingUplineEmail) return;
 
     // Don't set if user already has an upline
-    if (profile.upline_email || profile.leaders_id_of_my_leader) {
+    if (profile.upline_email) {
       sessionStorage.removeItem('pending_upline_email');
       return;
     }

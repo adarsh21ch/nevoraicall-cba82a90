@@ -118,7 +118,7 @@ export default function Profile() {
     window.open('https://nevorai.com/auth?redirect=/trackup', '_blank');
   };
 
-  // Process pending leader ID from share links
+  // Process pending upline email from share links
   useLeaderSetup();
 
   // Pull-to-refresh
@@ -190,7 +190,7 @@ export default function Profile() {
                     <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                   </div>
                   {/* Level dropdown in top-right */}
-                  <ProfileLevelDropdown currentLevelId={profile?.level_id || null} leaderNeveraiId={profile?.root_leader_id || profile?.leaders_id_of_my_leader || null} userId={user.id} onLevelChange={() => refetch?.()} />
+                  <ProfileLevelDropdown currentLevelId={profile?.level_id || null} uplineEmail={profile?.upline_email || null} userId={user.id} onLevelChange={() => refetch?.()} />
                 </div>
                 {/* Show connected upline email if exists */}
                 {profile?.upline_email && (
