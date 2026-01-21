@@ -29,6 +29,8 @@ export interface Profile {
   response_labels: string[];
   /** Monotonic counter for lifetime leads added - never decreases */
   total_leads_added: number;
+  /** Upline's email address (new simplified identifier) */
+  upline_email: string | null;
 }
 
 export interface ProfileUpdate {
@@ -46,6 +48,7 @@ export interface ProfileUpdate {
   stage_count?: number;
   stage_labels?: string[];
   response_labels?: string[];
+  upline_email?: string | null;
 }
 
 export function useProfile() {
@@ -112,6 +115,7 @@ export function useProfile() {
         stage_labels: data.stage_labels || [],
         response_labels: data.response_labels || [],
         total_leads_added: data.total_leads_added ?? 0,
+        upline_email: data.upline_email || null,
       } as Profile;
     },
     enabled: !!user,
@@ -170,7 +174,7 @@ export function useProfile() {
     },
   });
 
-  // Leader hierarchy mutation
+  // Leader hierarchy mutation (legacy - still works with Leader ID)
   const leaderMutation = useMutation({
     mutationFn: async (leaderNeveraiId: string) => {
       if (!user) throw new Error('Not authenticated');
@@ -193,35 +197,67 @@ export function useProfile() {
         leaders_id_of_my_leader: result.leaders_id_of_my_leader || null,
         root_leader_id: result.root_leader_id || null
       } : prev);
-      toast({ title: 'Leader updated successfully' });
+      toast({ title: 'Connected to upline successfully' });
     },
     onError: () => {
-      toast({ title: 'Error updating leader', variant: 'destructive' });
+      toast({ title: 'Error connecting to upline', variant: 'destructive' });
     },
   });
 
-  // Clear leader mutation
+  // Upline by email mutation (NEW - preferred method)
+  const uplineByEmailMutation = useMutation({
+    mutationFn: async (uplineEmail: string) => {
+      if (!user) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase.rpc('update_upline_by_email', {
+        p_user_id: user.id,
+        p_upline_email: uplineEmail.trim().toLowerCase()
+      });
+
+      if (error) throw error;
+
+      const result = data as { success: boolean; error?: string; upline_email?: string; upline_name?: string; leaders_id_of_my_leader?: string; root_leader_id?: string };
+      if (!result.success) throw new Error(result.error || 'Failed to connect to upline');
+      
+      return result;
+    },
+    onSuccess: (result) => {
+      queryClient.setQueryData<Profile>(queryKey, (prev) => prev ? {
+        ...prev,
+        upline_email: result.upline_email || null,
+        leaders_id_of_my_leader: result.leaders_id_of_my_leader || null,
+        root_leader_id: result.root_leader_id || null
+      } : prev);
+      toast({ title: `Connected to ${result.upline_name || result.upline_email}` });
+    },
+    onError: () => {
+      toast({ title: 'Error connecting to upline', variant: 'destructive' });
+    },
+  });
+
+  // Clear upline mutation
   const clearLeaderMutation = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error('Not authenticated');
 
-      const { error } = await supabase
-        .from('profiles')
-        .update({ leaders_id_of_my_leader: null, root_leader_id: null })
-        .eq('user_id', user.id);
+      const { data, error } = await supabase.rpc('clear_upline_relationship', {
+        p_user_id: user.id
+      });
 
       if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.setQueryData<Profile>(queryKey, (prev) => prev ? {
         ...prev,
+        upline_email: null,
         leaders_id_of_my_leader: null,
         root_leader_id: null
       } : prev);
-      toast({ title: 'Leader cleared successfully' });
+      toast({ title: 'Upline disconnected' });
     },
     onError: () => {
-      toast({ title: 'Error clearing leader', variant: 'destructive' });
+      toast({ title: 'Error disconnecting upline', variant: 'destructive' });
     },
   });
 
@@ -234,6 +270,7 @@ export function useProfile() {
     }
   }, [updateMutation]);
 
+  // Legacy: Update by Leader ID (still supported for backward compatibility)
   const updateLeaderHierarchy = useCallback(async (leaderNeveraiId: string) => {
     try {
       await leaderMutation.mutateAsync(leaderNeveraiId);
@@ -242,6 +279,16 @@ export function useProfile() {
       return { success: false, error: error.message };
     }
   }, [leaderMutation]);
+
+  // NEW: Update by upline email (preferred method)
+  const updateUplineByEmail = useCallback(async (uplineEmail: string) => {
+    try {
+      const result = await uplineByEmailMutation.mutateAsync(uplineEmail);
+      return { success: true, uplineName: result.upline_name };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  }, [uplineByEmailMutation]);
 
   const clearLeaderHierarchy = useCallback(async () => {
     try {
@@ -274,7 +321,7 @@ export function useProfile() {
     }
   }, []);
 
-  const updating = updateMutation.isPending || leaderMutation.isPending || clearLeaderMutation.isPending;
+  const updating = updateMutation.isPending || leaderMutation.isPending || uplineByEmailMutation.isPending || clearLeaderMutation.isPending;
 
   return { 
     profile: profile ?? null, 
@@ -282,6 +329,7 @@ export function useProfile() {
     updating, 
     updateProfile, 
     updateLeaderHierarchy,
+    updateUplineByEmail,
     clearLeaderHierarchy,
     getLeaderStageConfig,
     refetch 

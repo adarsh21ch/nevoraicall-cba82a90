@@ -1692,6 +1692,7 @@ export type Database = {
           tags_refresh_token: string | null
           total_leads_added: number
           updated_at: string
+          upline_email: string | null
           use_leader_stages: boolean
           user_id: string
         }
@@ -1719,6 +1720,7 @@ export type Database = {
           tags_refresh_token?: string | null
           total_leads_added?: number
           updated_at?: string
+          upline_email?: string | null
           use_leader_stages?: boolean
           user_id: string
         }
@@ -1746,6 +1748,7 @@ export type Database = {
           tags_refresh_token?: string | null
           total_leads_added?: number
           updated_at?: string
+          upline_email?: string | null
           use_leader_stages?: boolean
           user_id?: string
         }
@@ -2815,6 +2818,7 @@ export type Database = {
           neverai_id: string
           plan: string
           subscribed_at: string
+          upline_email: string
           user_id: string
         }[]
       }
@@ -2853,6 +2857,7 @@ export type Database = {
           source_app: string
         }[]
       }
+      clear_upline_relationship: { Args: { p_user_id: string }; Returns: Json }
       ensure_ac_profile_exists: { Args: never; Returns: Json }
       generate_neverai_id: { Args: never; Returns: string }
       generate_sequential_neverai_id: { Args: never; Returns: string }
@@ -2905,6 +2910,15 @@ export type Database = {
           why_need: string
         }[]
       }
+      get_user_by_email: {
+        Args: { target_email: string }
+        Returns: {
+          display_name: string
+          email: string
+          neverai_id: string
+          user_id: string
+        }[]
+      }
       get_user_by_neverai_id: {
         Args: { target_neverai_id: string }
         Returns: {
@@ -2955,6 +2969,10 @@ export type Database = {
       record_app_access: { Args: { p_app: string }; Returns: undefined }
       update_leader_hierarchy: {
         Args: { p_leader_id: string; p_user_id: string }
+        Returns: Json
+      }
+      update_upline_by_email: {
+        Args: { p_upline_email: string; p_user_id: string }
         Returns: Json
       }
       xor_decrypt_phone: { Args: { encrypted_text: string }; Returns: string }
