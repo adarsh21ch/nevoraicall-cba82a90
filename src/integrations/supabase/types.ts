@@ -1614,6 +1614,7 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          form_type: string | null
           id: string
           is_public: boolean
           owner_user_id: string
@@ -1623,6 +1624,7 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          form_type?: string | null
           id?: string
           is_public?: boolean
           owner_user_id: string
@@ -1632,6 +1634,7 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          form_type?: string | null
           id?: string
           is_public?: boolean
           owner_user_id?: string
