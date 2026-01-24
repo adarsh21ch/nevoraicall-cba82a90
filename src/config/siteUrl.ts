@@ -4,10 +4,22 @@
  */
 export const PUBLISHED_APP_URL = "https://app.nevorai.com";
 
+/**
+ * Main Nevorai website URL for TrackUp Dashboard and form share links.
+ */
+export const NEVORAI_WEBSITE_URL = "https://nevorai.com";
+
 export function getPublishedAppUrl(): string {
   return PUBLISHED_APP_URL;
 }
 
 export function getPasswordRecoveryRedirectUrl(): string {
   return `${PUBLISHED_APP_URL}/reset-password`;
+}
+
+/**
+ * Generate a shareable form URL for nevorai.com
+ */
+export function getFormShareUrl(token: string): string {
+  return `${NEVORAI_WEBSITE_URL}/f/${token}`;
 }
