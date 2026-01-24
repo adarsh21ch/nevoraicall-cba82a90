@@ -3130,6 +3130,7 @@ export type Database = {
         Args: { p_display_name: string; p_email: string }
         Returns: string
       }
+      get_form_share_url: { Args: { p_form_id: string }; Returns: string }
       get_leader_funnel_config: {
         Args: { target_neverai_id: string }
         Returns: {
