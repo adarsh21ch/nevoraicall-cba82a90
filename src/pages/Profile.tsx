@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
@@ -114,9 +115,35 @@ export default function Profile() {
   const { isPaid } = useLifetimeLeadLimit();
   const [editOpen, setEditOpen] = useState(false);
 
-  // Handle TrackUp Dashboard - Open nevorai.com TrackUp
-  const handleOpenTrackUp = () => {
-    window.open('https://nevorai.com/auth?redirect=/trackup', '_blank');
+  // Handle TrackUp Dashboard - SSO magic link to nevorai.com
+  const [ssoLoading, setSsoLoading] = useState(false);
+  
+  const handleOpenTrackUp = async () => {
+    setSsoLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('trackup-sso-link');
+      
+      if (error) {
+        console.error('SSO link error:', error);
+        toast.error('Failed to generate login link. Opening login page...');
+        window.open('https://nevorai.com/auth?redirect=/trackup', '_blank');
+        return;
+      }
+      
+      if (data?.action_link) {
+        // Open the magic link - user will be auto-logged in
+        window.open(data.action_link, '_blank');
+      } else {
+        toast.error('Failed to generate login link');
+        window.open('https://nevorai.com/auth?redirect=/trackup', '_blank');
+      }
+    } catch (err) {
+      console.error('SSO error:', err);
+      toast.error('Something went wrong. Opening login page...');
+      window.open('https://nevorai.com/auth?redirect=/trackup', '_blank');
+    } finally {
+      setSsoLoading(false);
+    }
   };
 
   // Process pending upline email from share links
@@ -283,22 +310,30 @@ export default function Profile() {
             {/* TrackUp Dashboard - Highlighted primary action */}
             <button 
               onClick={handleOpenTrackUp}
+              disabled={ssoLoading}
               className={cn(
                 "w-full relative overflow-hidden rounded-xl p-4",
                 "bg-gradient-to-r backdrop-blur-sm",
                 "border border-emerald-500/30 shadow-sm",
                 "flex items-center justify-between",
                 "transition-all duration-300 hover:shadow-md hover:scale-[1.01]",
-                "from-emerald-500/20 to-emerald-500/5"
+                "from-emerald-500/20 to-emerald-500/5",
+                ssoLoading && "opacity-70 cursor-wait"
               )}
             >
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-emerald-500/10">
-                  <BarChart3 className="h-5 w-5 text-emerald-500" />
+                  {ssoLoading ? (
+                    <Loader2 className="h-5 w-5 text-emerald-500 animate-spin" />
+                  ) : (
+                    <BarChart3 className="h-5 w-5 text-emerald-500" />
+                  )}
                 </div>
                 <div className="text-left">
                   <span className="font-medium block">TrackUp Dashboard</span>
-                  <span className="text-xs text-muted-foreground">Open TrackUp on nevorai.com</span>
+                  <span className="text-xs text-muted-foreground">
+                    {ssoLoading ? 'Opening...' : 'Open TrackUp on nevorai.com'}
+                  </span>
                 </div>
               </div>
               <ExternalLink className="h-5 w-5 text-muted-foreground" />
