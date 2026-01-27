@@ -1,32 +1,47 @@
 
 
-## Plan: Update RESEND_API_KEY and Test OTP Flow
+## Plan: Update Google OAuth Redirect to Use app.nevorai.com
 
 ### Overview
-Update the `RESEND_API_KEY` secret with the new US region API key and verify the send-otp edge function works correctly.
+Update the Google sign-in redirect URL to always use your custom domain `https://app.nevorai.com` instead of the current page's origin. This ensures users always land on your branded domain after Google authentication.
 
-### Steps
+### What Will Change
 
-#### 1. Update the RESEND_API_KEY Secret
-Replace the existing `RESEND_API_KEY` with the new key from the US region (North Virginia) where `nevorai.com` is verified.
+#### File: `src/pages/Auth.tsx`
 
-#### 2. Deploy and Test the send-otp Function
-After updating the secret:
-- Redeploy the `send-otp` edge function
-- Test with a sample email address
-- Verify the OTP email is sent successfully
+**1. Add import for PUBLISHED_APP_URL:**
+```typescript
+import { getPasswordRecoveryRedirectUrl, PUBLISHED_APP_URL } from '@/config/siteUrl';
+```
 
-#### 3. Verify End-to-End Flow
-- Test the complete signup flow in the Auth page
-- Confirm OTP email arrives
-- Verify the verification step works
+**2. Update handleGoogleSignIn function (line 271):**
+```typescript
+// Before:
+redirectTo: `${window.location.origin}/home`,
 
-### Expected Outcome
-The `send-otp` function should successfully send verification emails from `noreply@nevorai.com` now that the API key region matches the verified domain region.
+// After:
+redirectTo: `${PUBLISHED_APP_URL}/home`,
+```
 
-### Technical Details
-- **Secret to update**: `RESEND_API_KEY`
-- **New value**: The API key you provided (from US region)
-- **Domain**: nevorai.com (verified in North Virginia / us-east-1)
-- **Sender**: noreply@nevorai.com
+This changes the redirect from dynamically using whatever domain the user is on, to always using `https://app.nevorai.com/home`.
+
+### Current Configuration Status
+
+| Setting | Value | Status |
+|---------|-------|--------|
+| Branding verification | Verified | ✅ |
+| Authorized domain | nevorai.com | ✅ |
+| JavaScript origin 1 | https://app.nevorai.com | ✅ |
+| JavaScript origin 2 | https://nevorai.com | ✅ |
+| Redirect URI | https://kisankusogixarejjphi.supabase.co/auth/v1/callback | ✅ |
+
+### Expected Result
+After this change:
+1. User clicks "Continue with Google" from any domain (preview or production)
+2. Google authenticates the user
+3. User is redirected to `https://app.nevorai.com/home`
+4. No Lovable domains visible to end users
+
+### One Additional Check
+Make sure `https://app.nevorai.com` is added as an allowed redirect URL in your backend authentication settings. You can verify this in the Lovable Cloud dashboard.
 
