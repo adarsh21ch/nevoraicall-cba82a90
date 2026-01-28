@@ -1,4 +1,5 @@
 import { useAdminFeatureFlags } from '@/hooks/useAdminConfig';
+import { logAdminAction } from '@/hooks/useAuditLogs';
 import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
@@ -11,10 +12,25 @@ export function FeatureFlagsManager() {
   const handleToggle = async (
     id: string, 
     field: 'free_access' | 'pro_access' | 'is_enabled', 
-    value: boolean
+    value: boolean,
+    flag: { feature_name: string; feature_key: string; free_access: boolean; pro_access: boolean; is_enabled: boolean }
   ) => {
     try {
-      await updateFlag(id, { [field]: value });
+      const oldValue = { [field]: flag[field] };
+      const newValue = { [field]: value };
+      
+      await updateFlag(id, newValue);
+      
+      // Log audit action
+      await logAdminAction(
+        'feature_flag_updated',
+        'feature',
+        id,
+        oldValue,
+        newValue,
+        `Feature "${flag.feature_name}" - ${field} changed to ${value}`
+      );
+      
       toast.success('Feature flag updated');
     } catch (err) {
       toast.error('Failed to update feature flag');
@@ -65,9 +81,9 @@ export function FeatureFlagsManager() {
                   <div className="flex items-center gap-2">
                     <Power className="h-3.5 w-3.5 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground">Enabled</span>
-                    <Switch
+                  <Switch
                       checked={flag.is_enabled}
-                      onCheckedChange={(value) => handleToggle(flag.id, 'is_enabled', value)}
+                      onCheckedChange={(value) => handleToggle(flag.id, 'is_enabled', value, flag)}
                       aria-label="Toggle feature"
                     />
                   </div>
@@ -80,7 +96,7 @@ export function FeatureFlagsManager() {
                     <span className="text-xs text-muted-foreground">Free</span>
                     <Switch
                       checked={flag.free_access}
-                      onCheckedChange={(value) => handleToggle(flag.id, 'free_access', value)}
+                      onCheckedChange={(value) => handleToggle(flag.id, 'free_access', value, flag)}
                       disabled={!flag.is_enabled}
                       aria-label="Free user access"
                     />
@@ -92,7 +108,7 @@ export function FeatureFlagsManager() {
                     <span className="text-xs text-muted-foreground">Pro</span>
                     <Switch
                       checked={flag.pro_access}
-                      onCheckedChange={(value) => handleToggle(flag.id, 'pro_access', value)}
+                      onCheckedChange={(value) => handleToggle(flag.id, 'pro_access', value, flag)}
                       disabled={!flag.is_enabled}
                       aria-label="Pro user access"
                     />

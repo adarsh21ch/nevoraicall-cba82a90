@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useMemo } from 'react';
 
@@ -32,6 +32,7 @@ export interface Offer {
   is_active: boolean;
   max_uses_per_user: number | null;
   promo_code: string | null;
+  offer_payment_link: string | null;
 }
 
 export interface FeatureFlag {
@@ -156,6 +157,7 @@ export function useAdminConfig() {
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
     refetchOnWindowFocus: false,
+    refetchOnMount: 'always', // Always refetch when component mounts for fresh data
   });
 
   const config = useMemo<AppConfig>(() => data || SAFE_DEFAULTS, [data]);
@@ -201,6 +203,8 @@ export function useAdminConfig() {
 // =============================================
 
 export function useAdminPlans() {
+  const queryClient = useQueryClient();
+  
   const { data: plans, isLoading, refetch } = useQuery({
     queryKey: ['admin-plans-all'],
     queryFn: async () => {
@@ -213,6 +217,12 @@ export function useAdminPlans() {
     },
   });
 
+  const invalidateAllCaches = () => {
+    // Invalidate both admin and user-facing config caches
+    queryClient.invalidateQueries({ queryKey: ['admin-plans-all'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-config'] });
+  };
+
   const createPlan = async (plan: Partial<SubscriptionPlan>) => {
     const { data, error } = await supabase
       .from('admin_subscription_plans')
@@ -220,7 +230,7 @@ export function useAdminPlans() {
       .select()
       .single();
     if (error) throw error;
-    refetch();
+    invalidateAllCaches();
     return data;
   };
 
@@ -232,7 +242,7 @@ export function useAdminPlans() {
       .select()
       .single();
     if (error) throw error;
-    refetch();
+    invalidateAllCaches();
     return data;
   };
 
@@ -242,13 +252,15 @@ export function useAdminPlans() {
       .delete()
       .eq('id', id);
     if (error) throw error;
-    refetch();
+    invalidateAllCaches();
   };
 
   return { plans: plans || [], loading: isLoading, createPlan, updatePlan, deletePlan, refetch };
 }
 
 export function useAdminOffers() {
+  const queryClient = useQueryClient();
+  
   const { data: offers, isLoading, refetch } = useQuery({
     queryKey: ['admin-offers-all'],
     queryFn: async () => {
@@ -261,6 +273,11 @@ export function useAdminOffers() {
     },
   });
 
+  const invalidateAllCaches = () => {
+    queryClient.invalidateQueries({ queryKey: ['admin-offers-all'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-config'] });
+  };
+
   const createOffer = async (offer: Partial<Offer>) => {
     const { data, error } = await supabase
       .from('admin_offers')
@@ -268,7 +285,7 @@ export function useAdminOffers() {
       .select()
       .single();
     if (error) throw error;
-    refetch();
+    invalidateAllCaches();
     return data;
   };
 
@@ -280,7 +297,7 @@ export function useAdminOffers() {
       .select()
       .single();
     if (error) throw error;
-    refetch();
+    invalidateAllCaches();
     return data;
   };
 
@@ -290,13 +307,15 @@ export function useAdminOffers() {
       .delete()
       .eq('id', id);
     if (error) throw error;
-    refetch();
+    invalidateAllCaches();
   };
 
   return { offers: offers || [], loading: isLoading, createOffer, updateOffer, deleteOffer, refetch };
 }
 
 export function useAdminUsageLimits() {
+  const queryClient = useQueryClient();
+  
   const { data: limits, isLoading, refetch } = useQuery({
     queryKey: ['admin-usage-limits-all'],
     queryFn: async () => {
@@ -309,13 +328,18 @@ export function useAdminUsageLimits() {
     },
   });
 
+  const invalidateAllCaches = () => {
+    queryClient.invalidateQueries({ queryKey: ['admin-usage-limits-all'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-config'] });
+  };
+
   const updateLimit = async (id: string, config_value: number, is_enabled: boolean) => {
     const { error } = await supabase
       .from('admin_usage_limits')
       .update({ config_value, is_enabled })
       .eq('id', id);
     if (error) throw error;
-    refetch();
+    invalidateAllCaches();
   };
 
   const createLimit = async (config_key: string, config_value: number, description: string) => {
@@ -323,13 +347,15 @@ export function useAdminUsageLimits() {
       .from('admin_usage_limits')
       .insert({ config_key, config_value, description });
     if (error) throw error;
-    refetch();
+    invalidateAllCaches();
   };
 
   return { limits: limits || [], loading: isLoading, updateLimit, createLimit, refetch };
 }
 
 export function useAdminFeatureFlags() {
+  const queryClient = useQueryClient();
+  
   const { data: flags, isLoading, refetch } = useQuery({
     queryKey: ['admin-feature-flags-all'],
     queryFn: async () => {
@@ -342,6 +368,11 @@ export function useAdminFeatureFlags() {
     },
   });
 
+  const invalidateAllCaches = () => {
+    queryClient.invalidateQueries({ queryKey: ['admin-feature-flags-all'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-config'] });
+  };
+
   const updateFlag = async (id: string, updates: Partial<{
     free_access: boolean;
     pro_access: boolean;
@@ -352,7 +383,7 @@ export function useAdminFeatureFlags() {
       .update(updates)
       .eq('id', id);
     if (error) throw error;
-    refetch();
+    invalidateAllCaches();
   };
 
   const createFlag = async (feature_key: string, feature_name: string, description: string) => {
@@ -360,7 +391,7 @@ export function useAdminFeatureFlags() {
       .from('admin_feature_flags')
       .insert({ feature_key, feature_name, description });
     if (error) throw error;
-    refetch();
+    invalidateAllCaches();
   };
 
   return { flags: flags || [], loading: isLoading, updateFlag, createFlag, refetch };

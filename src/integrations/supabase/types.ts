@@ -922,6 +922,7 @@ export type Database = {
           is_active: boolean | null
           max_uses_per_user: number | null
           offer_name: string
+          offer_payment_link: string | null
           promo_code: string | null
           start_date: string
           updated_at: string | null
@@ -936,6 +937,7 @@ export type Database = {
           is_active?: boolean | null
           max_uses_per_user?: number | null
           offer_name: string
+          offer_payment_link?: string | null
           promo_code?: string | null
           start_date: string
           updated_at?: string | null
@@ -950,6 +952,7 @@ export type Database = {
           is_active?: boolean | null
           max_uses_per_user?: number | null
           offer_name?: string
+          offer_payment_link?: string | null
           promo_code?: string | null
           start_date?: string
           updated_at?: string | null
@@ -3055,6 +3058,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_daily_uploads: {
+        Row: {
+          id: string
+          updated_at: string | null
+          upload_count: number
+          upload_date: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          updated_at?: string | null
+          upload_count?: number
+          upload_date?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          updated_at?: string | null
+          upload_count?: number
+          upload_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -3481,6 +3508,10 @@ export type Database = {
           source_app: string
         }[]
       }
+      check_upload_limit: {
+        Args: { p_count: number; p_user_id: string }
+        Returns: Json
+      }
       clear_upline_relationship: { Args: { p_user_id: string }; Returns: Json }
       ensure_ac_profile_exists: { Args: never; Returns: Json }
       generate_neverai_id: { Args: never; Returns: string }
@@ -3586,6 +3617,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_daily_upload: {
+        Args: { p_count: number; p_user_id: string }
+        Returns: number
       }
       increment_leads_added: {
         Args: { count?: number; user_uuid: string }
