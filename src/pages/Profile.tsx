@@ -16,7 +16,6 @@ import { LeaderTrackingFormatDrawer } from '@/components/profile/LeaderTrackingF
 import { ProfileLevelDropdown } from '@/components/profile/ProfileLevelDropdown';
 import { HelpSupportDrawer } from '@/components/profile/HelpSupportDrawer';
 import { UserGuideDrawer } from '@/components/profile/UserGuideDrawer';
-
 import { ProgressiveNudgeBanner } from '@/components/subscription/ProgressiveNudgeBanner';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { Button } from '@/components/ui/button';
@@ -112,24 +111,26 @@ export default function Profile() {
   const {
     refreshFormat
   } = useTrackingFormatContext();
-  const { isPaid } = useLifetimeLeadLimit();
+  const {
+    isPaid
+  } = useLifetimeLeadLimit();
   const [editOpen, setEditOpen] = useState(false);
 
   // Handle TrackUp Dashboard - SSO magic link to nevorai.com
   const [ssoLoading, setSsoLoading] = useState(false);
-  
   const handleOpenTrackUp = async () => {
     setSsoLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('trackup-sso-link');
-      
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('trackup-sso-link');
       if (error) {
         console.error('SSO link error:', error);
         toast.error('Failed to generate login link. Opening login page...');
         window.open('https://nevorai.com/auth?redirect=/trackup', '_blank');
         return;
       }
-      
       if (data?.action_link) {
         // Open the magic link - user will be auto-logged in
         window.open(data.action_link, '_blank');
@@ -208,12 +209,10 @@ export default function Profile() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-semibold text-lg truncate">{displayName}</p>
-                      {isPro && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                      {isPro && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
                           <Crown className="h-3 w-3" />
                           Pro
-                        </span>
-                      )}
+                        </span>}
                     </div>
                     <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                   </div>
@@ -221,13 +220,11 @@ export default function Profile() {
                   <ProfileLevelDropdown currentLevelId={profile?.level_id || null} uplineEmail={profile?.upline_email || null} userId={user.id} onLevelChange={() => refetch?.()} />
                 </div>
                 {/* Show connected upline - display name or email prefix, never full email */}
-                {profile?.upline_email && (
-                  <p className="text-xs text-muted-foreground mt-2">
+                {profile?.upline_email && <p className="text-xs text-muted-foreground mt-2">
                     Connected to: <span className="text-primary font-medium">
                       {profile.upline_email.split('@')[0].charAt(0).toUpperCase() + profile.upline_email.split('@')[0].slice(1)}
                     </span>
-                  </p>
-                )}
+                  </p>}
               </div>
             </div>
             {/* Decorative elements */}
@@ -239,13 +236,7 @@ export default function Profile() {
           {!isPaid && <ProgressiveNudgeBanner context="profile" />}
 
           {/* Upline & Tracking Format Settings - Opens in Sidebar */}
-          <LeaderTrackingFormatDrawer
-            profile={profile}
-            updating={updating}
-            onUpdateProfile={updateProfile}
-            onUpdateUplineByEmail={updateUplineByEmail}
-            onClearLeaderHierarchy={clearLeaderHierarchy}
-          />
+          <LeaderTrackingFormatDrawer profile={profile} updating={updating} onUpdateProfile={updateProfile} onUpdateUplineByEmail={updateUplineByEmail} onClearLeaderHierarchy={clearLeaderHierarchy} />
 
 
           {/* Profile Details */}
@@ -284,29 +275,13 @@ export default function Profile() {
             </div>}
 
           {/* TrackUp Dashboard - External link to web dashboard */}
-          <button 
-            onClick={handleOpenTrackUp}
-            disabled={ssoLoading}
-            className={cn(
-              "w-full relative overflow-hidden rounded-xl p-4",
-              "bg-gradient-to-r backdrop-blur-sm",
-              "border border-emerald-500/30 shadow-sm",
-              "flex items-center justify-between",
-              "transition-all duration-300 hover:shadow-md hover:scale-[1.01]",
-              "from-emerald-500/20 to-emerald-500/5",
-              ssoLoading && "opacity-70 cursor-wait"
-            )}
-          >
+          <button onClick={handleOpenTrackUp} disabled={ssoLoading} className={cn("w-full relative overflow-hidden rounded-xl p-4", "bg-gradient-to-r backdrop-blur-sm", "border border-emerald-500/30 shadow-sm", "flex items-center justify-between", "transition-all duration-300 hover:shadow-md hover:scale-[1.01]", "from-emerald-500/20 to-emerald-500/5", ssoLoading && "opacity-70 cursor-wait")}>
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-emerald-500/10">
-                {ssoLoading ? (
-                  <Loader2 className="h-5 w-5 text-emerald-500 animate-spin" />
-                ) : (
-                  <BarChart3 className="h-5 w-5 text-emerald-500" />
-                )}
+                {ssoLoading ? <Loader2 className="h-5 w-5 text-emerald-500 animate-spin" /> : <BarChart3 className="h-5 w-5 text-emerald-500" />}
               </div>
               <div className="text-left">
-                <span className="font-medium block">TrackUp Dashboard</span>
+                <span className="font-medium block">Team Tracking - TrackUp Dashboard                         </span>
                 <span className="text-xs text-muted-foreground">
                   {ssoLoading ? 'Opening...' : 'Team tracking on nevorai.com'}
                 </span>
@@ -329,10 +304,7 @@ export default function Profile() {
             <CollapsibleContent>
               <div className="px-4 pb-4 space-y-1">
                 {/* Edit Profile - Neutral list item */}
-                <button 
-                  onClick={() => setEditOpen(true)} 
-                  className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors"
-                >
+                <button onClick={() => setEditOpen(true)} className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
                   <div className="flex items-center gap-3">
                     <User className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm">Edit Profile</span>
@@ -353,18 +325,7 @@ export default function Profile() {
           <HelpSupportDrawer />
 
           {/* Admin Panel Link - Only visible to admin */}
-          {isAdmin && (
-            <Link 
-              to="/admin" 
-              className={cn(
-                "w-full relative overflow-hidden rounded-xl p-4 block",
-                "bg-gradient-to-r backdrop-blur-sm",
-                "border border-destructive/30 shadow-sm",
-                "flex items-center justify-between",
-                "transition-all duration-300 hover:shadow-md hover:scale-[1.01]",
-                "from-destructive/20 to-destructive/5"
-              )}
-            >
+          {isAdmin && <Link to="/admin" className={cn("w-full relative overflow-hidden rounded-xl p-4 block", "bg-gradient-to-r backdrop-blur-sm", "border border-destructive/30 shadow-sm", "flex items-center justify-between", "transition-all duration-300 hover:shadow-md hover:scale-[1.01]", "from-destructive/20 to-destructive/5")}>
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-destructive/10">
                   <Shield className="h-5 w-5 text-destructive" />
@@ -372,8 +333,7 @@ export default function Profile() {
                 <span className="font-medium">Admin Panel</span>
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </Link>
-          )}
+            </Link>}
 
           {/* Contact Us */}
           <div className="rounded-2xl p-4 bg-card border border-border/50">
