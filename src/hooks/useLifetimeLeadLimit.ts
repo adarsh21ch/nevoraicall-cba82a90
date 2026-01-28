@@ -1,25 +1,31 @@
 import { useMemo, useCallback } from 'react';
 import { useProfile } from '@/hooks/useProfile';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useAdminConfig } from '@/hooks/useAdminConfig';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-/** Free tier limit - lifetime leads added */
+/** Default free tier limit - overridden by admin config */
 export const FREE_LIFETIME_LEAD_LIMIT = 1000;
-/** Warning threshold - show upgrade prompt */
+/** Default warning threshold - overridden by admin config */
 export const LEAD_WARNING_THRESHOLD = 950;
 
 /**
  * Hook to check lifetime lead limits for free users.
- * Uses monotonic counter (total_leads_added) that never decreases.
+ * Now reads limits dynamically from admin_usage_limits table.
  */
 export function useLifetimeLeadLimit() {
   const { user } = useAuth();
   const { profile, loading: profileLoading, refetch: refetchProfile } = useProfile();
   const { isPaid, plan, loading: subLoading } = useSubscription();
+  const { config, loading: configLoading } = useAdminConfig();
 
   const totalLeadsAdded = profile?.total_leads_added ?? 0;
-  const isLoading = profileLoading || subLoading;
+  const isLoading = profileLoading || subLoading || configLoading;
+
+  // Get dynamic limits from admin config
+  const freeLimit = config.limits.free_total_leads ?? FREE_LIFETIME_LEAD_LIMIT;
+  const warningThreshold = config.limits.warning_threshold_3 ?? LEAD_WARNING_THRESHOLD;
 
   const limitInfo = useMemo(() => {
     // Paid users have no limit
@@ -37,24 +43,24 @@ export function useLifetimeLeadLimit() {
       };
     }
 
-    // Free users have lifetime limit
-    const isAtLimit = totalLeadsAdded >= FREE_LIFETIME_LEAD_LIMIT;
-    const isNearLimit = totalLeadsAdded >= LEAD_WARNING_THRESHOLD;
-    const remaining = Math.max(0, FREE_LIFETIME_LEAD_LIMIT - totalLeadsAdded);
-    const percentUsed = Math.min(100, (totalLeadsAdded / FREE_LIFETIME_LEAD_LIMIT) * 100);
+    // Free users have lifetime limit from admin config
+    const isAtLimit = totalLeadsAdded >= freeLimit;
+    const isNearLimit = totalLeadsAdded >= warningThreshold;
+    const remaining = Math.max(0, freeLimit - totalLeadsAdded);
+    const percentUsed = Math.min(100, (totalLeadsAdded / freeLimit) * 100);
 
     return {
       isAtLimit,
       isNearLimit,
       canAddLead: !isAtLimit,
-      canAddLeads: (count: number) => totalLeadsAdded + count <= FREE_LIFETIME_LEAD_LIMIT,
+      canAddLeads: (count: number) => totalLeadsAdded + count <= freeLimit,
       lifetimeCount: totalLeadsAdded,
-      limit: FREE_LIFETIME_LEAD_LIMIT,
+      limit: freeLimit,
       remaining,
       percentUsed,
       showWarning: isNearLimit && !isPaid,
     };
-  }, [totalLeadsAdded, isPaid]);
+  }, [totalLeadsAdded, isPaid, freeLimit, warningThreshold]);
 
   /**
    * Increment the lifetime lead counter after adding leads.
@@ -91,5 +97,8 @@ export function useLifetimeLeadLimit() {
     isPaid,
     isLoading,
     incrementLeadCount,
+    // Expose the dynamic limits for reference
+    configuredLimit: freeLimit,
+    configuredWarningThreshold: warningThreshold,
   };
 }

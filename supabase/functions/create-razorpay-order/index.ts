@@ -29,21 +29,18 @@ function checkRateLimit(userId: string): boolean {
   return true;
 }
 
-// Toggle this flag for testing (set to false for production)
-const TEST_MODE = false;
-
-// Both plans grant Pro access with different durations
-const PLAN_CONFIG = {
+// Fallback plan config if database fetch fails
+const FALLBACK_PLAN_CONFIG = {
   monthly: {
-    amount: TEST_MODE ? 100 : 9900, // ₹1 test or ₹99 production (in paise)
+    amount: 9900, // ₹99 in paise
     duration_days: 30,
-    plan_name: 'pro', // Always Pro
+    plan_name: 'pro',
     description: 'Pro Monthly',
   },
   quarterly: {
-    amount: TEST_MODE ? 100 : 29900, // ₹1 test or ₹299 production (in paise)
+    amount: 29900, // ₹299 in paise
     duration_days: 120,
-    plan_name: 'pro', // Always Pro
+    plan_name: 'pro',
     description: 'Pro 4-Month',
   },
 };
@@ -94,14 +91,49 @@ serve(async (req) => {
       );
     }
 
-    // Map plan types - both grant Pro access
-    const validPlanTypes = ['monthly', 'quarterly'];
-    const selectedPlan = validPlanTypes.includes(plan_type) ? plan_type : 'quarterly';
-    const planConfig = PLAN_CONFIG[selectedPlan as keyof typeof PLAN_CONFIG];
+    // Fetch plan from database
+    let planConfig;
+    try {
+      const { data: planData, error: planError } = await supabase
+        .from('admin_subscription_plans')
+        .select('*')
+        .eq('plan_key', plan_type)
+        .eq('is_active', true)
+        .single();
+
+      if (planError || !planData) {
+        console.warn(`Plan ${plan_type} not found in database, using fallback`);
+        const fallbackPlan = FALLBACK_PLAN_CONFIG[plan_type as keyof typeof FALLBACK_PLAN_CONFIG] 
+          || FALLBACK_PLAN_CONFIG.quarterly;
+        planConfig = {
+          amount: fallbackPlan.amount,
+          duration_days: fallbackPlan.duration_days,
+          plan_name: fallbackPlan.plan_name,
+          description: fallbackPlan.description,
+        };
+      } else {
+        planConfig = {
+          amount: planData.price_inr * 100, // Convert rupees to paise
+          duration_days: planData.duration_days,
+          plan_name: 'pro', // All plans grant Pro access
+          description: planData.plan_name,
+        };
+      }
+    } catch (dbError) {
+      console.error('Database error fetching plan:', dbError);
+      const fallbackPlan = FALLBACK_PLAN_CONFIG[plan_type as keyof typeof FALLBACK_PLAN_CONFIG] 
+        || FALLBACK_PLAN_CONFIG.quarterly;
+      planConfig = {
+        amount: fallbackPlan.amount,
+        duration_days: fallbackPlan.duration_days,
+        plan_name: fallbackPlan.plan_name,
+        description: fallbackPlan.description,
+      };
+    }
 
     const finalAmount = planConfig.amount;
 
-    console.log(`Creating Razorpay order for user: ${user_email}, plan: ${selectedPlan}, amount: ${finalAmount}, duration: ${planConfig.duration_days} days`);
+    console.log(`Creating Razorpay order for user: ${user_email}, plan: ${plan_type}, amount: ${finalAmount}, duration: ${planConfig.duration_days} days`);
 
     const shortUserId = user_id.slice(0, 8);
     const orderPayload = {
@@ -112,7 +144,7 @@ serve(async (req) => {
         user_id: user_id,
         user_email: user_email,
         plan: 'pro', // Always Pro
-        plan_variant: selectedPlan, // 'monthly' or 'quarterly' for reference
+        plan_variant: plan_type, // Plan key for reference
         duration_days: planConfig.duration_days,
         original_amount: planConfig.amount,
         final_amount: finalAmount,
@@ -140,7 +172,7 @@ serve(async (req) => {
     }
 
     const order = await razorpayResponse.json();
-    console.log(`Order created successfully: ${order.id}, plan: pro (${selectedPlan}), amount: ${finalAmount}, duration: ${planConfig.duration_days} days`);
+    console.log(`Order created successfully: ${order.id}, plan: pro (${plan_type}), amount: ${finalAmount}, duration: ${planConfig.duration_days} days`);
 
     return new Response(
       JSON.stringify({
@@ -148,7 +180,7 @@ serve(async (req) => {
         amount: order.amount,
         currency: order.currency,
         key_id: RAZORPAY_KEY_ID,
-        plan_type: selectedPlan,
+        plan_type: plan_type,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
