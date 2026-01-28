@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { sanitizeImportString, validateImportedProspect } from '@/lib/validations';
 import { cn } from '@/lib/utils';
 import { useLifetimeLeadLimit } from '@/hooks/useLifetimeLeadLimit';
+import { useDailyUploadLimit } from '@/hooks/useDailyUploadLimit';
 import { HardLimitModal } from '@/components/subscription/HardLimitModal';
 import { useActivityLog } from '@/hooks/useActivityLog';
 
@@ -69,6 +70,7 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
   const [showLimitModal, setShowLimitModal] = useState(false);
   
   const { isAtLimit, canAddLeads, remaining, incrementLeadCount, isPaid } = useLifetimeLeadLimit();
+  const { checkLimit: checkDailyLimit, incrementCount: incrementDailyCount } = useDailyUploadLimit();
   
   // Resizable columns state for preview table
   const [previewColumnWidths, setPreviewColumnWidths] = useState<Record<string, number>>({});
@@ -238,7 +240,7 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
       return;
     }
 
-    // Check lead limit before importing
+    // Check lifetime lead limit before importing
     if (isAtLimit) {
       setShowLimitModal(true);
       return;
@@ -290,7 +292,20 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
       return;
     }
 
-    // Check if importing would exceed limit (for free users)
+    // Check daily upload limit FIRST (backend enforcement)
+    const dailyLimitCheck = await checkDailyLimit(prospects.length);
+    if (!dailyLimitCheck.allowed) {
+      setError(dailyLimitCheck.reason);
+      setIsImporting(false);
+      setImportProgress(null);
+      // Show upgrade modal if limit type is daily or total
+      if (dailyLimitCheck.limit_type === 'daily' || dailyLimitCheck.limit_type === 'total') {
+        setShowLimitModal(true);
+      }
+      return;
+    }
+
+    // Check if importing would exceed lifetime limit (for free users)
     if (!isPaid && !canAddLeads(prospects.length)) {
       setError(`Cannot import ${prospects.length} leads. You have ${remaining} leads remaining in your free plan. Upgrade to Pro for unlimited leads.`);
       setIsImporting(false);
@@ -304,9 +319,10 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
       setImportProgress({ current: imported, total });
     });
     
-    // Increment lifetime lead counter after successful import
+    // Increment counters after successful import
     if (result.imported > 0) {
       await incrementLeadCount(result.imported);
+      await incrementDailyCount(result.imported);
       // Log SINGLE bulk import activity (not individual entries)
       await logBulkActivity('bulk_import', result.imported);
     }

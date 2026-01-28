@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAdminPlans, SubscriptionPlan } from '@/hooks/useAdminConfig';
+import { logAdminAction } from '@/hooks/useAuditLogs';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +20,20 @@ export function PlansManager() {
 
   const handleToggleActive = async (plan: SubscriptionPlan) => {
     try {
-      await updatePlan(plan.id, { is_active: !plan.is_active });
+      const oldValue = { is_active: plan.is_active };
+      const newValue = { is_active: !plan.is_active };
+      await updatePlan(plan.id, newValue);
+      
+      // Log audit action
+      await logAdminAction(
+        'plan_updated',
+        'plan',
+        plan.id,
+        oldValue,
+        newValue,
+        `Plan "${plan.plan_name}" ${plan.is_active ? 'deactivated' : 'activated'}`
+      );
+      
       toast.success(`Plan ${plan.is_active ? 'deactivated' : 'activated'}`);
     } catch (err) {
       toast.error('Failed to update plan status');
@@ -35,6 +49,17 @@ export function PlansManager() {
         }
       }
       await updatePlan(plan.id, { is_default: true });
+      
+      // Log audit action
+      await logAdminAction(
+        'plan_updated',
+        'plan',
+        plan.id,
+        { is_default: false },
+        { is_default: true },
+        `Plan "${plan.plan_name}" set as default`
+      );
+      
       toast.success(`${plan.plan_name} is now the default plan`);
     } catch (err) {
       toast.error('Failed to set default plan');
@@ -45,6 +70,17 @@ export function PlansManager() {
     if (!confirm(`Delete "${plan.plan_name}"? This cannot be undone.`)) return;
     try {
       await deletePlan(plan.id);
+      
+      // Log audit action
+      await logAdminAction(
+        'plan_deleted',
+        'plan',
+        plan.id,
+        { plan_name: plan.plan_name, plan_key: plan.plan_key, price_inr: plan.price_inr },
+        null,
+        `Deleted plan "${plan.plan_name}"`
+      );
+      
       toast.success('Plan deleted');
     } catch (err) {
       toast.error('Failed to delete plan');
@@ -129,11 +165,41 @@ export function PlansManager() {
             plan={editingPlan}
             onSave={async (data) => {
               try {
+                // Validation: payment_link is required
+                if (!data.payment_link?.trim()) {
+                  toast.error('Payment link is required');
+                  return;
+                }
+                
                 if (isCreating) {
-                  await createPlan(data);
+                  const newPlan = await createPlan(data);
+                  // Log audit action
+                  await logAdminAction(
+                    'plan_created',
+                    'plan',
+                    newPlan?.id || 'unknown',
+                    null,
+                    { plan_name: data.plan_name, plan_key: data.plan_key, price_inr: data.price_inr },
+                    `Created plan "${data.plan_name}"`
+                  );
                   toast.success('Plan created');
                 } else if (editingPlan) {
+                  const oldData = {
+                    plan_name: editingPlan.plan_name,
+                    price_inr: editingPlan.price_inr,
+                    duration_days: editingPlan.duration_days,
+                    payment_link: editingPlan.payment_link,
+                  };
                   await updatePlan(editingPlan.id, data);
+                  // Log audit action
+                  await logAdminAction(
+                    'plan_updated',
+                    'plan',
+                    editingPlan.id,
+                    oldData,
+                    { plan_name: data.plan_name, price_inr: data.price_inr, duration_days: data.duration_days, payment_link: data.payment_link },
+                    `Updated plan "${data.plan_name}"`
+                  );
                   toast.success('Plan updated');
                 }
                 setSheetOpen(false);

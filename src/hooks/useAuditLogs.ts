@@ -49,11 +49,13 @@ export function useAuditLogs(options: UseAuditLogsOptions = {}) {
         created_at: row.created_at,
       }));
 
-      const totalCount = data?.[0]?.total_count || 0;
+      // Handle empty results gracefully
+      const totalCount = data && data.length > 0 ? (data[0]?.total_count || 0) : 0;
 
       return { logs, totalCount };
     },
     staleTime: 30000, // 30 seconds
+    retry: 1, // Only retry once on failure
   });
 }
 

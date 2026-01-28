@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAdminUsageLimits } from '@/hooks/useAdminConfig';
+import { logAdminAction } from '@/hooks/useAuditLogs';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,7 +48,27 @@ export function UsageLimitsManager() {
     setSaving(true);
     try {
       for (const [id, changes] of Object.entries(pendingChanges)) {
+        // Find the original limit to get old values
+        const originalLimit = limits.find(l => l.id === id);
+        const oldValue = originalLimit ? {
+          config_key: originalLimit.config_key,
+          config_value: originalLimit.config_value,
+          is_enabled: originalLimit.is_enabled,
+        } : null;
+        
         await updateLimit(id, changes.value, changes.enabled);
+        
+        // Log audit action for each limit change
+        if (originalLimit) {
+          await logAdminAction(
+            'limit_updated',
+            'limit',
+            id,
+            oldValue,
+            { config_key: originalLimit.config_key, config_value: changes.value, is_enabled: changes.enabled },
+            `Updated limit "${originalLimit.config_key}" from ${originalLimit.config_value} to ${changes.value}`
+          );
+        }
       }
       setPendingChanges({});
       toast.success('All limits saved');

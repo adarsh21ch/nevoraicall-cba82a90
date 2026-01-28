@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAdminOffers, useAdminPlans, Offer } from '@/hooks/useAdminConfig';
+import { logAdminAction } from '@/hooks/useAuditLogs';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Loader2, Plus, Pencil, Trash2, Tag, Percent, IndianRupee, Calendar, Gift } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Tag, Percent, IndianRupee, Calendar, Gift, Link as LinkIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -21,7 +22,20 @@ export function OffersManager() {
 
   const handleToggleActive = async (offer: Offer) => {
     try {
-      await updateOffer(offer.id, { is_active: !offer.is_active });
+      const oldValue = { is_active: offer.is_active };
+      const newValue = { is_active: !offer.is_active };
+      await updateOffer(offer.id, newValue);
+      
+      // Log audit action
+      await logAdminAction(
+        'offer_updated',
+        'offer',
+        offer.id,
+        oldValue,
+        newValue,
+        `Offer "${offer.offer_name}" ${offer.is_active ? 'deactivated' : 'activated'}`
+      );
+      
       toast.success(`Offer ${offer.is_active ? 'deactivated' : 'activated'}`);
     } catch (err) {
       toast.error('Failed to update offer');
@@ -32,6 +46,17 @@ export function OffersManager() {
     if (!confirm(`Delete "${offer.offer_name}"?`)) return;
     try {
       await deleteOffer(offer.id);
+      
+      // Log audit action
+      await logAdminAction(
+        'offer_deleted',
+        'offer',
+        offer.id,
+        { offer_name: offer.offer_name, promo_code: offer.promo_code, discount_value: offer.discount_value },
+        null,
+        `Deleted offer "${offer.offer_name}"`
+      );
+      
       toast.success('Offer deleted');
     } catch (err) {
       toast.error('Failed to delete offer');
@@ -127,11 +152,41 @@ export function OffersManager() {
             plans={plans}
             onSave={async (data) => {
               try {
+                // Validation
+                if (!data.applicable_plan_ids || data.applicable_plan_ids.length === 0) {
+                  toast.error('At least one applicable plan is required');
+                  return;
+                }
+                
                 if (isCreating) {
-                  await createOffer(data);
+                  const newOffer = await createOffer(data);
+                  // Log audit action
+                  await logAdminAction(
+                    'offer_created',
+                    'offer',
+                    newOffer?.id || 'unknown',
+                    null,
+                    { offer_name: data.offer_name, promo_code: data.promo_code, discount_value: data.discount_value },
+                    `Created offer "${data.offer_name}"`
+                  );
                   toast.success('Offer created');
                 } else if (editingOffer) {
+                  const oldData = {
+                    offer_name: editingOffer.offer_name,
+                    discount_value: editingOffer.discount_value,
+                    promo_code: editingOffer.promo_code,
+                    offer_payment_link: editingOffer.offer_payment_link,
+                  };
                   await updateOffer(editingOffer.id, data);
+                  // Log audit action
+                  await logAdminAction(
+                    'offer_updated',
+                    'offer',
+                    editingOffer.id,
+                    oldData,
+                    { offer_name: data.offer_name, discount_value: data.discount_value, promo_code: data.promo_code, offer_payment_link: data.offer_payment_link },
+                    `Updated offer "${data.offer_name}"`
+                  );
                   toast.success('Offer updated');
                 }
                 setSheetOpen(false);
@@ -203,6 +258,12 @@ function OfferCard({
                 Plans: {applicablePlanNames.join(', ')}
               </span>
             )}
+            {offer.offer_payment_link && (
+              <span className="flex items-center gap-1 truncate max-w-[200px]">
+                <LinkIcon className="h-3 w-3 shrink-0" />
+                <span className="truncate">Payment link set</span>
+              </span>
+            )}
           </div>
         </div>
 
@@ -240,6 +301,7 @@ function OfferEditForm({
     discount_type: offer?.discount_type || 'percent',
     discount_value: offer?.discount_value || 10,
     promo_code: offer?.promo_code || '',
+    offer_payment_link: offer?.offer_payment_link || '',
     start_date: offer?.start_date ? format(new Date(offer.start_date), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
     end_date: offer?.end_date ? format(new Date(offer.end_date), 'yyyy-MM-dd') : '',
     max_uses_per_user: offer?.max_uses_per_user || '',
@@ -254,6 +316,7 @@ function OfferEditForm({
       await onSave({
         ...formData,
         discount_type: formData.discount_type as 'percent' | 'flat',
+        offer_payment_link: formData.offer_payment_link || null,
         start_date: new Date(formData.start_date).toISOString(),
         end_date: new Date(formData.end_date).toISOString(),
         max_uses_per_user: formData.max_uses_per_user ? parseInt(formData.max_uses_per_user as string) : null,
@@ -322,6 +385,19 @@ function OfferEditForm({
           value={formData.promo_code}
           onChange={(e) => setFormData(prev => ({ ...prev, promo_code: e.target.value.toUpperCase() }))}
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="offer_payment_link">Offer Payment Link (optional)</Label>
+        <Input
+          id="offer_payment_link"
+          placeholder="https://rzp.io/... (special offer link)"
+          value={formData.offer_payment_link}
+          onChange={(e) => setFormData(prev => ({ ...prev, offer_payment_link: e.target.value }))}
+        />
+        <p className="text-xs text-muted-foreground">
+          When coupon is applied, this link will be used instead of the plan's default payment link
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">

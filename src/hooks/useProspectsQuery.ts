@@ -216,10 +216,20 @@ export function useProspectsQuery(options: UseProspectsQueryOptions = {}) {
   const loadedCount = prospects.length;
   const totalCount = data?.pages[0]?.totalCount ?? 0;
 
-  // Add prospect mutation
+  // Add prospect mutation with daily limit check
   const addMutation = useMutation({
     mutationFn: async (prospect: Partial<Prospect>): Promise<Prospect> => {
       if (!user) throw new Error('Not authenticated');
+
+      // Check daily upload limit before adding
+      const { data: limitCheck, error: limitError } = await supabase.rpc('check_upload_limit', {
+        p_user_id: user.id,
+        p_count: 1,
+      });
+      
+      if (!limitError && limitCheck && !(limitCheck as any).allowed) {
+        throw new Error((limitCheck as any).reason || 'Daily upload limit reached');
+      }
 
       let encryptedPhone = prospect.phone!;
       try {
@@ -249,6 +259,13 @@ export function useProspectsQuery(options: UseProspectsQueryOptions = {}) {
         .single();
 
       if (error) throw error;
+      
+      // Increment daily upload count after successful insert
+      await supabase.rpc('increment_daily_upload', {
+        p_user_id: user.id,
+        p_count: 1,
+      });
+      
       return mapDbProspect({ ...data, phone: prospect.phone });
     },
     onSuccess: (newProspect) => {
@@ -257,8 +274,9 @@ export function useProspectsQuery(options: UseProspectsQueryOptions = {}) {
       queryClient.invalidateQueries({ queryKey: ['prospects-kpi', user?.id] });
       toast.success('Prospect added');
     },
-    onError: () => {
-      toast.error('Failed to add prospect');
+    onError: (error: Error) => {
+      // Show specific error message for limit errors
+      toast.error(error.message || 'Failed to add prospect');
     },
   });
 
