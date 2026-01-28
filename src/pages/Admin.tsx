@@ -7,14 +7,19 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Shield, Users, Crown, ArrowLeft, Search, Save, Calendar, BarChart3, ChevronDown, MessageSquare } from 'lucide-react';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { Loader2, Shield, Users, Crown, ArrowLeft, Search, Save, Calendar, BarChart3, MessageSquare, Settings, Tag, Sliders, Sparkles } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { toast } from 'sonner';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
 import { AdminAnalyticsDashboard } from '@/components/admin/AdminAnalyticsDashboard';
 import { AdminSupportPanel } from '@/components/admin/AdminSupportPanel';
+import { PlansManager } from '@/components/admin/PlansManager';
+import { OffersManager } from '@/components/admin/OffersManager';
+import { UsageLimitsManager } from '@/components/admin/UsageLimitsManager';
+import { FeatureFlagsManager } from '@/components/admin/FeatureFlagsManager';
+import { UserOverrideDrawer } from '@/components/admin/UserOverrideDrawer';
 
 const DURATION_OPTIONS = [
   { value: '30', label: '30 days' },
@@ -167,24 +172,63 @@ export default function Admin() {
         <div className="container py-4 px-4 pb-24 space-y-5">
           {/* Admin Tabs */}
           <Tabs defaultValue="users" className="w-full">
-            <TabsList className="w-full grid grid-cols-3">
-              <TabsTrigger value="users" className="text-xs">
-                <Users className="h-4 w-4 mr-1" />
-                Users
-              </TabsTrigger>
-              <TabsTrigger value="analytics" className="text-xs">
-                <BarChart3 className="h-4 w-4 mr-1" />
-                Analytics
-              </TabsTrigger>
-              <TabsTrigger value="support" className="text-xs">
-                <MessageSquare className="h-4 w-4 mr-1" />
-                Support
-              </TabsTrigger>
-            </TabsList>
+            <ScrollArea className="w-full">
+              <TabsList className="inline-flex w-max gap-1">
+                <TabsTrigger value="users" className="text-xs px-3">
+                  <Users className="h-3.5 w-3.5 mr-1" />
+                  Users
+                </TabsTrigger>
+                <TabsTrigger value="analytics" className="text-xs px-3">
+                  <BarChart3 className="h-3.5 w-3.5 mr-1" />
+                  Analytics
+                </TabsTrigger>
+                <TabsTrigger value="plans" className="text-xs px-3">
+                  <Crown className="h-3.5 w-3.5 mr-1" />
+                  Plans
+                </TabsTrigger>
+                <TabsTrigger value="offers" className="text-xs px-3">
+                  <Tag className="h-3.5 w-3.5 mr-1" />
+                  Offers
+                </TabsTrigger>
+                <TabsTrigger value="limits" className="text-xs px-3">
+                  <Sliders className="h-3.5 w-3.5 mr-1" />
+                  Limits
+                </TabsTrigger>
+                <TabsTrigger value="features" className="text-xs px-3">
+                  <Sparkles className="h-3.5 w-3.5 mr-1" />
+                  Features
+                </TabsTrigger>
+                <TabsTrigger value="support" className="text-xs px-3">
+                  <MessageSquare className="h-3.5 w-3.5 mr-1" />
+                  Support
+                </TabsTrigger>
+              </TabsList>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
 
             {/* Analytics Tab */}
             <TabsContent value="analytics" className="mt-4">
               <AdminAnalyticsDashboard />
+            </TabsContent>
+
+            {/* Plans Tab */}
+            <TabsContent value="plans" className="mt-4">
+              <PlansManager />
+            </TabsContent>
+
+            {/* Offers Tab */}
+            <TabsContent value="offers" className="mt-4">
+              <OffersManager />
+            </TabsContent>
+
+            {/* Limits Tab */}
+            <TabsContent value="limits" className="mt-4">
+              <UsageLimitsManager />
+            </TabsContent>
+
+            {/* Features Tab */}
+            <TabsContent value="features" className="mt-4">
+              <FeatureFlagsManager />
             </TabsContent>
 
             {/* Support Tab */}

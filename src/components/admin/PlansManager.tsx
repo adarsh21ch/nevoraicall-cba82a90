@@ -1,0 +1,371 @@
+import { useState } from 'react';
+import { useAdminPlans, SubscriptionPlan } from '@/hooks/useAdminConfig';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Loader2, Plus, Pencil, Crown, Link as LinkIcon, Clock, IndianRupee, Star, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+
+export function PlansManager() {
+  const { plans, loading, createPlan, updatePlan, deletePlan } = useAdminPlans();
+  const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  const handleToggleActive = async (plan: SubscriptionPlan) => {
+    try {
+      await updatePlan(plan.id, { is_active: !plan.is_active });
+      toast.success(`Plan ${plan.is_active ? 'deactivated' : 'activated'}`);
+    } catch (err) {
+      toast.error('Failed to update plan status');
+    }
+  };
+
+  const handleToggleDefault = async (plan: SubscriptionPlan) => {
+    try {
+      // First, remove default from all plans
+      for (const p of plans) {
+        if (p.is_default && p.id !== plan.id) {
+          await updatePlan(p.id, { is_default: false });
+        }
+      }
+      await updatePlan(plan.id, { is_default: true });
+      toast.success(`${plan.plan_name} is now the default plan`);
+    } catch (err) {
+      toast.error('Failed to set default plan');
+    }
+  };
+
+  const handleDelete = async (plan: SubscriptionPlan) => {
+    if (!confirm(`Delete "${plan.plan_name}"? This cannot be undone.`)) return;
+    try {
+      await deletePlan(plan.id);
+      toast.success('Plan deleted');
+    } catch (err) {
+      toast.error('Failed to delete plan');
+    }
+  };
+
+  const openEditSheet = (plan: SubscriptionPlan | null) => {
+    setEditingPlan(plan);
+    setIsCreating(!plan);
+    setSheetOpen(true);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const activePlans = plans.filter(p => p.is_active);
+  const inactivePlans = plans.filter(p => !p.is_active);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Subscription Plans</h2>
+          <p className="text-sm text-muted-foreground">Manage pricing, features, and payment links</p>
+        </div>
+        <Button size="sm" onClick={() => openEditSheet(null)}>
+          <Plus className="h-4 w-4 mr-1" />
+          Add Plan
+        </Button>
+      </div>
+
+      {/* Active Plans */}
+      {activePlans.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium text-muted-foreground">Active Plans</h3>
+          <div className="grid gap-3">
+            {activePlans.map((plan) => (
+              <PlanCard 
+                key={plan.id} 
+                plan={plan}
+                onEdit={() => openEditSheet(plan)}
+                onToggleActive={() => handleToggleActive(plan)}
+                onToggleDefault={() => handleToggleDefault(plan)}
+                onDelete={() => handleDelete(plan)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Inactive Plans */}
+      {inactivePlans.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium text-muted-foreground">Inactive Plans</h3>
+          <div className="grid gap-3 opacity-60">
+            {inactivePlans.map((plan) => (
+              <PlanCard 
+                key={plan.id} 
+                plan={plan}
+                onEdit={() => openEditSheet(plan)}
+                onToggleActive={() => handleToggleActive(plan)}
+                onToggleDefault={() => handleToggleDefault(plan)}
+                onDelete={() => handleDelete(plan)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Edit/Create Sheet */}
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent className="overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>{isCreating ? 'Create New Plan' : 'Edit Plan'}</SheetTitle>
+          </SheetHeader>
+          <PlanEditForm 
+            plan={editingPlan}
+            onSave={async (data) => {
+              try {
+                if (isCreating) {
+                  await createPlan(data);
+                  toast.success('Plan created');
+                } else if (editingPlan) {
+                  await updatePlan(editingPlan.id, data);
+                  toast.success('Plan updated');
+                }
+                setSheetOpen(false);
+              } catch (err) {
+                toast.error('Failed to save plan');
+              }
+            }}
+            onCancel={() => setSheetOpen(false)}
+          />
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+}
+
+function PlanCard({ 
+  plan, 
+  onEdit, 
+  onToggleActive, 
+  onToggleDefault,
+  onDelete 
+}: { 
+  plan: SubscriptionPlan;
+  onEdit: () => void;
+  onToggleActive: () => void;
+  onToggleDefault: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <Card className="p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <Crown className="h-4 w-4 text-primary" />
+            <span className="font-semibold">{plan.plan_name}</span>
+            {plan.badge_text && (
+              <Badge variant="secondary" className="text-xs">
+                <Star className="h-3 w-3 mr-1" />
+                {plan.badge_text}
+              </Badge>
+            )}
+            {plan.is_default && (
+              <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30">
+                Default
+              </Badge>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground mb-2">{plan.description}</p>
+          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <IndianRupee className="h-3 w-3" />
+              ₹{plan.price_inr}
+            </span>
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {plan.duration_days} days
+            </span>
+            {plan.payment_link && (
+              <span className="flex items-center gap-1 truncate max-w-[200px]">
+                <LinkIcon className="h-3 w-3 shrink-0" />
+                <span className="truncate">{plan.payment_link}</span>
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Switch 
+            checked={plan.is_active} 
+            onCheckedChange={onToggleActive}
+            aria-label="Toggle active"
+          />
+          <Button variant="ghost" size="icon" onClick={onEdit}>
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={onDelete} className="text-destructive hover:text-destructive">
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+      {!plan.is_default && plan.is_active && (
+        <Button variant="ghost" size="sm" onClick={onToggleDefault} className="mt-2 text-xs">
+          Set as Default
+        </Button>
+      )}
+    </Card>
+  );
+}
+
+function PlanEditForm({ 
+  plan, 
+  onSave, 
+  onCancel 
+}: { 
+  plan: SubscriptionPlan | null;
+  onSave: (data: Partial<SubscriptionPlan>) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    plan_key: plan?.plan_key || '',
+    plan_name: plan?.plan_name || '',
+    description: plan?.description || '',
+    price_inr: plan?.price_inr || 99,
+    duration_days: plan?.duration_days || 30,
+    payment_link: plan?.payment_link || '',
+    badge_text: plan?.badge_text || '',
+    features: (plan?.features || []).join('\n'),
+    sort_order: plan?.sort_order || 0,
+  });
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await onSave({
+        ...formData,
+        features: formData.features.split('\n').filter(f => f.trim()),
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="plan_key">Plan Key</Label>
+          <Input
+            id="plan_key"
+            placeholder="e.g., monthly"
+            value={formData.plan_key}
+            onChange={(e) => setFormData(prev => ({ ...prev, plan_key: e.target.value }))}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="plan_name">Display Name</Label>
+          <Input
+            id="plan_name"
+            placeholder="e.g., Pro Monthly"
+            value={formData.plan_name}
+            onChange={(e) => setFormData(prev => ({ ...prev, plan_name: e.target.value }))}
+            required
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="description">Description</Label>
+        <Input
+          id="description"
+          placeholder="Short description"
+          value={formData.description}
+          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+        />
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="price_inr">Price (₹)</Label>
+          <Input
+            id="price_inr"
+            type="number"
+            min="1"
+            value={formData.price_inr}
+            onChange={(e) => setFormData(prev => ({ ...prev, price_inr: parseInt(e.target.value) || 0 }))}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="duration_days">Duration (days)</Label>
+          <Input
+            id="duration_days"
+            type="number"
+            min="1"
+            value={formData.duration_days}
+            onChange={(e) => setFormData(prev => ({ ...prev, duration_days: parseInt(e.target.value) || 0 }))}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="sort_order">Sort Order</Label>
+          <Input
+            id="sort_order"
+            type="number"
+            value={formData.sort_order}
+            onChange={(e) => setFormData(prev => ({ ...prev, sort_order: parseInt(e.target.value) || 0 }))}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="payment_link">Razorpay Payment Link</Label>
+        <Input
+          id="payment_link"
+          placeholder="https://rzp.io/..."
+          value={formData.payment_link}
+          onChange={(e) => setFormData(prev => ({ ...prev, payment_link: e.target.value }))}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="badge_text">Badge Text (optional)</Label>
+        <Input
+          id="badge_text"
+          placeholder="e.g., Best Value"
+          value={formData.badge_text}
+          onChange={(e) => setFormData(prev => ({ ...prev, badge_text: e.target.value }))}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="features">Features (one per line)</Label>
+        <Textarea
+          id="features"
+          placeholder="Unlimited prospects&#10;Team sync&#10;Export data"
+          value={formData.features}
+          onChange={(e) => setFormData(prev => ({ ...prev, features: e.target.value }))}
+          rows={6}
+        />
+      </div>
+
+      <div className="flex gap-2 pt-4">
+        <Button type="submit" disabled={saving} className="flex-1">
+          {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+          Save Plan
+        </Button>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </form>
+  );
+}

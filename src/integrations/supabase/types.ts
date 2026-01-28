@@ -839,6 +839,207 @@ export type Database = {
           },
         ]
       }
+      admin_feature_flags: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          feature_key: string
+          feature_name: string
+          free_access: boolean | null
+          id: string
+          is_enabled: boolean | null
+          pro_access: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          feature_key: string
+          feature_name: string
+          free_access?: boolean | null
+          id?: string
+          is_enabled?: boolean | null
+          pro_access?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          feature_key?: string
+          feature_name?: string
+          free_access?: boolean | null
+          id?: string
+          is_enabled?: boolean | null
+          pro_access?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      admin_offers: {
+        Row: {
+          applicable_plan_ids: string[] | null
+          created_at: string | null
+          discount_type: string
+          discount_value: number
+          end_date: string
+          id: string
+          is_active: boolean | null
+          max_uses_per_user: number | null
+          offer_name: string
+          promo_code: string | null
+          start_date: string
+          updated_at: string | null
+        }
+        Insert: {
+          applicable_plan_ids?: string[] | null
+          created_at?: string | null
+          discount_type: string
+          discount_value: number
+          end_date: string
+          id?: string
+          is_active?: boolean | null
+          max_uses_per_user?: number | null
+          offer_name: string
+          promo_code?: string | null
+          start_date: string
+          updated_at?: string | null
+        }
+        Update: {
+          applicable_plan_ids?: string[] | null
+          created_at?: string | null
+          discount_type?: string
+          discount_value?: number
+          end_date?: string
+          id?: string
+          is_active?: boolean | null
+          max_uses_per_user?: number | null
+          offer_name?: string
+          promo_code?: string | null
+          start_date?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      admin_subscription_plans: {
+        Row: {
+          badge_text: string | null
+          created_at: string | null
+          description: string | null
+          duration_days: number
+          features: Json | null
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          payment_link: string | null
+          plan_key: string
+          plan_name: string
+          price_inr: number
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          badge_text?: string | null
+          created_at?: string | null
+          description?: string | null
+          duration_days: number
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          payment_link?: string | null
+          plan_key: string
+          plan_name: string
+          price_inr: number
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          badge_text?: string | null
+          created_at?: string | null
+          description?: string | null
+          duration_days?: number
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          payment_link?: string | null
+          plan_key?: string
+          plan_name?: string
+          price_inr?: number
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      admin_usage_limits: {
+        Row: {
+          config_key: string
+          config_value: number
+          description: string | null
+          id: string
+          is_enabled: boolean | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          config_key: string
+          config_value: number
+          description?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          config_key?: string
+          config_value?: number
+          description?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      admin_user_overrides: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          custom_daily_limit: number | null
+          custom_expiry_date: string | null
+          custom_total_limit: number | null
+          force_pro_access: boolean | null
+          id: string
+          notes: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          custom_daily_limit?: number | null
+          custom_expiry_date?: string | null
+          custom_total_limit?: number | null
+          force_pro_access?: boolean | null
+          id?: string
+          notes?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          custom_daily_limit?: number | null
+          custom_expiry_date?: string | null
+          custom_total_limit?: number | null
+          force_pro_access?: boolean | null
+          id?: string
+          notes?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           body: string | null
@@ -3186,6 +3387,7 @@ export type Database = {
       generate_neverai_id: { Args: never; Returns: string }
       generate_sequential_neverai_id: { Args: never; Returns: string }
       generate_simple_neverai_id: { Args: never; Returns: string }
+      get_app_config: { Args: never; Returns: Json }
       get_clean_display_name: {
         Args: { p_display_name: string; p_email: string }
         Returns: string
@@ -3254,6 +3456,16 @@ export type Database = {
           display_name: string
           neverai_id: string
           user_id: string
+        }[]
+      }
+      get_user_effective_limits: {
+        Args: { p_user_id: string }
+        Returns: {
+          custom_expiry: string
+          daily_limit: number
+          force_pro: boolean
+          is_override: boolean
+          total_limit: number
         }[]
       }
       get_user_email_by_leader_id: {
