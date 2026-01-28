@@ -1,0 +1,406 @@
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useMemo } from 'react';
+
+// =============================================
+// TYPES
+// =============================================
+
+export interface SubscriptionPlan {
+  id: string;
+  plan_key: string;
+  plan_name: string;
+  description: string | null;
+  price_inr: number;
+  duration_days: number;
+  payment_link: string | null;
+  features: string[];
+  is_active: boolean;
+  is_default: boolean;
+  sort_order: number;
+  badge_text: string | null;
+}
+
+export interface Offer {
+  id: string;
+  offer_name: string;
+  discount_type: 'percent' | 'flat';
+  discount_value: number;
+  applicable_plan_ids: string[];
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+  max_uses_per_user: number | null;
+  promo_code: string | null;
+}
+
+export interface FeatureFlag {
+  feature_name: string;
+  description: string | null;
+  free_access: boolean;
+  pro_access: boolean;
+  is_enabled: boolean;
+}
+
+export interface AppConfig {
+  plans: SubscriptionPlan[];
+  offers: Offer[];
+  limits: Record<string, number>;
+  features: Record<string, FeatureFlag>;
+}
+
+// =============================================
+// SAFE DEFAULTS - Used when config fetch fails
+// =============================================
+
+export const SAFE_DEFAULTS: AppConfig = {
+  plans: [
+    {
+      id: 'default-quarterly',
+      plan_key: 'quarterly',
+      plan_name: 'Pro 4-Month',
+      description: '4 Months Access – Best Value',
+      price_inr: 299,
+      duration_days: 120,
+      payment_link: 'https://rzp.io/rzp/CPQRHdp',
+      features: [
+        'Unlimited prospects',
+        'Auto-sync from teammates',
+        'View team member tracking',
+        'Team actions & dashboards',
+        'Switch tracking source',
+        'Frontline team gets access FREE',
+      ],
+      is_active: true,
+      is_default: true,
+      sort_order: 1,
+      badge_text: 'Best Value',
+    },
+    {
+      id: 'default-monthly',
+      plan_key: 'monthly',
+      plan_name: 'Pro Monthly',
+      description: '1 Month Access',
+      price_inr: 99,
+      duration_days: 30,
+      payment_link: 'https://rzp.io/rzp/HhAdokE',
+      features: [
+        'Unlimited prospects',
+        'Manual personal tracking',
+        'Manual team tracking (self-entered)',
+        'Auto-calculated totals',
+      ],
+      is_active: true,
+      is_default: false,
+      sort_order: 2,
+      badge_text: null,
+    },
+  ],
+  offers: [],
+  limits: {
+    free_total_leads: 1000,
+    free_daily_upload: 100,
+    pro_daily_upload: 500,
+    warning_threshold_1: 800,
+    warning_threshold_2: 900,
+    warning_threshold_3: 950,
+    hard_limit: 1000,
+  },
+  features: {
+    insights: { feature_name: 'View Insights', description: null, free_access: true, pro_access: true, is_enabled: true },
+    export: { feature_name: 'Export Data', description: null, free_access: true, pro_access: true, is_enabled: true },
+    ai_tips: { feature_name: 'AI Tips', description: null, free_access: true, pro_access: true, is_enabled: true },
+    team_sync: { feature_name: 'Team Sync', description: null, free_access: false, pro_access: true, is_enabled: true },
+    team_view: { feature_name: 'Team View', description: null, free_access: false, pro_access: true, is_enabled: true },
+  },
+};
+
+// =============================================
+// FETCH FUNCTION
+// =============================================
+
+async function fetchAppConfig(): Promise<AppConfig> {
+  const { data, error } = await supabase.rpc('get_app_config');
+  
+  if (error) {
+    console.error('Error fetching app config:', error);
+    return SAFE_DEFAULTS;
+  }
+  
+  // Parse and validate the response - cast through unknown first for safety
+  const config = (data as unknown) as {
+    plans: SubscriptionPlan[] | null;
+    offers: Offer[] | null;
+    limits: Record<string, number> | null;
+    features: Record<string, FeatureFlag> | null;
+  } | null;
+  
+  if (!config) return SAFE_DEFAULTS;
+  
+  return {
+    plans: config.plans && config.plans.length > 0 ? config.plans : SAFE_DEFAULTS.plans,
+    offers: config.offers || [],
+    limits: { ...SAFE_DEFAULTS.limits, ...(config.limits || {}) },
+    features: { ...SAFE_DEFAULTS.features, ...(config.features || {}) },
+  };
+}
+
+// =============================================
+// MAIN HOOK
+// =============================================
+
+export function useAdminConfig() {
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['admin-config'],
+    queryFn: fetchAppConfig,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+  });
+
+  const config = useMemo<AppConfig>(() => data || SAFE_DEFAULTS, [data]);
+
+  // Helper to get a specific limit with fallback
+  const getLimit = (key: string, fallback: number = 0): number => {
+    return config.limits[key] ?? SAFE_DEFAULTS.limits[key] ?? fallback;
+  };
+
+  // Get active plans sorted by sort_order
+  const activePlans = useMemo(() => {
+    return config.plans
+      .filter(p => p.is_active)
+      .sort((a, b) => a.sort_order - b.sort_order);
+  }, [config.plans]);
+
+  // Get default plan
+  const defaultPlan = useMemo(() => {
+    return activePlans.find(p => p.is_default) || activePlans[0];
+  }, [activePlans]);
+
+  // Get active offers that apply to a specific plan
+  const getOffersForPlan = (planId: string): Offer[] => {
+    return config.offers.filter(o => 
+      o.is_active && o.applicable_plan_ids.includes(planId)
+    );
+  };
+
+  return {
+    config,
+    loading: isLoading,
+    error,
+    refetch,
+    getLimit,
+    activePlans,
+    defaultPlan,
+    getOffersForPlan,
+  };
+}
+
+// =============================================
+// ADMIN-ONLY HOOKS FOR CRUD OPERATIONS
+// =============================================
+
+export function useAdminPlans() {
+  const { data: plans, isLoading, refetch } = useQuery({
+    queryKey: ['admin-plans-all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('admin_subscription_plans')
+        .select('*')
+        .order('sort_order');
+      if (error) throw error;
+      return data as SubscriptionPlan[];
+    },
+  });
+
+  const createPlan = async (plan: Partial<SubscriptionPlan>) => {
+    const { data, error } = await supabase
+      .from('admin_subscription_plans')
+      .insert([plan as any])
+      .select()
+      .single();
+    if (error) throw error;
+    refetch();
+    return data;
+  };
+
+  const updatePlan = async (id: string, updates: Partial<SubscriptionPlan>) => {
+    const { data, error } = await supabase
+      .from('admin_subscription_plans')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    refetch();
+    return data;
+  };
+
+  const deletePlan = async (id: string) => {
+    const { error } = await supabase
+      .from('admin_subscription_plans')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+    refetch();
+  };
+
+  return { plans: plans || [], loading: isLoading, createPlan, updatePlan, deletePlan, refetch };
+}
+
+export function useAdminOffers() {
+  const { data: offers, isLoading, refetch } = useQuery({
+    queryKey: ['admin-offers-all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('admin_offers')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data as Offer[];
+    },
+  });
+
+  const createOffer = async (offer: Partial<Offer>) => {
+    const { data, error } = await supabase
+      .from('admin_offers')
+      .insert([offer as any])
+      .select()
+      .single();
+    if (error) throw error;
+    refetch();
+    return data;
+  };
+
+  const updateOffer = async (id: string, updates: Partial<Offer>) => {
+    const { data, error } = await supabase
+      .from('admin_offers')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    refetch();
+    return data;
+  };
+
+  const deleteOffer = async (id: string) => {
+    const { error } = await supabase
+      .from('admin_offers')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+    refetch();
+  };
+
+  return { offers: offers || [], loading: isLoading, createOffer, updateOffer, deleteOffer, refetch };
+}
+
+export function useAdminUsageLimits() {
+  const { data: limits, isLoading, refetch } = useQuery({
+    queryKey: ['admin-usage-limits-all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('admin_usage_limits')
+        .select('*')
+        .order('config_key');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const updateLimit = async (id: string, config_value: number, is_enabled: boolean) => {
+    const { error } = await supabase
+      .from('admin_usage_limits')
+      .update({ config_value, is_enabled })
+      .eq('id', id);
+    if (error) throw error;
+    refetch();
+  };
+
+  const createLimit = async (config_key: string, config_value: number, description: string) => {
+    const { error } = await supabase
+      .from('admin_usage_limits')
+      .insert({ config_key, config_value, description });
+    if (error) throw error;
+    refetch();
+  };
+
+  return { limits: limits || [], loading: isLoading, updateLimit, createLimit, refetch };
+}
+
+export function useAdminFeatureFlags() {
+  const { data: flags, isLoading, refetch } = useQuery({
+    queryKey: ['admin-feature-flags-all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('admin_feature_flags')
+        .select('*')
+        .order('feature_key');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const updateFlag = async (id: string, updates: Partial<{
+    free_access: boolean;
+    pro_access: boolean;
+    is_enabled: boolean;
+  }>) => {
+    const { error } = await supabase
+      .from('admin_feature_flags')
+      .update(updates)
+      .eq('id', id);
+    if (error) throw error;
+    refetch();
+  };
+
+  const createFlag = async (feature_key: string, feature_name: string, description: string) => {
+    const { error } = await supabase
+      .from('admin_feature_flags')
+      .insert({ feature_key, feature_name, description });
+    if (error) throw error;
+    refetch();
+  };
+
+  return { flags: flags || [], loading: isLoading, updateFlag, createFlag, refetch };
+}
+
+export function useAdminUserOverrides() {
+  const { data: overrides, isLoading, refetch } = useQuery({
+    queryKey: ['admin-user-overrides-all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('admin_user_overrides')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const createOrUpdateOverride = async (userId: string, updates: {
+    force_pro_access?: boolean;
+    custom_daily_limit?: number | null;
+    custom_total_limit?: number | null;
+    custom_expiry_date?: string | null;
+    notes?: string;
+  }) => {
+    const { error } = await supabase
+      .from('admin_user_overrides')
+      .upsert({ user_id: userId, ...updates }, { onConflict: 'user_id' });
+    if (error) throw error;
+    refetch();
+  };
+
+  const deleteOverride = async (userId: string) => {
+    const { error } = await supabase
+      .from('admin_user_overrides')
+      .delete()
+      .eq('user_id', userId);
+    if (error) throw error;
+    refetch();
+  };
+
+  return { overrides: overrides || [], loading: isLoading, createOrUpdateOverride, deleteOverride, refetch };
+}
