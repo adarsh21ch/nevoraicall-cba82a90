@@ -1,9 +1,10 @@
 import { useMemo, useCallback } from 'react';
 import { useLifetimeLeadLimit } from './useLifetimeLeadLimit';
+import { useAdminConfig } from './useAdminConfig';
 
 /**
- * Progressive upgrade nudge thresholds.
- * Each stage has specific behavior to avoid being spammy.
+ * Default progressive upgrade nudge thresholds.
+ * These are overridden by values from admin_usage_limits table.
  */
 export const NUDGE_THRESHOLDS = {
   /** Stage 1: Soft informational banner, show once per session */
@@ -31,26 +32,35 @@ export type NudgeStage = 'none' | 'stage1' | 'stage2' | 'stage3' | 'stage4';
 
 /**
  * Hook to manage progressive upgrade nudges based on lifetime lead count.
- * Implements non-spammy, value-based messaging with proper dismissal tracking.
+ * Now reads thresholds dynamically from admin_usage_limits table.
  */
 export function useUpgradeNudge() {
   const { lifetimeCount, isPaid, isAtLimit, isLoading } = useLifetimeLeadLimit();
+  const { config, loading: configLoading } = useAdminConfig();
+
+  // Get dynamic thresholds from admin config with fallbacks
+  const thresholds = useMemo(() => ({
+    STAGE_1: config.limits.warning_threshold_1 ?? NUDGE_THRESHOLDS.STAGE_1,
+    STAGE_2: config.limits.warning_threshold_2 ?? NUDGE_THRESHOLDS.STAGE_2,
+    STAGE_3: config.limits.warning_threshold_3 ?? NUDGE_THRESHOLDS.STAGE_3,
+    STAGE_4: config.limits.hard_limit ?? config.limits.free_total_leads ?? NUDGE_THRESHOLDS.STAGE_4,
+  }), [config.limits]);
 
   /**
    * Determine the current nudge stage based on prospect count.
    */
   const currentStage = useMemo((): NudgeStage => {
     // Don't show any nudges while still loading subscription status
-    if (isLoading) return 'none';
+    if (isLoading || configLoading) return 'none';
     if (isPaid) return 'none';
     
-    if (lifetimeCount >= NUDGE_THRESHOLDS.STAGE_4) return 'stage4';
-    if (lifetimeCount >= NUDGE_THRESHOLDS.STAGE_3) return 'stage3';
-    if (lifetimeCount >= NUDGE_THRESHOLDS.STAGE_2) return 'stage2';
-    if (lifetimeCount >= NUDGE_THRESHOLDS.STAGE_1) return 'stage1';
+    if (lifetimeCount >= thresholds.STAGE_4) return 'stage4';
+    if (lifetimeCount >= thresholds.STAGE_3) return 'stage3';
+    if (lifetimeCount >= thresholds.STAGE_2) return 'stage2';
+    if (lifetimeCount >= thresholds.STAGE_1) return 'stage1';
     
     return 'none';
-  }, [lifetimeCount, isPaid, isLoading]);
+  }, [lifetimeCount, isPaid, isLoading, configLoading, thresholds]);
 
   /**
    * Check if Stage 1 banner should be shown.
@@ -144,8 +154,8 @@ export function useUpgradeNudge() {
    * Get remaining prospects until next threshold or limit.
    */
   const remainingToLimit = useMemo(() => {
-    return Math.max(0, NUDGE_THRESHOLDS.STAGE_4 - lifetimeCount);
-  }, [lifetimeCount]);
+    return Math.max(0, thresholds.STAGE_4 - lifetimeCount);
+  }, [thresholds.STAGE_4, lifetimeCount]);
 
   return {
     // Current state
@@ -153,8 +163,11 @@ export function useUpgradeNudge() {
     lifetimeCount,
     isPaid,
     isAtLimit,
-    isLoading,
+    isLoading: isLoading || configLoading,
     remainingToLimit,
+    
+    // Dynamic thresholds
+    thresholds,
     
     // Visibility flags
     shouldShowStage1,

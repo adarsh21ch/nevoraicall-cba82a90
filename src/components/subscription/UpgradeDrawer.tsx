@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
 import { useSubscription } from '@/hooks/useSubscription';
-import { PLAN_CONFIG, PlanType } from '@/hooks/usePaymentLinks';
+import { usePaymentLinks, PlanConfig } from '@/hooks/usePaymentLinks';
 import { useRazorpay } from '@/hooks/useRazorpay';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -21,13 +21,17 @@ export function UpgradeDrawer({ variant = 'default', triggerText }: UpgradeDrawe
   const { initiatePayment, loading: paymentLoading } = useRazorpay();
   const { toast } = useToast();
   const { refetch } = useSubscription();
+  const { plans, getDefaultPlan, loading: plansLoading } = usePaymentLinks();
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<PlanType>('quarterly');
+  
+  // Get default plan key for initial selection
+  const defaultPlan = getDefaultPlan();
+  const [selectedPlanKey, setSelectedPlanKey] = useState<string>(defaultPlan?.plan_key || 'quarterly');
 
-  const handleUpgrade = (planType: PlanType) => {
+  const handleUpgrade = (planKey: string) => {
     initiatePayment({
-      planType,
+      planType: planKey,
       onSuccess: () => {
         toast({
           title: "Pro Activated 🎉",
@@ -46,6 +50,10 @@ export function UpgradeDrawer({ variant = 'default', triggerText }: UpgradeDrawe
   if (loading || isPaid) return null;
 
   const buttonText = triggerText || 'Upgrade to Pro';
+  
+  // Sort plans by sortOrder
+  const sortedPlans = [...plans].sort((a, b) => a.sortOrder - b.sortOrder);
+  const selectedPlan = plans.find(p => p.plan_key === selectedPlanKey) || defaultPlan;
 
   const TriggerButton = variant === 'compact' ? (
     <Button
@@ -69,6 +77,61 @@ export function UpgradeDrawer({ variant = 'default', triggerText }: UpgradeDrawe
     </Button>
   );
 
+  const PlanCard = ({ plan, isSelected }: { plan: PlanConfig; isSelected: boolean }) => {
+    const hasFeatures = plan.features && plan.features.length > 0;
+    const monthlyPrice = plan.durationDays >= 30 
+      ? Math.round(plan.price / (plan.durationDays / 30)) 
+      : plan.price;
+    const months = Math.round(plan.durationDays / 30);
+
+    return (
+      <button
+        type="button"
+        onClick={() => setSelectedPlanKey(plan.plan_key)}
+        className={`w-full p-4 rounded-xl border-2 transition-all text-left relative ${
+          isSelected
+            ? 'border-primary bg-primary/10'
+            : 'border-border bg-card hover:border-primary/50'
+        }`}
+      >
+        {plan.badgeText && (
+          <div className="absolute -top-2.5 right-3 px-2 py-0.5 bg-amber-500 text-white text-xs font-semibold rounded-full flex items-center gap-1">
+            <Star className="h-3 w-3" />
+            {plan.badgeText}
+          </div>
+        )}
+        <div className="flex justify-between items-start">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <Crown className="h-4 w-4 text-primary" />
+              <p className="font-semibold text-foreground">{plan.name}</p>
+            </div>
+            <p className="text-xs text-muted-foreground mb-2">{plan.description}</p>
+            {hasFeatures && (
+              <div className="space-y-1">
+                {plan.features.slice(0, 3).map((feature, i) => (
+                  <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Check className="h-3 w-3 text-primary shrink-0" />
+                    <span>{feature}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="text-right shrink-0 ml-3">
+            <p className="font-bold text-xl text-foreground">₹{plan.price}</p>
+            <p className="text-xs text-muted-foreground">
+              for {months} month{months > 1 ? 's' : ''}
+            </p>
+            {months > 1 && (
+              <p className="text-xs text-primary font-medium">Just ₹{monthlyPrice} / month</p>
+            )}
+          </div>
+        </div>
+      </button>
+    );
+  };
+
   const PlanContent = (
     <div className="space-y-4 p-1">
       <div className="flex items-center gap-3 mb-4">
@@ -81,90 +144,39 @@ export function UpgradeDrawer({ variant = 'default', triggerText }: UpgradeDrawe
         </div>
       </div>
 
-      <div className="space-y-3">
-        {/* 4-Month Plan - Best Value */}
-        <button
-          type="button"
-          onClick={() => setSelectedPlan('quarterly')}
-          className={`w-full p-4 rounded-xl border-2 transition-all text-left relative ${
-            selectedPlan === 'quarterly'
-              ? 'border-primary bg-primary/10'
-              : 'border-border bg-card hover:border-primary/50'
-          }`}
-        >
-          <div className="absolute -top-2.5 right-3 px-2 py-0.5 bg-amber-500 text-white text-xs font-semibold rounded-full flex items-center gap-1">
-            <Star className="h-3 w-3" />
-            Best Value
-          </div>
-          <div className="flex justify-between items-start">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <Crown className="h-4 w-4 text-primary" />
-                <p className="font-semibold text-foreground">{PLAN_CONFIG.quarterly.name}</p>
-              </div>
-              <p className="text-xs text-muted-foreground mb-2">{PLAN_CONFIG.quarterly.description}</p>
-              <div className="space-y-1">
-                {PLAN_CONFIG.quarterly.features.slice(0, 3).map((feature, i) => (
-                  <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Check className="h-3 w-3 text-primary shrink-0" />
-                    <span>{feature}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="text-right shrink-0 ml-3">
-              <p className="font-bold text-xl text-foreground">₹299</p>
-              <p className="text-xs text-muted-foreground">for 4 months</p>
-              <p className="text-xs text-primary font-medium">Just ₹75 / month</p>
-            </div>
-          </div>
-        </button>
-
-        {/* Monthly Plan */}
-        <button
-          type="button"
-          onClick={() => setSelectedPlan('monthly')}
-          className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
-            selectedPlan === 'monthly'
-              ? 'border-primary bg-primary/10'
-              : 'border-border bg-card hover:border-primary/50'
-          }`}
-        >
-          <div className="flex justify-between items-start">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <Crown className="h-4 w-4 text-primary" />
-                <p className="font-semibold text-foreground">{PLAN_CONFIG.monthly.name}</p>
-              </div>
-              <p className="text-xs text-muted-foreground mb-2">{PLAN_CONFIG.monthly.description}</p>
-              <div className="space-y-1">
-                {PLAN_CONFIG.monthly.features.slice(0, 3).map((feature, i) => (
-                  <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Check className="h-3 w-3 text-primary shrink-0" />
-                    <span>{feature}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="text-right shrink-0 ml-3">
-              <p className="font-bold text-xl text-foreground">₹99</p>
-              <p className="text-xs text-muted-foreground">for 1 month</p>
-            </div>
-          </div>
-        </button>
-      </div>
+      {plansLoading ? (
+        <div className="space-y-3">
+          <div className="h-28 bg-muted animate-pulse rounded-xl" />
+          <div className="h-24 bg-muted animate-pulse rounded-xl" />
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {sortedPlans.map((plan) => (
+            <PlanCard 
+              key={plan.id || plan.plan_key} 
+              plan={plan} 
+              isSelected={selectedPlanKey === plan.plan_key} 
+            />
+          ))}
+        </div>
+      )}
 
       <Button 
-        onClick={() => handleUpgrade(selectedPlan)}
+        onClick={() => handleUpgrade(selectedPlanKey)}
         className="w-full h-12 text-base font-semibold shadow-lg shadow-primary/30"
-        disabled={paymentLoading}
+        disabled={paymentLoading || plansLoading}
       >
         {paymentLoading ? (
           'Opening payment...'
+        ) : selectedPlan ? (
+          <>
+            <Crown className="h-5 w-5 mr-2" />
+            Get {selectedPlan.name} – ₹{selectedPlan.price}
+          </>
         ) : (
           <>
             <Crown className="h-5 w-5 mr-2" />
-            Get {PLAN_CONFIG[selectedPlan].name} – ₹{PLAN_CONFIG[selectedPlan].price}
+            Upgrade Now
           </>
         )}
       </Button>

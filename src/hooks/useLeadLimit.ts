@@ -1,17 +1,24 @@
 import { useMemo } from 'react';
 import { useGlobalProspects } from '@/contexts/ProspectsContext';
 import { useSubscription } from '@/hooks/useSubscription';
-import { FREE_LEAD_LIMIT } from '@/hooks/usePaymentLinks';
+import { useAdminConfig } from '@/hooks/useAdminConfig';
+
+/** Default free lead limit - overridden by admin config */
+const DEFAULT_FREE_LEAD_LIMIT = 500;
 
 /**
  * Hook to check if user has reached the free lead limit.
- * Returns information about lead limits and whether user can add more leads.
+ * Now reads limits dynamically from admin_usage_limits table.
  */
 export function useLeadLimit() {
   const { prospects } = useGlobalProspects();
   const { isPaid, plan } = useSubscription();
+  const { config, loading: configLoading } = useAdminConfig();
 
   const totalLeads = prospects?.length ?? 0;
+  
+  // Get dynamic limit from admin config
+  const freeLeadLimit = config.limits.free_total_leads ?? DEFAULT_FREE_LEAD_LIMIT;
   
   const limitInfo = useMemo(() => {
     // Paid users have no limit
@@ -26,24 +33,25 @@ export function useLeadLimit() {
       };
     }
 
-    // Free users have 500 lead limit
-    const isAtLimit = totalLeads >= FREE_LEAD_LIMIT;
-    const remaining = Math.max(0, FREE_LEAD_LIMIT - totalLeads);
-    const percentUsed = Math.min(100, (totalLeads / FREE_LEAD_LIMIT) * 100);
+    // Free users have dynamic lead limit
+    const isAtLimit = totalLeads >= freeLeadLimit;
+    const remaining = Math.max(0, freeLeadLimit - totalLeads);
+    const percentUsed = Math.min(100, (totalLeads / freeLeadLimit) * 100);
 
     return {
       isAtLimit,
       canAddLead: !isAtLimit,
       currentCount: totalLeads,
-      limit: FREE_LEAD_LIMIT,
+      limit: freeLeadLimit,
       remaining,
       percentUsed,
     };
-  }, [totalLeads, isPaid]);
+  }, [totalLeads, isPaid, freeLeadLimit]);
 
   return {
     ...limitInfo,
     plan,
     isPaid,
+    loading: configLoading,
   };
 }

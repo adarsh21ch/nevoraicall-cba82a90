@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useAdminConfig } from '@/hooks/useAdminConfig';
 import { BRAND_NAME } from '@/config/brand';
 
 declare global {
@@ -10,7 +11,7 @@ declare global {
   }
 }
 
-export type PlanType = 'monthly' | 'quarterly';
+export type PlanType = string;
 
 interface RazorpayOptions {
   planType?: PlanType;
@@ -18,26 +19,11 @@ interface RazorpayOptions {
   onError?: (error: string) => void;
 }
 
-// Toggle this flag for testing (set to false for production)
-const TEST_MODE = false;
-
-const PLAN_CONFIG = {
-  monthly: {
-    amount: TEST_MODE ? 100 : 9900, // ₹1 test or ₹99 production (in paise)
-    duration_days: 30,
-    description: TEST_MODE ? `Pro Monthly – ₹1 (TEST)` : `Pro Monthly – ₹99`,
-  },
-  quarterly: {
-    amount: TEST_MODE ? 100 : 29900, // ₹1 test or ₹299 production (in paise)
-    duration_days: 120,
-    description: TEST_MODE ? `Pro 4-Month – ₹1 (TEST)` : `Pro 4-Month – ₹299`,
-  },
-};
-
 export function useRazorpay() {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { config } = useAdminConfig();
 
   const loadRazorpayScript = useCallback((): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -64,9 +50,14 @@ export function useRazorpay() {
       return;
     }
 
-    const planType = options?.planType || 'quarterly';
-    const planConfig = PLAN_CONFIG[planType];
-    const description = planConfig.description;
+    // Get plan from dynamic config or use default
+    const planKey = options?.planType || 'quarterly';
+    const plan = config.plans.find(p => p.plan_key === planKey);
+    
+    // Build description from dynamic config
+    const description = plan 
+      ? `${plan.plan_name} – ₹${plan.price_inr}` 
+      : `Pro Plan`;
 
     setLoading(true);
 
@@ -82,7 +73,7 @@ export function useRazorpay() {
         body: {
           user_id: user.id,
           user_email: user.email,
-          plan_type: planType,
+          plan_type: planKey,
         },
       });
 
@@ -158,7 +149,7 @@ export function useRazorpay() {
       options?.onError?.(err.message);
       setLoading(false);
     }
-  }, [user, loadRazorpayScript, toast]);
+  }, [user, loadRazorpayScript, toast, config.plans]);
 
   return { initiatePayment, loading };
 }
