@@ -187,12 +187,12 @@ export default function Tracking() {
           {/* Dashboard Link Button */}
           <Button
             variant="ghost"
-            size="icon"
+            size="sm"
             onClick={handleOpenDashboard}
-            className="h-8 w-8"
-            title="Open TrackUp Dashboard"
+            className="h-8 gap-1.5 text-xs font-medium"
           >
-            <ExternalLink className="h-4 w-4" />
+            <ExternalLink className="h-3.5 w-3.5" />
+            Dashboard
           </Button>
         </div>
         
