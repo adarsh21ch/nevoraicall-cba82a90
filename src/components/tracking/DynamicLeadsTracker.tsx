@@ -103,17 +103,16 @@ export function DynamicLeadsTracker({
     );
   }
 
-  // Build metrics array: Leads, Responses (⭐ key conversion), then each Response Tag
+  // Build metrics array: Leads, Responses, then each Response Tag (star only on Final Target)
   const metrics = [
-    { key: 'leads', label: 'Leads', icon: Users, color: METRIC_COLORS.leads, isKeyConversion: false },
-    { key: 'responses', label: 'Responses', icon: MessageSquare, color: METRIC_COLORS.responses, isKeyConversion: true }, // ⭐ Key conversion point
+    { key: 'leads', label: 'Leads', icon: Users, color: METRIC_COLORS.leads },
+    { key: 'responses', label: 'Responses', icon: MessageSquare, color: METRIC_COLORS.responses },
     ...tags.map((tag, idx) => ({
       key: tag,
       label: tag,
       icon: tag === leadsFinalTargetTag ? Star : Tag,
       color: METRIC_COLORS.tag[idx % METRIC_COLORS.tag.length],
       isFinal: tag === leadsFinalTargetTag,
-      isKeyConversion: false,
     })),
   ];
 
@@ -129,9 +128,9 @@ export function DynamicLeadsTracker({
             <span className="text-xs font-bold">{isPro ? totals.leads : '–'}</span>
           </div>
           
-          {/* Responses - Key conversion point with star */}
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-500/10 ring-1 ring-emerald-500/30">
-            <Star className="h-3 w-3 text-emerald-500 fill-emerald-500" />
+          {/* Responses */}
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-500/10">
+            <MessageSquare className="h-3 w-3 text-emerald-600" />
             <span className="text-[10px] font-medium text-emerald-600">Responses</span>
             <span className="text-xs font-bold">{isPro ? totals.responses : '–'}</span>
           </div>
@@ -225,10 +224,9 @@ export function DynamicLeadsTracker({
               </thead>
 
               <tbody>
-                {metrics.map((metric, metricIdx) => {
+              {metrics.map((metric, metricIdx) => {
                   const Icon = metric.icon;
                   const isFinal = 'isFinal' in metric && metric.isFinal;
-                  const isKeyConversion = metric.isKeyConversion;
                   
                   return (
                     <tr key={metric.key} className={metricIdx % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
@@ -240,17 +238,15 @@ export function DynamicLeadsTracker({
                         <div className="flex items-center gap-1.5">
                           <div className={cn(
                             "p-1 rounded", 
-                            metric.color.bg,
-                            isKeyConversion && "ring-1 ring-emerald-500/30"
+                            metric.color.bg
                           )}>
                             <Icon className={cn(
                               "h-3 w-3", 
                               metric.color.text, 
-                              (isFinal || isKeyConversion) && "fill-current"
+                              isFinal && "fill-current"
                             )} />
                           </div>
                           <span className="truncate max-w-[50px]">{metric.label}</span>
-                          {isKeyConversion && <Star className="h-2.5 w-2.5 text-emerald-500 fill-emerald-500" />}
                         </div>
                       </td>
                       
