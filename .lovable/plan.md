@@ -1,312 +1,340 @@
 
+# Complete Admin Panel & Lead Limits Fix Plan
 
-# Founder-Level Admin Panel Enhancement Plan
+## Current Issues Summary
 
-## Summary
+Based on my analysis, here are the confirmed bugs:
 
-This plan enhances the existing admin panel to add the remaining critical features: audit logging, enhanced user details, user suspension capabilities, and tighter integration between user management and override controls.
-
-## Current State Analysis
-
-The admin panel already has solid foundations:
-- ✅ Plans Manager with full CRUD + payment links
-- ✅ Offers Manager for discounts
-- ✅ Usage Limits Manager for configuring free/pro limits
-- ✅ Feature Flags Manager for feature gating
-- ✅ User Override Drawer for per-user overrides
-- ✅ Analytics Dashboard with revenue charts
-- ✅ Backend-driven configuration (no hardcoded values)
-
-**What's missing:**
-- ❌ Audit logs for tracking admin actions
-- ❌ Enhanced user details (leads count, signup source, last active)
-- ❌ User suspension functionality
-- ❌ Users tab integration with Override Drawer
-- ❌ Free→Pro conversion rate display
+| Issue | Root Cause | Severity |
+|-------|-----------|----------|
+| Audit Log shows "Failed to load audit logs" | Table is empty - no admin actions are being logged | High |
+| Daily upload limit (50) not enforced | No tracking table, no enforcement logic anywhere | Critical |
+| Plan updates not reflecting in app | Cache not invalidated after admin changes | Medium |
+| Offers missing payment link | Schema and UI missing offer_payment_link field | Medium |
+| Coupon doesn't change payment link | No logic to swap payment links | Medium |
 
 ---
 
-## Implementation Plan
+## Phase 1: Fix Audit Logging
 
-### Phase 1: Audit Logs System
+**Problem**: Admin actions (plan CRUD, offer CRUD, limit updates, feature flag updates) are not being logged to the audit log. Only user pro grants/revokes in EnhancedUsersTab are logged.
 
-**Database Changes:**
+**Solution**: Add `logAdminAction()` calls to all admin operations.
 
-Create a new `admin_audit_logs` table to track all admin actions:
+### Files to Modify
 
-```text
-admin_audit_logs
-├── id (uuid)
-├── admin_user_id (uuid) - Who performed the action
-├── action_type (text) - e.g., 'plan_updated', 'pro_access_granted'
-├── target_type (text) - e.g., 'plan', 'user', 'limit'
-├── target_id (text) - ID of the affected entity
-├── old_value (jsonb) - Previous state
-├── new_value (jsonb) - New state
-├── description (text) - Human-readable summary
-├── created_at (timestamptz)
-```
+**1. src/components/admin/PlansManager.tsx**
+- Import `logAdminAction` from `@/hooks/useAuditLogs`
+- Add logging after:
+  - `createPlan()` success: `logAdminAction('plan_created', 'plan', planId, null, planData, 'Created plan: ' + planName)`
+  - `updatePlan()` success: `logAdminAction('plan_updated', 'plan', planId, oldPlan, newPlan, 'Updated plan: ' + planName)`
+  - `deletePlan()` success: `logAdminAction('plan_deleted', 'plan', planId, oldPlan, null, 'Deleted plan: ' + planName)`
+  - Toggle active: `logAdminAction('plan_updated', 'plan', id, {is_active: !old}, {is_active: new}, 'Plan status changed')`
 
-**Admin-only RLS:**
-- Admins can INSERT and SELECT
-- Regular users cannot access
+**2. src/components/admin/OffersManager.tsx**
+- Import `logAdminAction`
+- Add logging for create/update/delete/toggle operations
 
-**Automatic Logging:**
-- Add database triggers on admin tables to auto-log changes
-- Create helper function `log_admin_action()` for manual logging
+**3. src/components/admin/UsageLimitsManager.tsx**
+- Import `logAdminAction`
+- Add logging in `handleSaveAll()` for each limit change:
+  - `logAdminAction('limit_updated', 'limit', limitId, {config_key, old_value}, {config_key, new_value}, 'Updated ' + limitKey)`
 
-**UI Component:**
-- New "Audit Log" tab in Admin panel
-- Filterable list of recent actions
-- Shows: timestamp, admin email, action type, description, old→new values
+**4. src/components/admin/FeatureFlagsManager.tsx**
+- Import `logAdminAction`
+- Add logging for flag updates
 
 ---
 
-### Phase 2: Enhanced User Management
+## Phase 2: Daily Upload Limit Enforcement (Critical)
 
-**Database Function Updates:**
+**Problem**: `admin_usage_limits` shows `free_daily_upload: 50` but users can import 100+ leads. No enforcement exists.
 
-Enhance `admin_search_users` RPC to return additional fields:
-- `total_leads_count` - Count of prospects for user
-- `source_app` - Signup source (from profiles table)
-- `last_active_at` - From user_app_access table
-- `is_suspended` - New suspension status
+### Database Changes
 
-**New Suspension System:**
-
-Add `is_suspended` boolean to profiles table:
-- When suspended, user sees "Account Suspended" message
-- Admin can toggle suspension from Users list
-- Log suspension actions to audit log
-
-**UI Enhancements to Users Tab:**
-
-For each user row, display:
-- Email + Display name
-- Plan badge (Free/Pro/Expired)
-- Total leads count
-- Signup source badge (Achievers Club / Direct)
-- Last active date
-- Actions: Plan dropdown, Override button, Suspend toggle
-
-Add "Override" button that opens `UserOverrideDrawer` for quick access.
-
----
-
-### Phase 3: Conversion Analytics
-
-**New Metrics:**
-
-Add to analytics dashboard:
-- Free → Pro conversion rate (total Pro users / total users who were Free)
-- Conversion funnel visualization
-- Average time from signup to Pro upgrade
-
-**UI Updates:**
-
-In Analytics tab:
-- Add "Conversion Rate" KPI card
-- Show trend compared to previous period
-
----
-
-### Phase 4: Users Tab Improvements
-
-**Current Issues:**
-1. Users tab doesn't show Override button
-2. No way to quickly access user overrides
-3. Missing user detail fields
-
-**Solution:**
-
-Refactor Users tab to:
-1. Use enhanced RPC data with more fields
-2. Add "Override" icon button per user row
-3. Show leads count, source, last active
-4. Add suspend toggle per user
-5. Better mobile layout with expandable cards
-
----
-
-## Files to Create
-
-| File | Purpose |
-|------|---------|
-| `src/components/admin/AuditLogViewer.tsx` | Displays admin action history |
-| `src/hooks/useAuditLogs.ts` | Fetches audit log data |
-
-## Files to Modify
-
-| File | Changes |
-|------|---------|
-| Database migration | Create audit_logs table, add is_suspended to profiles |
-| `src/pages/Admin.tsx` | Add Audit Log tab, enhance Users tab UI |
-| `src/hooks/useAdmin.ts` | Add suspension toggle, enhanced user data |
-| `src/components/admin/EnhancedStatsGrid.tsx` | Add conversion rate KPI |
-| `src/hooks/useAdminAnalytics.ts` | Calculate conversion rate |
-
----
-
-## Database Schema Additions
-
-### Audit Logs Table
-
+**1. Create `user_daily_uploads` tracking table**
 ```sql
-CREATE TABLE public.admin_audit_logs (
+CREATE TABLE public.user_daily_uploads (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  admin_user_id UUID REFERENCES auth.users(id) NOT NULL,
-  action_type TEXT NOT NULL,
-  target_type TEXT NOT NULL,
-  target_id TEXT,
-  old_value JSONB,
-  new_value JSONB,
-  description TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now()
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  upload_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  upload_count INTEGER NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(user_id, upload_date)
 );
 
--- Index for efficient querying
-CREATE INDEX idx_audit_logs_created ON admin_audit_logs(created_at DESC);
-CREATE INDEX idx_audit_logs_action ON admin_audit_logs(action_type);
+ALTER TABLE user_daily_uploads ENABLE ROW LEVEL SECURITY;
 
--- RLS: Admin-only access
-ALTER TABLE admin_audit_logs ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Admins can read audit logs"
-  ON admin_audit_logs FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
-
-CREATE POLICY "Admins can create audit logs"
-  ON admin_audit_logs FOR INSERT
-  TO authenticated
-  WITH CHECK (public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "Users can read own uploads"
+  ON user_daily_uploads FOR SELECT
+  USING (auth.uid() = user_id);
 ```
 
-### User Suspension Column
-
+**2. Create `check_upload_limit` RPC function**
 ```sql
-ALTER TABLE public.profiles 
-ADD COLUMN IF NOT EXISTS is_suspended BOOLEAN DEFAULT false;
-```
-
----
-
-## Audit Log Action Types
-
-Actions to be logged:
-| Action Type | Target | Description |
-|-------------|--------|-------------|
-| `plan_created` | plan | New subscription plan added |
-| `plan_updated` | plan | Plan price/duration/status changed |
-| `plan_deleted` | plan | Plan removed |
-| `limit_updated` | limit | Usage limit value changed |
-| `feature_flag_updated` | feature | Feature access toggled |
-| `offer_created` | offer | New discount offer created |
-| `offer_updated` | offer | Offer modified |
-| `user_pro_granted` | user | Pro access granted |
-| `user_pro_revoked` | user | Pro access revoked |
-| `user_override_set` | user | Custom override applied |
-| `user_suspended` | user | User account suspended |
-| `user_unsuspended` | user | User account reactivated |
-
----
-
-## Technical Implementation Details
-
-### Logging Function
-
-```sql
-CREATE FUNCTION log_admin_action(
-  p_action_type TEXT,
-  p_target_type TEXT,
-  p_target_id TEXT,
-  p_old_value JSONB,
-  p_new_value JSONB,
-  p_description TEXT
-)
-RETURNS UUID
+CREATE OR REPLACE FUNCTION public.check_upload_limit(p_user_id UUID, p_count INTEGER)
+RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = 'public'
 AS $$
 DECLARE
-  v_log_id UUID;
+  v_is_pro BOOLEAN;
+  v_total_added INTEGER;
+  v_today_count INTEGER;
+  v_free_total_limit INTEGER;
+  v_free_daily_limit INTEGER;
+  v_pro_daily_limit INTEGER;
 BEGIN
-  INSERT INTO admin_audit_logs (
-    admin_user_id, action_type, target_type, 
-    target_id, old_value, new_value, description
-  ) VALUES (
-    auth.uid(), p_action_type, p_target_type,
-    p_target_id, p_old_value, p_new_value, p_description
-  ) RETURNING id INTO v_log_id;
+  -- Check if user is Pro
+  SELECT (plan = 'pro' AND (expires_at IS NULL OR expires_at > NOW()))
+  INTO v_is_pro
+  FROM user_subscriptions
+  WHERE user_id = p_user_id;
   
-  RETURN v_log_id;
+  v_is_pro := COALESCE(v_is_pro, false);
+  
+  -- Get user's total leads added
+  SELECT COALESCE(total_leads_added, 0) INTO v_total_added
+  FROM profiles WHERE user_id = p_user_id;
+  
+  -- Get today's upload count
+  SELECT COALESCE(upload_count, 0) INTO v_today_count
+  FROM user_daily_uploads
+  WHERE user_id = p_user_id AND upload_date = CURRENT_DATE;
+  
+  -- Get limits from admin config
+  SELECT config_value INTO v_free_total_limit
+  FROM admin_usage_limits WHERE config_key = 'free_total_leads' AND is_enabled = true;
+  
+  SELECT config_value INTO v_free_daily_limit
+  FROM admin_usage_limits WHERE config_key = 'free_daily_upload' AND is_enabled = true;
+  
+  SELECT config_value INTO v_pro_daily_limit
+  FROM admin_usage_limits WHERE config_key = 'pro_daily_upload' AND is_enabled = true;
+  
+  -- Defaults
+  v_free_total_limit := COALESCE(v_free_total_limit, 1000);
+  v_free_daily_limit := COALESCE(v_free_daily_limit, 50);
+  v_pro_daily_limit := COALESCE(v_pro_daily_limit, 500);
+  
+  -- Pro user check
+  IF v_is_pro THEN
+    IF v_pro_daily_limit > 0 AND (v_today_count + p_count) > v_pro_daily_limit THEN
+      RETURN jsonb_build_object(
+        'allowed', false,
+        'reason', 'Daily Pro upload limit reached (' || v_pro_daily_limit || '/day)',
+        'limit_type', 'pro_daily'
+      );
+    END IF;
+    RETURN jsonb_build_object('allowed', true, 'reason', '', 'limit_type', 'pro');
+  END IF;
+  
+  -- Free user: check total limit first
+  IF (v_total_added + p_count) > v_free_total_limit THEN
+    RETURN jsonb_build_object(
+      'allowed', false,
+      'reason', 'Total free leads limit reached (' || v_free_total_limit || '). Upgrade to Pro for unlimited.',
+      'limit_type', 'total'
+    );
+  END IF;
+  
+  -- Free user: check daily limit
+  IF (v_today_count + p_count) > v_free_daily_limit THEN
+    RETURN jsonb_build_object(
+      'allowed', false,
+      'reason', 'Daily free upload limit reached (' || v_free_daily_limit || '/day). Try again tomorrow or upgrade to Pro.',
+      'limit_type', 'daily'
+    );
+  END IF;
+  
+  RETURN jsonb_build_object('allowed', true, 'reason', '', 'limit_type', 'free');
 END;
 $$;
 ```
 
-### Enhanced User Search RPC
+**3. Create `increment_daily_upload` RPC function**
+```sql
+CREATE OR REPLACE FUNCTION public.increment_daily_upload(p_user_id UUID, p_count INTEGER)
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = 'public'
+AS $$
+DECLARE
+  v_new_count INTEGER;
+BEGIN
+  INSERT INTO user_daily_uploads (user_id, upload_date, upload_count)
+  VALUES (p_user_id, CURRENT_DATE, p_count)
+  ON CONFLICT (user_id, upload_date)
+  DO UPDATE SET 
+    upload_count = user_daily_uploads.upload_count + p_count,
+    updated_at = now()
+  RETURNING upload_count INTO v_new_count;
+  
+  RETURN v_new_count;
+END;
+$$;
+```
 
-Update existing `admin_search_users` to include:
-- Leads count via subquery
-- Source app from profiles
-- Last active from user_app_access
-- Suspension status
+### Frontend Changes
+
+**1. Create `src/hooks/useDailyUploadLimit.ts`**
+```typescript
+export function useDailyUploadLimit() {
+  const { user } = useAuth();
+  
+  const checkLimit = async (count: number): Promise<{allowed: boolean; reason: string}> => {
+    const { data, error } = await supabase.rpc('check_upload_limit', {
+      p_user_id: user.id,
+      p_count: count
+    });
+    if (error) return { allowed: true, reason: '' }; // Fail open
+    return data;
+  };
+  
+  const incrementCount = async (count: number) => {
+    await supabase.rpc('increment_daily_upload', {
+      p_user_id: user.id,
+      p_count: count
+    });
+  };
+  
+  return { checkLimit, incrementCount };
+}
+```
+
+**2. Update `src/components/prospects/ImportExcelDialog.tsx`**
+- Import `useDailyUploadLimit`
+- Before starting import, call `checkLimit(prospects.length)`
+- If not allowed, show error with specific reason
+- After successful import, call `incrementCount(result.imported)`
+
+**3. Update `src/hooks/useProspectsQuery.ts`**
+- In `addMutation.mutationFn`, add daily limit check before insert
+- After successful insert, increment daily count
 
 ---
 
-## UI Mockup: Enhanced Users Tab
+## Phase 3: Offer Payment Links
 
-```text
-┌─────────────────────────────────────────────────────┐
-│ [Search by email, name, upline...]  [All ▾] [Pro ▾]│
-├─────────────────────────────────────────────────────┤
-│ ┌─────────────────────────────────────────────────┐ │
-│ │ user@example.com                    [Pro Badge] │ │
-│ │ John Doe                                        │ │
-│ │ ─────────────────────────────────────────────── │ │
-│ │ 📊 245 leads  │  🏷️ Achievers Club  │  ⏰ Today │ │
-│ │ ─────────────────────────────────────────────── │ │
-│ │ [Free ▾] [30 days ▾] → Jan 28  [💾] [⚙️] [🚫]  │ │
-│ └─────────────────────────────────────────────────┘ │
-│ ┌─────────────────────────────────────────────────┐ │
-│ │ another@email.com                  [Free Badge] │ │
-│ │ Jane Smith                                      │ │
-│ │ ─────────────────────────────────────────────── │ │
-│ │ 📊 52 leads   │  🏷️ Direct         │  ⏰ 3d ago │ │
-│ └─────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────┘
+**Problem**: Offers have no payment link field. When coupon is applied, payment link doesn't change.
 
-Legend:
-[⚙️] = Override settings
-[🚫] = Suspend toggle
-[💾] = Save changes
+### Database Changes
+
+```sql
+ALTER TABLE admin_offers 
+ADD COLUMN offer_payment_link TEXT;
+```
+
+### Frontend Changes
+
+**1. Update `src/components/admin/OffersManager.tsx`**
+- Add `offer_payment_link` field to OfferEditForm
+- Make it required for active offers
+- Show validation error if missing
+
+**2. Update offer types in `src/hooks/useAdminConfig.ts`**
+```typescript
+export interface Offer {
+  // ... existing fields
+  offer_payment_link: string | null;
+}
+```
+
+**3. Update payment flow in `src/hooks/useRazorpay.ts`**
+- When coupon is applied, use `offer_payment_link` instead of plan's `payment_link`
+- Pass coupon code in payment metadata
+
+---
+
+## Phase 4: Cache Invalidation
+
+**Problem**: When admin updates plans/limits/offers, user-facing components show stale data due to 5-minute cache.
+
+### Solution
+
+**1. Update `src/hooks/useAdminConfig.ts`**
+
+In each admin CRUD hook (useAdminPlans, useAdminOffers, useAdminUsageLimits, useAdminFeatureFlags), after successful mutation:
+
+```typescript
+const queryClient = useQueryClient();
+
+// After createPlan/updatePlan/deletePlan:
+queryClient.invalidateQueries({ queryKey: ['admin-config'] });
+```
+
+**2. Add `refetchOnMount: 'always'` to useAdminConfig**
+
+```typescript
+const { data, isLoading, error, refetch } = useQuery({
+  queryKey: ['admin-config'],
+  queryFn: fetchAppConfig,
+  staleTime: 5 * 60 * 1000,
+  refetchOnMount: 'always', // Always refetch when component mounts
+});
 ```
 
 ---
 
-## Deliverables Summary
+## Phase 5: Admin Validation
 
-1. **Audit Logs** - Complete tracking of all admin actions with filterable viewer
-2. **Enhanced User Management** - More data per user, suspend capability, override access
-3. **Conversion Analytics** - Free→Pro conversion rate KPI
-4. **Integrated Experience** - Users tab connects to override drawer
+### PlansManager.tsx
+- Before saving, validate `payment_link` is not empty
+- Show toast error: "Payment link is required"
 
----
-
-## Security Considerations
-
-- All audit log access restricted to admin role
-- Suspension enforced at auth level (check on protected routes)
-- Audit logs are immutable (no UPDATE/DELETE policies)
-- Admin actions traceable for compliance
+### OffersManager.tsx
+- Before saving, validate:
+  - `offer_payment_link` is not empty (when is_active = true)
+  - `applicable_plan_ids` has at least one plan
+- Show specific error messages
 
 ---
 
-## Priority Order
+## Files Summary
 
-1. **High**: Audit Logs (critical for accountability)
-2. **High**: User Suspension (moderation capability)
-3. **Medium**: Enhanced User Details (better admin visibility)
-4. **Medium**: Override Integration in Users Tab (workflow improvement)
-5. **Low**: Conversion Analytics (nice-to-have metric)
+### New Files
+| File | Purpose |
+|------|---------|
+| `src/hooks/useDailyUploadLimit.ts` | Daily limit checking hook |
 
+### Database Migration
+- Create `user_daily_uploads` table
+- Add `check_upload_limit` function
+- Add `increment_daily_upload` function
+- Add `offer_payment_link` column to `admin_offers`
+
+### Modified Files
+| File | Changes |
+|------|---------|
+| `src/components/admin/PlansManager.tsx` | Add audit logging, validation |
+| `src/components/admin/OffersManager.tsx` | Add audit logging, payment link field, validation |
+| `src/components/admin/UsageLimitsManager.tsx` | Add audit logging |
+| `src/components/admin/FeatureFlagsManager.tsx` | Add audit logging |
+| `src/components/prospects/ImportExcelDialog.tsx` | Add daily limit check |
+| `src/hooks/useProspectsQuery.ts` | Add daily limit check in addProspect |
+| `src/hooks/useAdminConfig.ts` | Add cache invalidation, update Offer type |
+| `src/hooks/useRazorpay.ts` | Use offer payment link when coupon applied |
+
+---
+
+## Implementation Order
+
+1. **Database migration** - Create tables and functions
+2. **Audit logging** - Fix PlansManager, OffersManager, UsageLimitsManager, FeatureFlagsManager
+3. **Daily limit enforcement** - Create hook, update ImportExcelDialog and useProspectsQuery
+4. **Offer payment links** - Schema change, UI update
+5. **Cache invalidation** - Update admin hooks
+6. **Validation** - Add to admin forms
+
+---
+
+## Expected Outcomes
+
+After implementation:
+- Audit log shows all admin actions with old/new values
+- Free users blocked at 50 leads/day with clear error message
+- Plan updates instantly visible in upgrade popup (no stale data)
+- Offers have dedicated payment links that apply when coupon used
+- Admin cannot save incomplete configurations
