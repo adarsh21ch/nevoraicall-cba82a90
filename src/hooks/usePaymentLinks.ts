@@ -23,19 +23,19 @@ export interface PlanConfig {
 // Legacy constants for backward compatibility (will be overridden by dynamic config)
 export const PAYMENT_LINKS = {
   monthly: 'https://rzp.io/rzp/HhAdokE',
-  quarterly: 'https://rzp.io/rzp/CPQRHdp',
+  pro_6_months: 'https://rzp.io/rzp/CPQRHdp',
 } as const;
 
-// Legacy config for fallback
+// Legacy config for fallback - updated to match current admin config
 export const PLAN_CONFIG: Record<string, PlanConfig> = {
-  quarterly: {
-    id: 'quarterly',
-    plan_key: 'quarterly',
-    name: 'Pro 4-Month',
+  pro_6_months: {
+    id: 'pro_6_months',
+    plan_key: 'pro_6_months',
+    name: 'Pro 6-Month',
     price: 299,
-    paymentLink: PAYMENT_LINKS.quarterly,
-    description: '4 Months Access – Best Value',
-    durationDays: 120,
+    paymentLink: PAYMENT_LINKS.pro_6_months,
+    description: '6 Months Access – Best Value',
+    durationDays: 180,
     badgeText: 'Best Value',
     isDefault: true,
     sortOrder: 1,
@@ -45,7 +45,6 @@ export const PLAN_CONFIG: Record<string, PlanConfig> = {
       'View team member tracking',
       'Team actions & dashboards',
       'Switch tracking source',
-      'Frontline team gets access FREE',
     ],
   },
   monthly: {
@@ -66,7 +65,7 @@ export const PLAN_CONFIG: Record<string, PlanConfig> = {
   },
 };
 
-export const FREE_LEAD_LIMIT = 500;
+export const FREE_LEAD_LIMIT = 200; // Updated to match admin config
 
 export function usePaymentLinks() {
   const { config, loading } = useAdminConfig();
