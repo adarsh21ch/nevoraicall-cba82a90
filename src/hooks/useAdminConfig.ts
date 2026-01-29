@@ -57,12 +57,12 @@ export interface AppConfig {
 export const SAFE_DEFAULTS: AppConfig = {
   plans: [
     {
-      id: 'default-quarterly',
-      plan_key: 'quarterly',
-      plan_name: 'Pro 4-Month',
-      description: '4 Months Access – Best Value',
+      id: 'default-pro-6-months',
+      plan_key: 'pro_6_months',
+      plan_name: 'Pro 6-Month',
+      description: '6 Months Access – Best Value',
       price_inr: 299,
-      duration_days: 120,
+      duration_days: 180,
       payment_link: 'https://rzp.io/rzp/CPQRHdp',
       features: [
         'Unlimited prospects',
@@ -70,7 +70,6 @@ export const SAFE_DEFAULTS: AppConfig = {
         'View team member tracking',
         'Team actions & dashboards',
         'Switch tracking source',
-        'Frontline team gets access FREE',
       ],
       is_active: true,
       is_default: true,
@@ -99,13 +98,13 @@ export const SAFE_DEFAULTS: AppConfig = {
   ],
   offers: [],
   limits: {
-    free_total_leads: 1000,
-    free_daily_upload: 100,
+    free_total_leads: 200,
+    free_daily_upload: 50,
     pro_daily_upload: 500,
-    warning_threshold_1: 800,
-    warning_threshold_2: 900,
-    warning_threshold_3: 950,
-    hard_limit: 1000,
+    warning_threshold_1: 100,
+    warning_threshold_2: 150,
+    warning_threshold_3: 190,
+    hard_limit: 200,
   },
   features: {
     insights: { feature_name: 'View Insights', description: null, free_access: true, pro_access: true, is_enabled: true },
@@ -154,9 +153,9 @@ export function useAdminConfig() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['admin-config'],
     queryFn: fetchAppConfig,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
-    refetchOnWindowFocus: false,
+    staleTime: 30 * 1000, // 30 seconds - ensures fresh data on navigation
+    gcTime: 5 * 60 * 1000, // 5 minutes garbage collection
+    refetchOnWindowFocus: true, // Refetch when user returns to tab
     refetchOnMount: 'always', // Always refetch when component mounts for fresh data
   });
 

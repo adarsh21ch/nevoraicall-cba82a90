@@ -1,10 +1,11 @@
 import { Lock, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
-import { PLAN_CONFIG, PlanType } from '@/hooks/usePaymentLinks';
+import { usePaymentLinks } from '@/hooks/usePaymentLinks';
 import { useRazorpay } from '@/hooks/useRazorpay';
 import { useToast } from '@/hooks/use-toast';
 import { useLeadLimit } from '@/hooks/useLeadLimit';
+import { useAdminConfig } from '@/hooks/useAdminConfig';
 
 interface UpgradeBarProps {
   /** Which app context - affects messaging and plan suggestion */
@@ -14,18 +15,28 @@ interface UpgradeBarProps {
   onUpgrade?: () => void;
 }
 
-const UPGRADE_THRESHOLD = 500;
-
+/**
+ * Floating upgrade bar shown when free user exceeds threshold.
+ * NOW USES DYNAMIC PLANS AND THRESHOLDS FROM ADMIN CONFIG.
+ */
 export function UpgradeBar({ appContext = 'nevorai', suggestPro = true, onUpgrade }: UpgradeBarProps) {
   const { isPaid, loading, refetch } = useSubscription();
   const { currentCount } = useLeadLimit();
   const { initiatePayment, loading: paymentLoading } = useRazorpay();
   const { toast } = useToast();
+  const { getDefaultPlan } = usePaymentLinks();
+  const { config } = useAdminConfig();
+
+  // Get dynamic threshold from admin config (default 500)
+  const upgradeThreshold = config.limits.warning_threshold_1 ?? 500;
+  
+  // Get default plan dynamically
+  const defaultPlan = getDefaultPlan();
 
   const handleSubscribe = () => {
-    const plan: PlanType = 'quarterly'; // Always suggest quarterly (best value)
+    const planKey = defaultPlan?.plan_key || 'quarterly';
     initiatePayment({
-      planType: plan,
+      planType: planKey,
       onSuccess: () => {
         toast({
           title: "Pro Activated 🎉",
@@ -40,10 +51,11 @@ export function UpgradeBar({ appContext = 'nevorai', suggestPro = true, onUpgrad
     });
   };
 
-  // Hide upgrade bar for paid users OR free users with less than 450 leads
-  if (loading || isPaid || currentCount < UPGRADE_THRESHOLD) return null;
+  // Hide upgrade bar for paid users OR free users below threshold
+  if (loading || isPaid || currentCount < upgradeThreshold) return null;
 
-  const planConfig = PLAN_CONFIG.quarterly;
+  // Calculate duration text dynamically
+  const months = defaultPlan ? Math.round(defaultPlan.durationDays / 30) : 4;
 
   return (
     <div className="fixed bottom-20 left-0 right-0 z-50 px-4 pb-2">
@@ -58,7 +70,7 @@ export function UpgradeBar({ appContext = 'nevorai', suggestPro = true, onUpgrad
                 🔒 Upgrade to unlock this feature
               </p>
               <p className="text-xs text-primary-foreground/80">
-                {planConfig.name} – ₹{planConfig.price} for 4 months
+                {defaultPlan?.name || 'Pro Plan'} – ₹{defaultPlan?.price || 299} for {months} month{months > 1 ? 's' : ''}
               </p>
             </div>
           </div>

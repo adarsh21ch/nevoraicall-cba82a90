@@ -8,13 +8,13 @@ import { useAdminConfig } from './useAdminConfig';
  */
 export const NUDGE_THRESHOLDS = {
   /** Stage 1: Soft informational banner, show once per session */
-  STAGE_1: 800,
+  STAGE_1: 100,
   /** Stage 2: Highlighted banner, show max once per day */
-  STAGE_2: 900,
+  STAGE_2: 150,
   /** Stage 3: Sticky banner, always visible on Calling tab */
-  STAGE_3: 950,
+  STAGE_3: 190,
   /** Stage 4: Hard limit, one-time blocking modal */
-  STAGE_4: 1000,
+  STAGE_4: 200,
 } as const;
 
 /** Session storage keys for tracking nudge dismissals */

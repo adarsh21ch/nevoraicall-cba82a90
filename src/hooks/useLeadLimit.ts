@@ -4,7 +4,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { useAdminConfig } from '@/hooks/useAdminConfig';
 
 /** Default free lead limit - overridden by admin config */
-const DEFAULT_FREE_LEAD_LIMIT = 500;
+const DEFAULT_FREE_LEAD_LIMIT = 200;
 
 /**
  * Hook to check if user has reached the free lead limit.

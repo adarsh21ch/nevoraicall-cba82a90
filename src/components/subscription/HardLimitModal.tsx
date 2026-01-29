@@ -8,11 +8,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { useUpgradeNudge, NUDGE_THRESHOLDS } from '@/hooks/useUpgradeNudge';
+import { useUpgradeNudge } from '@/hooks/useUpgradeNudge';
 import { useRazorpay } from '@/hooks/useRazorpay';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useToast } from '@/hooks/use-toast';
-import { PLAN_CONFIG, PlanType } from '@/hooks/usePaymentLinks';
+import { usePaymentLinks } from '@/hooks/usePaymentLinks';
+import { useAdminConfig } from '@/hooks/useAdminConfig';
 
 interface HardLimitModalProps {
   /** External control for modal visibility */
@@ -22,18 +23,29 @@ interface HardLimitModalProps {
 }
 
 /**
- * One-time blocking modal shown when user hits the 1000 prospect limit.
+ * One-time blocking modal shown when user hits the prospect limit.
  * Only shows once per session, does not re-show after dismissal.
+ * NOW USES DYNAMIC PLANS AND LIMITS FROM ADMIN CONFIG.
  */
 export function HardLimitModal({ forceOpen, onClose }: HardLimitModalProps) {
-  const { shouldShowLimitModal, markLimitModalShown, currentStage, isPaid } = useUpgradeNudge();
+  const { shouldShowLimitModal, markLimitModalShown, currentStage, isPaid, thresholds } = useUpgradeNudge();
   const { initiatePayment, loading: paymentLoading } = useRazorpay();
   const { refetch } = useSubscription();
   const { toast } = useToast();
+  const { plans, getDefaultPlan, loading: plansLoading } = usePaymentLinks();
+  const { config } = useAdminConfig();
   
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<PlanType>('quarterly');
+  const defaultPlan = getDefaultPlan();
+  const [selectedPlanKey, setSelectedPlanKey] = useState<string>(defaultPlan?.plan_key || 'quarterly');
   const [hasShown, setHasShown] = useState(false);
+
+  // Update selected plan when default plan loads
+  useEffect(() => {
+    if (defaultPlan?.plan_key) {
+      setSelectedPlanKey(defaultPlan.plan_key);
+    }
+  }, [defaultPlan?.plan_key]);
 
   // Determine if modal should be open
   useEffect(() => {
@@ -56,9 +68,9 @@ export function HardLimitModal({ forceOpen, onClose }: HardLimitModalProps) {
     onClose?.();
   };
 
-  const handleUpgrade = (plan: PlanType) => {
+  const handleUpgrade = () => {
     initiatePayment({
-      planType: plan,
+      planType: selectedPlanKey,
       onSuccess: () => {
         toast({
           title: "Pro Activated 🎉",
@@ -81,6 +93,13 @@ export function HardLimitModal({ forceOpen, onClose }: HardLimitModalProps) {
   // Don't render for paid users
   if (isPaid) return null;
 
+  // Sort plans by sortOrder
+  const sortedPlans = [...plans].sort((a, b) => a.sortOrder - b.sortOrder);
+  const selectedPlan = plans.find(p => p.plan_key === selectedPlanKey);
+
+  // Get dynamic limit from thresholds (which come from admin config)
+  const hardLimit = thresholds.STAGE_4;
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="sm:max-w-md bg-card border-border">
@@ -90,93 +109,84 @@ export function HardLimitModal({ forceOpen, onClose }: HardLimitModalProps) {
           </div>
           <DialogTitle className="text-xl">Free Limit Reached</DialogTitle>
           <DialogDescription className="text-center">
-            You've reached the free limit of {NUDGE_THRESHOLDS.STAGE_4} prospects.
+            You've reached the free limit of {hardLimit} prospects.
             Upgrade to Pro for unlimited access.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 mt-4">
-          {/* 4-Month Plan - Best Value */}
-          <button
-            type="button"
-            onClick={() => setSelectedPlan('quarterly')}
-            className={`w-full p-4 rounded-xl border-2 transition-all text-left relative ${
-              selectedPlan === 'quarterly'
-                ? 'border-primary bg-primary/10'
-                : 'border-border bg-card hover:border-primary/50'
-            }`}
-          >
-            <div className="absolute -top-2.5 right-3 px-2 py-0.5 bg-amber-500 text-white text-xs font-semibold rounded-full flex items-center gap-1">
-              <Star className="h-3 w-3" />
-              Best Value
+          {plansLoading ? (
+            <div className="space-y-3">
+              <div className="h-28 bg-muted animate-pulse rounded-xl" />
+              <div className="h-24 bg-muted animate-pulse rounded-xl" />
             </div>
-            <div className="flex justify-between items-start">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <Crown className="h-4 w-4 text-primary" />
-                  <p className="font-semibold text-foreground">{PLAN_CONFIG.quarterly.name}</p>
-                </div>
-                <div className="space-y-1">
-                  {PLAN_CONFIG.quarterly.features.slice(0, 2).map((feature, i) => (
-                    <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Check className="h-3 w-3 text-primary shrink-0" />
-                      <span>{feature}</span>
+          ) : (
+            sortedPlans.map((plan) => {
+              const isSelected = selectedPlanKey === plan.plan_key;
+              const months = Math.round(plan.durationDays / 30);
+              
+              return (
+                <button
+                  key={plan.id || plan.plan_key}
+                  type="button"
+                  onClick={() => setSelectedPlanKey(plan.plan_key)}
+                  className={`w-full p-4 rounded-xl border-2 transition-all text-left relative ${
+                    isSelected
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border bg-card hover:border-primary/50'
+                  }`}
+                >
+                  {plan.badgeText && (
+                    <div className="absolute -top-2.5 right-3 px-2 py-0.5 bg-amber-500 text-white text-xs font-semibold rounded-full flex items-center gap-1">
+                      <Star className="h-3 w-3" />
+                      {plan.badgeText}
                     </div>
-                  ))}
-                </div>
-              </div>
-              <div className="text-right shrink-0 ml-3">
-                <p className="font-bold text-xl text-foreground">₹299</p>
-                <p className="text-xs text-muted-foreground">for 4 months</p>
-              </div>
-            </div>
-          </button>
-
-          {/* Monthly Plan */}
-          <button
-            type="button"
-            onClick={() => setSelectedPlan('monthly')}
-            className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
-              selectedPlan === 'monthly'
-                ? 'border-primary bg-primary/10'
-                : 'border-border bg-card hover:border-primary/50'
-            }`}
-          >
-            <div className="flex justify-between items-start">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <Crown className="h-4 w-4 text-primary" />
-                  <p className="font-semibold text-foreground">{PLAN_CONFIG.monthly.name}</p>
-                </div>
-                <div className="space-y-1">
-                  {PLAN_CONFIG.monthly.features.slice(0, 2).map((feature, i) => (
-                    <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Check className="h-3 w-3 text-primary shrink-0" />
-                      <span>{feature}</span>
+                  )}
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Crown className="h-4 w-4 text-primary" />
+                        <p className="font-semibold text-foreground">{plan.name}</p>
+                      </div>
+                      {plan.features && plan.features.length > 0 && (
+                        <div className="space-y-1">
+                          {plan.features.slice(0, 2).map((feature, i) => (
+                            <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Check className="h-3 w-3 text-primary shrink-0" />
+                              <span>{feature}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              </div>
-              <div className="text-right shrink-0 ml-3">
-                <p className="font-bold text-xl text-foreground">₹99</p>
-                <p className="text-xs text-muted-foreground">for 1 month</p>
-              </div>
-            </div>
-          </button>
+                    <div className="text-right shrink-0 ml-3">
+                      <p className="font-bold text-xl text-foreground">₹{plan.price}</p>
+                      <p className="text-xs text-muted-foreground">for {months} month{months > 1 ? 's' : ''}</p>
+                    </div>
+                  </div>
+                </button>
+              );
+            })
+          )}
         </div>
 
         <div className="space-y-3 mt-4">
           <Button 
-            onClick={() => handleUpgrade(selectedPlan)}
+            onClick={handleUpgrade}
             className="w-full h-12 text-base font-semibold shadow-lg shadow-primary/30"
-            disabled={paymentLoading}
+            disabled={paymentLoading || plansLoading}
           >
             {paymentLoading ? (
               'Opening payment...'
+            ) : selectedPlan ? (
+              <>
+                <Crown className="h-5 w-5 mr-2" />
+                Upgrade to Pro – ₹{selectedPlan.price}
+              </>
             ) : (
               <>
                 <Crown className="h-5 w-5 mr-2" />
-                Upgrade to Pro – ₹{PLAN_CONFIG[selectedPlan].price}
+                Upgrade Now
               </>
             )}
           </Button>

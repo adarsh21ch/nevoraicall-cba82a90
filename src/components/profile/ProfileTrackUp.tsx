@@ -4,7 +4,7 @@ import { FunnelTracker } from '@/components/trackup/FunnelTracker';
 import { Button } from '@/components/ui/button';
 import { BarChart3, Layers, Lock, Crown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { PLAN_CONFIG } from '@/hooks/usePaymentLinks';
+import { usePaymentLinks } from '@/hooks/usePaymentLinks';
 import { useRazorpay } from '@/hooks/useRazorpay';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -16,15 +16,24 @@ interface ProfileTrackUpProps {
 
 type TrackUpTab = 'leads' | 'funnel';
 
+/**
+ * Profile page tracking section with leads and funnel tabs.
+ * NOW USES DYNAMIC PLANS FROM ADMIN CONFIG.
+ */
 export function ProfileTrackUp({ isPro }: ProfileTrackUpProps) {
   const [activeTab, setActiveTab] = useState<TrackUpTab>('leads');
   const { initiatePayment, loading: paymentLoading } = useRazorpay();
   const { toast } = useToast();
   const { refetch } = useSubscription();
+  const { getDefaultPlan, loading: plansLoading } = usePaymentLinks();
+
+  // Get default plan dynamically
+  const defaultPlan = getDefaultPlan();
 
   const handleUpgrade = () => {
+    const planKey = defaultPlan?.plan_key || 'quarterly';
     initiatePayment({
-      planType: 'quarterly', // Default to best value plan
+      planType: planKey,
       onSuccess: () => {
         toast({
           title: "Pro Activated 🎉",
@@ -99,10 +108,10 @@ export function ProfileTrackUp({ isPro }: ProfileTrackUpProps) {
                 size="sm" 
                 onClick={handleUpgrade}
                 className="gap-1"
-                disabled={paymentLoading}
+                disabled={paymentLoading || plansLoading}
               >
                 <Crown className="h-4 w-4" />
-                {paymentLoading ? 'Processing...' : `Get Pro – ₹${PLAN_CONFIG.quarterly.price}`}
+                {paymentLoading ? 'Processing...' : defaultPlan ? `Get Pro – ₹${defaultPlan.price}` : 'Get Pro'}
               </Button>
             </div>
           </div>

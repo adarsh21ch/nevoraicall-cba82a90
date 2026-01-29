@@ -1,6 +1,7 @@
 import { AlertTriangle } from 'lucide-react';
 import { UpgradeDrawer } from './UpgradeDrawer';
-import { useLifetimeLeadLimit, FREE_LIFETIME_LEAD_LIMIT } from '@/hooks/useLifetimeLeadLimit';
+import { useLifetimeLeadLimit } from '@/hooks/useLifetimeLeadLimit';
+import { useAdminConfig } from '@/hooks/useAdminConfig';
 
 interface LeadLimitWarningBannerProps {
   /** Compact mode for inline display in action bars */
@@ -11,24 +12,29 @@ interface LeadLimitWarningBannerProps {
 
 /**
  * Warning banner shown when free user is approaching lead limit.
- * Shows at 450+ leads with upgrade CTA.
+ * Shows at warning threshold with upgrade CTA.
+ * NOW USES DYNAMIC LIMITS FROM ADMIN CONFIG.
  */
 export function LeadLimitWarningBanner({ compact = false, context = 'calling' }: LeadLimitWarningBannerProps) {
-  const { showWarning, lifetimeCount, remaining, isAtLimit, isPaid } = useLifetimeLeadLimit();
+  const { showWarning, lifetimeCount, remaining, isAtLimit, isPaid, configuredLimit } = useLifetimeLeadLimit();
+  const { config, loading: configLoading } = useAdminConfig();
 
-  // Don't show for paid users or if not near limit
-  if (isPaid || !showWarning) return null;
+  // Don't show for paid users or if not near limit, or while loading
+  if (isPaid || !showWarning || configLoading) return null;
+
+  // Get dynamic limit from admin config
+  const freeLimit = configuredLimit;
 
   // Profile-specific messaging
   const getWarningText = () => {
     if (context === 'profile') {
       return isAtLimit
-        ? `You've reached the free limit of ${FREE_LIFETIME_LEAD_LIMIT} prospects.`
-        : `You are about to reach your free limit of ${FREE_LIFETIME_LEAD_LIMIT} prospects.`;
+        ? `You've reached the free limit of ${freeLimit} prospects.`
+        : `You are about to reach your free limit of ${freeLimit} prospects.`;
     }
     return isAtLimit
-      ? `You've reached the free limit of ${FREE_LIFETIME_LEAD_LIMIT} prospects.`
-      : `⚠️ You're close to your free limit (${remaining} of ${FREE_LIFETIME_LEAD_LIMIT} left).`;
+      ? `You've reached the free limit of ${freeLimit} prospects.`
+      : `⚠️ You're close to your free limit (${remaining} of ${freeLimit} left).`;
   };
 
   const getSubText = () => {
