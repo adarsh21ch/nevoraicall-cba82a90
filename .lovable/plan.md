@@ -1,280 +1,200 @@
 
+# Fix: Admin Panel Trial/Limit Sync Not Reflected in User UI
 
-# Time-Based Free Trial Feature Implementation Plan
+## Problem Summary
 
-## Overview
+Despite configuring a 7-day free trial in the Admin Panel (with "Free Trial Days = 7" and "Trial Only Mode = ON"), the user-facing UI is still:
+1. Showing the old "200 prospect limit" paywall modal instead of trial-aware messaging
+2. Not displaying any trial banner or badge on the Profile page
+3. Not showing the trial countdown on all main tabs
 
-You want to add a **day-wise limit** option in the admin panel that works as an alternative to lead-based limits. When enabled:
-- New/existing free users get X days of free trial (e.g., 7 days)
-- During the trial, they can use the app without lead limits
-- After the trial expires, they see an upgrade prompt
+**Root Causes Identified:**
 
-This gives you flexibility to choose between:
-1. **Lead-based limits only** (current system)
-2. **Time-based trial only** (new system)
-3. **Both combined** (e.g., 7-day trial + 200 lead limit)
+1. **`useFreeTrial` hook ignores `is_enabled` flag**: The hook checks if `free_trial_days > 0` but doesn't verify the `is_enabled` flag from the database. Since the `get_app_config` RPC only returns limits where `is_enabled = true`, this works but the logic is confusing.
 
----
+2. **`trialOnlyMode` check is broken**: The hook checks `config.limits.trial_only_mode > 0`, but the admin panel stores this as `is_enabled = true` (toggle on/off), not as a numeric value. The database shows `trial_only_mode = 0` with `is_enabled = true`, which means the toggle IS enabled but the check `> 0` fails.
 
-## How It Will Work
+3. **Trial banner only on Home page**: The `TrialBanner` component is only rendered on the Home page, not on Profile or other tabs.
 
-### Admin Panel Controls
+4. **Profile page has no trial indicator**: There's no Pro/Trial badge showing remaining days on the Profile page.
 
-A new "Trial Period" section in the Limits tab with:
-
-| Setting | Description | Example |
-|---------|-------------|---------|
-| **Enable Free Trial** | Toggle to activate time-based trial | ON/OFF |
-| **Trial Duration (Days)** | Number of days for free trial | 7 |
-| **Use Trial Only** | If ON, disable lead limits during trial | ON/OFF |
-
-### User Experience Flow
-
-```text
-NEW USER SIGNS UP
-       |
-       v
-  Is Free Trial Enabled?
-       |
-   YES |           NO
-       v            v
-  Show Welcome    Apply Lead
-  "7-Day Trial!"   Limits
-       |
-       v
-  User uses app freely
-  (or with lead limits if combined)
-       |
-       v
-  Trial Expires?
-       |
-   YES |
-       v
-  Show Upgrade Modal:
-  "Your 7-day trial has ended"
-```
-
-### For Existing Users
-
-When you enable the trial:
-- Their trial starts from their original signup date (`profiles.created_at`)
-- If they signed up 10 days ago and trial is 7 days: Trial already expired
-- Option: Admin can set "Trial Start Date" as "Today" for all existing users (reset trial)
+5. **HardLimitModal doesn't respect trial status**: When trial is active and trial-only mode is on, the paywall modal should not show at all - but currently it still triggers based on lead count.
 
 ---
 
-## Technical Implementation
+## Technical Root Cause Analysis
 
-### Phase 1: Database Changes
-
-**Add new limit configurations to `admin_usage_limits`:**
-
-```sql
-INSERT INTO admin_usage_limits (config_key, config_value, description, is_enabled) VALUES
-('free_trial_days', 7, 'Number of free trial days for new users', false),
-('trial_only_mode', 0, 'If 1, disable lead limits during active trial', false);
+### Database State
+```
+config_key         | config_value | is_enabled
+-------------------|--------------|----------
+free_trial_days    | 7            | true
+trial_only_mode    | 0            | true    <-- Problem: value=0, but toggle is ON
+hard_limit         | 200          | true
+free_total_leads   | 200          | true
 ```
 
-**Update `check_upload_limit` function to include trial logic:**
+The `trial_only_mode` design flaw: The toggle being ON (`is_enabled = true`) should mean trial-only mode is active, but the current hook checks `config_value > 0` which is `0 > 0 = false`.
 
-The function will check:
-1. Is free trial enabled?
-2. Is user still within trial period? (Compare `profiles.created_at` + trial days vs now)
-3. Is "trial only mode" enabled?
+### Current Hook Logic (Broken)
+```typescript
+// useFreeTrial.ts line 26
+const trialOnlyMode = (config.limits.trial_only_mode ?? 0) > 0; // Returns FALSE
+```
 
-If trial is active and trial-only mode is ON: Allow unlimited uploads
-If trial is expired: Apply normal lead limits OR block with "Trial ended" message
+The `get_app_config` RPC only returns limits where `is_enabled = true`, so `trial_only_mode` IS in the config, but its value is 0.
 
-### Phase 2: Admin Panel UI
+### User's Profile
+- `created_at`: 2026-01-27 10:07:35 (2 days ago)
+- `total_leads_added`: 200
 
-**Update `UsageLimitsManager.tsx`:**
+With a 7-day trial starting Jan 27, the trial would end Feb 3. Today is Jan 29, so the trial IS active. But the system is ignoring this.
 
-Add a new "Trial Period" category with:
-- Toggle: Enable Free Trial (is_enabled)
-- Input: Trial Duration in Days (config_value)
-- Toggle: Trial Only Mode (disable lead limits during trial)
+---
+
+## Solution Plan
+
+### Phase 1: Fix Trial Only Mode Detection
+
+**File: `src/hooks/useFreeTrial.ts`**
+
+The issue is that `trial_only_mode` should be considered "enabled" when it appears in the limits object (meaning `is_enabled = true` in the database), regardless of its numeric value. Alternatively, fix the admin panel to store `1` when the toggle is ON.
+
+**Recommended Fix**: Change the admin panel logic so when the toggle is ON, it sets `config_value = 1`, and when OFF, it sets `config_value = 0`. Then the hook logic `> 0` will work correctly.
+
+**Alternative (simpler)**: Check if the key exists in the returned limits (which means `is_enabled = true`):
+```typescript
+// If trial_only_mode key exists in limits, it means the toggle is ON
+const trialOnlyMode = 'trial_only_mode' in config.limits;
+```
+
+However, this is semantically confusing. Better approach:
+
+**Best Fix**: Store `trial_only_mode` as boolean-like: toggle ON = value 1, toggle OFF = value 0 AND disabled.
+
+Update `UsageLimitsManager.tsx` to set `config_value = 1` when enabling and `config_value = 0` when disabling for `trial_only_mode` specifically.
+
+---
+
+### Phase 2: Add Trial Banner to All Main Tabs
+
+**Files to modify:**
+- `src/pages/Profile.tsx` - Add trial badge/banner
+- `src/pages/Dashboard.tsx` - Add trial banner
+- `src/pages/ListUp.tsx` - Add trial banner
+- `src/pages/TodoUp.tsx` - Add trial banner (optional)
+
+**Profile Page Enhancement:**
+- Add a trial badge next to the Pro badge showing remaining days
+- Add `TrialBanner` component for users in active trial
 
 ```typescript
-const LIMIT_CATEGORIES = {
-  'Trial Period': ['free_trial_days', 'trial_only_mode'],
-  'Lead Limits': ['free_total_leads', 'free_daily_upload', 'pro_daily_upload'],
-  // ... existing categories
-};
-
-const LIMIT_ICONS: Record<string, React.ReactNode> = {
-  free_trial_days: <Clock className="h-4 w-4" />,
-  trial_only_mode: <Timer className="h-4 w-4" />,
-  // ... existing icons
-};
-```
-
-### Phase 3: Frontend Hooks
-
-**Create `useFreeTrial` hook:**
-
-```typescript
-export function useFreeTrial() {
-  const { profile } = useProfile();
-  const { config } = useAdminConfig();
-  const { isPaid } = useSubscription();
-  
-  const trialEnabled = config.limits.free_trial_days !== undefined 
-    && config.limits.free_trial_days > 0;
-  const trialDays = config.limits.free_trial_days ?? 0;
-  
-  const signupDate = profile?.created_at;
-  const trialEndDate = signupDate 
-    ? addDays(new Date(signupDate), trialDays) 
-    : null;
-  
-  const isTrialActive = trialEndDate && new Date() < trialEndDate;
-  const isTrialExpired = trialEndDate && new Date() >= trialEndDate;
-  const daysRemaining = trialEndDate 
-    ? Math.max(0, differenceInDays(trialEndDate, new Date())) 
-    : 0;
-  
-  return {
-    trialEnabled,
-    trialDays,
-    isTrialActive: !isPaid && isTrialActive,
-    isTrialExpired: !isPaid && isTrialExpired,
-    daysRemaining,
-    trialEndDate,
-  };
-}
-```
-
-**Update limit enforcement:**
-
-Modify `check_upload_limit` RPC to check trial status:
-
-```sql
--- Inside check_upload_limit function
-DECLARE
-  v_trial_enabled boolean;
-  v_trial_days integer;
-  v_trial_only_mode boolean;
-  v_user_created_at timestamptz;
-  v_trial_end_date timestamptz;
-  v_is_trial_active boolean;
-BEGIN
-  -- Get trial settings
-  SELECT is_enabled, config_value INTO v_trial_enabled, v_trial_days
-  FROM admin_usage_limits WHERE config_key = 'free_trial_days';
-  
-  SELECT is_enabled INTO v_trial_only_mode
-  FROM admin_usage_limits WHERE config_key = 'trial_only_mode';
-  
-  -- Get user signup date
-  SELECT created_at INTO v_user_created_at
-  FROM profiles WHERE user_id = p_user_id;
-  
-  -- Calculate if trial is active
-  v_trial_end_date := v_user_created_at + (v_trial_days || ' days')::interval;
-  v_is_trial_active := v_trial_enabled AND now() < v_trial_end_date;
-  
-  -- If trial active and trial-only mode: allow unlimited
-  IF v_is_trial_active AND v_trial_only_mode THEN
-    RETURN jsonb_build_object(
-      'allowed', true,
-      'reason', '',
-      'limit_type', 'free_trial',
-      'trial_days_remaining', EXTRACT(DAY FROM v_trial_end_date - now())::integer
-    );
-  END IF;
-  
-  -- If trial expired and trial-only mode: block
-  IF v_trial_enabled AND v_trial_only_mode AND NOT v_is_trial_active THEN
-    RETURN jsonb_build_object(
-      'allowed', false,
-      'reason', 'Your free trial has ended. Upgrade to Pro to continue.',
-      'limit_type', 'trial_expired'
-    );
-  END IF;
-  
-  -- Otherwise, apply normal lead limits...
-END;
-```
-
-### Phase 4: User Interface Updates
-
-**Welcome Banner (new users):**
-
-Show a celebratory banner for users with active trial:
-
-```typescript
-// In Home.tsx or a global component
-const { isTrialActive, daysRemaining } = useFreeTrial();
-
-{isTrialActive && (
-  <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 mb-4">
-    <div className="flex items-center gap-2">
-      <Gift className="h-5 w-5 text-green-500" />
-      <span className="font-medium">🎉 {daysRemaining} days left in your free trial!</span>
-    </div>
-  </div>
+// In Profile.tsx, near the Pro badge
+{isTrialActive && !isPro && (
+  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/30">
+    <Gift className="h-3 w-3" />
+    {daysRemaining}d Trial
+  </span>
 )}
 ```
 
-**Trial Expired Modal:**
+---
 
-When trial expires and trial-only mode is on, show upgrade modal with trial-specific messaging:
+### Phase 3: Make Paywalls Trial-Aware
+
+**Files to modify:**
+- `src/components/subscription/HardLimitModal.tsx`
+- `src/components/subscription/LeadLimitModal.tsx`
+- `src/components/prospects/AddProspectDialog.tsx`
+- `src/components/prospects/ImportExcelDialog.tsx`
+
+**Logic Change:**
+
+In `AddProspectDialog.tsx` and `ImportExcelDialog.tsx`, before showing the `HardLimitModal`, check if user is in active trial with trial-only mode:
 
 ```typescript
-// TrialExpiredModal.tsx
-<DialogTitle>Your Free Trial Has Ended</DialogTitle>
-<DialogDescription>
-  You've completed your {trialDays}-day free trial. 
-  Upgrade to Pro to continue using all features.
-</DialogDescription>
+const { isTrialActive, trialOnlyMode } = useFreeTrial();
+
+// In handleOpenChange or before showing modal
+if (isTrialActive && trialOnlyMode) {
+  // Allow the action, don't show modal
+  setOpen(isOpen);
+  return;
+}
+
+// Otherwise, existing limit check logic
+if (isOpen && isAtLimit && !isTrialActive) {
+  setShowLimitModal(true);
+  return;
+}
 ```
+
+**TrialExpiredModal Enhancement:**
+The `TrialExpiredModal` already exists but only shows when:
+1. `isTrialExpired` is true
+2. `trialOnlyMode` is true
+3. User is not paid
+
+Currently it's not triggering because `trialOnlyMode` is returning false.
+
+---
+
+### Phase 4: Database Migration - Fix Trial Only Mode Value
+
+**SQL Migration:**
+```sql
+-- Update trial_only_mode to have value=1 when enabled
+-- This makes the is_enabled toggle meaningful
+UPDATE admin_usage_limits 
+SET config_value = 1 
+WHERE config_key = 'trial_only_mode' 
+AND is_enabled = true;
+```
+
+This ensures that when the toggle is ON, the config_value is 1, making the hook logic work correctly.
+
+---
+
+## Implementation Steps
+
+1. **Database Fix**: Update `trial_only_mode` to have `config_value = 1` when enabled
+
+2. **Update UsageLimitsManager**: For trial_only_mode specifically, when toggling ON, set value to 1; when toggling OFF, set value to 0
+
+3. **Fix useFreeTrial hook**: Add fallback logic to check if key exists in limits as additional signal
+
+4. **Add TrialBanner to all pages**: Dashboard, Profile, ListUp, TodoUp
+
+5. **Add trial badge to Profile**: Show "Xd Trial" badge next to name when in active trial
+
+6. **Make dialogs trial-aware**: Skip limit modal when trial is active with trial-only mode
+
+7. **Ensure TrialExpiredModal works**: Verify it triggers correctly when trial expires
 
 ---
 
 ## Files to Create/Modify
 
-### New Files
-| File | Purpose |
-|------|---------|
-| `src/hooks/useFreeTrial.ts` | Trial status checking hook |
-| `src/components/subscription/TrialExpiredModal.tsx` | Modal for expired trials |
-| `src/components/subscription/TrialBanner.tsx` | Banner showing trial status |
-
-### Modified Files
 | File | Changes |
 |------|---------|
-| `UsageLimitsManager.tsx` | Add Trial Period section UI |
-| `useAdminConfig.ts` | Add trial limits to SAFE_DEFAULTS |
-| `check_upload_limit` (RPC) | Add trial checking logic |
-| `Home.tsx` or `ListUp.tsx` | Show trial banner |
-| `HardLimitModal.tsx` | Add trial-expired variant |
-
-### Database Migration
-- Insert `free_trial_days` and `trial_only_mode` rows in `admin_usage_limits`
-- Update `check_upload_limit` function with trial logic
-- Update `get_app_config` to include trial settings
-
----
-
-## Admin Workflow
-
-1. Go to Admin Panel > Limits tab
-2. See new "Trial Period" section at top
-3. Enable "Free Trial Days" toggle
-4. Set value to 7 (or any number)
-5. Optionally enable "Trial Only Mode" to disable lead limits during trial
-6. Save changes
-7. All free users now follow trial rules
+| `supabase/migrations/` | Set `trial_only_mode.config_value = 1` where enabled |
+| `src/hooks/useFreeTrial.ts` | Refine trialOnlyMode detection logic |
+| `src/components/admin/UsageLimitsManager.tsx` | Special handling for trial_only_mode toggle |
+| `src/pages/Profile.tsx` | Add TrialBanner + trial badge in user card |
+| `src/pages/Dashboard.tsx` | Add TrialBanner component |
+| `src/pages/ListUp.tsx` | Add TrialBanner component |
+| `src/components/prospects/AddProspectDialog.tsx` | Skip limit check if in trial with trial-only mode |
+| `src/components/prospects/ImportExcelDialog.tsx` | Skip limit check if in trial with trial-only mode |
+| `src/components/subscription/HardLimitModal.tsx` | Don't render if in active trial |
 
 ---
 
-## Expected Outcomes
+## Expected Outcome
 
 After implementation:
-- Admin can enable 7-day (or any) free trial from the Limits panel
-- New users see "7 days free trial!" welcome message
-- During trial, users can use app without hitting lead limits (if trial-only mode is on)
-- After trial expires, upgrade modal appears with trial-specific messaging
-- Existing users' trial is calculated from their original signup date
-- System is flexible: can use trial only, lead limits only, or both
-
+1. Admin sets "Free Trial Days = 7" and toggles "Trial Only Mode" ON
+2. All users see trial banner on Dashboard, Home, ListUp, Profile
+3. Profile shows trial badge with remaining days
+4. Users can add/import leads without seeing the 200-limit paywall during trial
+5. When trial expires, `TrialExpiredModal` appears prompting upgrade
+6. All settings sync from Admin Panel in real-time (30s cache)
