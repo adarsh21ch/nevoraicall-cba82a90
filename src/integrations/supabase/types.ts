@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      abuse_logs: {
+        Row: {
+          created_at: string | null
+          event_type: string
+          funnel_id: string | null
+          id: string
+          ip_hash: string | null
+          key_hash: string | null
+          lead_id: string | null
+          metadata: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_type: string
+          funnel_id?: string | null
+          id?: string
+          ip_hash?: string | null
+          key_hash?: string | null
+          lead_id?: string | null
+          metadata?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          event_type?: string
+          funnel_id?: string | null
+          id?: string
+          ip_hash?: string | null
+          key_hash?: string | null
+          lead_id?: string | null
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "abuse_logs_funnel_id_fkey"
+            columns: ["funnel_id"]
+            isOneToOne: false
+            referencedRelation: "funnels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "abuse_logs_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "funnel_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ac_announcement_media: {
         Row: {
           announcement_id: string
@@ -1610,6 +1658,8 @@ export type Database = {
           owner_user_id: string
           payment_status_cache: string | null
           phone: string | null
+          session_token: string | null
+          session_token_expires_at: string | null
           source: string | null
           synced_to_trackup_at: string | null
           updated_at: string | null
@@ -1634,6 +1684,8 @@ export type Database = {
           owner_user_id: string
           payment_status_cache?: string | null
           phone?: string | null
+          session_token?: string | null
+          session_token_expires_at?: string | null
           source?: string | null
           synced_to_trackup_at?: string | null
           updated_at?: string | null
@@ -1658,6 +1710,8 @@ export type Database = {
           owner_user_id?: string
           payment_status_cache?: string | null
           phone?: string | null
+          session_token?: string | null
+          session_token_expires_at?: string | null
           source?: string | null
           synced_to_trackup_at?: string | null
           updated_at?: string | null
