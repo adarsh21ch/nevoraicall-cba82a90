@@ -46,6 +46,15 @@ export function UpgradeDrawer({ variant = 'default', triggerText }: UpgradeDrawe
     );
   }, [config.offers]);
 
+  // Check if selected plan has any active offers
+  const offersForSelectedPlan = useMemo(() => {
+    const selectedPlan = plans.find(p => p.plan_key === selectedPlanKey);
+    if (!selectedPlan) return [];
+    return activeOffers.filter(o => o.applicable_plan_ids.includes(selectedPlan.id));
+  }, [activeOffers, plans, selectedPlanKey]);
+
+  const hasOffersForPlan = offersForSelectedPlan.length > 0;
+
   const validateCoupon = () => {
     if (!couponCode.trim()) {
       setCouponError('Please enter a coupon code');
@@ -261,49 +270,60 @@ export function UpgradeDrawer({ variant = 'default', triggerText }: UpgradeDrawe
         </div>
       )}
 
-      {/* Coupon Code Section */}
-      <div className="pt-2 border-t">
-        {appliedOffer ? (
-          <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
-            <div className="flex items-center gap-2">
-              <Tag className="h-4 w-4 text-green-600" />
-              <span className="text-sm font-medium text-green-700 dark:text-green-400">
-                {appliedOffer.promo_code} – {appliedOffer.discount_value}% off
-              </span>
-            </div>
-            <Button variant="ghost" size="sm" onClick={removeCoupon} className="h-7 text-xs">
-              Remove
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Enter coupon code"
-                value={couponCode}
-                onChange={(e) => {
-                  setCouponCode(e.target.value.toUpperCase());
-                  setCouponError(null);
-                }}
-                className="flex-1 h-9 text-sm uppercase"
-                onKeyDown={(e) => e.key === 'Enter' && validateCoupon()}
-              />
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={validateCoupon}
-                disabled={validatingCoupon || !couponCode.trim()}
-                className="h-9"
-              >
-                {validatingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
+      {/* Coupon Code Section - Only show if selected plan has offers */}
+      {hasOffersForPlan && (
+        <div className="pt-2 border-t">
+          {appliedOffer ? (
+            <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+              <div className="flex items-center gap-2">
+                <Tag className="h-4 w-4 text-green-600" />
+                <span className="text-sm font-medium text-green-700 dark:text-green-400">
+                  {appliedOffer.promo_code} – {appliedOffer.discount_value}% off
+                </span>
+              </div>
+              <Button variant="ghost" size="sm" onClick={removeCoupon} className="h-7 text-xs">
+                Remove
               </Button>
             </div>
-            {couponError && (
-              <p className="text-xs text-destructive">{couponError}</p>
-            )}
-          </div>
-        )}
-      </div>
+          ) : (
+            <div className="space-y-2">
+              {/* Promotional message */}
+              {offersForSelectedPlan[0] && selectedPlan && (
+                <div className="flex items-start gap-2 p-2 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                  <Sparkles className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-800 dark:text-amber-300">
+                    🎁 Use <span className="font-bold">{offersForSelectedPlan[0].promo_code}</span> as a welcome bonus and get {selectedPlan.name} at just <span className="font-bold">₹{Math.round(selectedPlan.price * (1 - offersForSelectedPlan[0].discount_value / 100))}</span>!
+                  </p>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter coupon code"
+                  value={couponCode}
+                  onChange={(e) => {
+                    setCouponCode(e.target.value.toUpperCase());
+                    setCouponError(null);
+                  }}
+                  className="flex-1 h-9 text-sm uppercase"
+                  onKeyDown={(e) => e.key === 'Enter' && validateCoupon()}
+                />
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={validateCoupon}
+                  disabled={validatingCoupon || !couponCode.trim()}
+                  className="h-9"
+                >
+                  {validatingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
+                </Button>
+              </div>
+              {couponError && (
+                <p className="text-xs text-destructive">{couponError}</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <Button 
         onClick={() => handleUpgrade(selectedPlanKey)}
