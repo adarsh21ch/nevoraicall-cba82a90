@@ -1,0 +1,288 @@
+import { useState, useEffect, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { LeadCaptureForm } from '@/components/funnels/LeadCaptureForm';
+import { ControlledVideoPlayer } from '@/components/funnels/ControlledVideoPlayer';
+import { Button } from '@/components/ui/button';
+import { Loader2, CheckCircle, Lock } from 'lucide-react';
+import { toast } from 'sonner';
+
+interface PublicFunnel {
+  id: string;
+  title: string;
+  description: string | null;
+  slug: string;
+  video_asset_id: string | null;
+  thumbnail_url: string | null;
+  allow_speed_control: boolean;
+  allow_forward_seek: boolean;
+  lock_cta_until_complete: boolean;
+  price: number;
+  payment_type: string;
+  upi_id: string | null;
+  cta_button_text: string;
+  cta_redirect_url: string | null;
+  success_message: string | null;
+  is_published: boolean;
+}
+
+interface LeadSession {
+  leadId: string;
+  accessToken: string;
+}
+
+type ViewPhase = 'loading' | 'capture' | 'video' | 'complete' | 'error';
+
+export default function FunnelView() {
+  const { slug } = useParams();
+  const [phase, setPhase] = useState<ViewPhase>('loading');
+  const [funnel, setFunnel] = useState<PublicFunnel | null>(null);
+  const [leadSession, setLeadSession] = useState<LeadSession | null>(null);
+  const [isCtaLocked, setIsCtaLocked] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load funnel by slug
+  useEffect(() => {
+    async function loadFunnel() {
+      if (!slug) {
+        setError('Invalid funnel URL');
+        setPhase('error');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('funnels')
+        .select('*')
+        .eq('slug', slug)
+        .eq('is_published', true)
+        .single();
+
+      if (error || !data) {
+        setError('Funnel not found or not published');
+        setPhase('error');
+        return;
+      }
+
+      setFunnel(data as PublicFunnel);
+      
+      // Check if we have an existing session
+      const storedSession = sessionStorage.getItem(`funnel_lead_${data.id}`);
+      if (storedSession) {
+        try {
+          const session = JSON.parse(storedSession);
+          setLeadSession(session);
+          setPhase('video');
+          return;
+        } catch {
+          // Invalid session, continue to capture
+        }
+      }
+
+      setPhase('capture');
+    }
+
+    loadFunnel();
+  }, [slug]);
+
+  // Handle lead capture
+  const handleLeadCapture = async (data: { name: string; phone: string; email?: string }) => {
+    if (!funnel) return;
+
+    setIsSubmitting(true);
+
+    try {
+      // Generate access token
+      const accessToken = crypto.randomUUID();
+
+      // Insert lead
+      const { data: lead, error } = await supabase
+        .from('funnel_leads')
+        .insert({
+          funnel_id: funnel.id,
+          owner_user_id: (await supabase.from('funnels').select('owner_user_id').eq('id', funnel.id).single()).data?.owner_user_id,
+          name: data.name,
+          phone: data.phone,
+          email: data.email || null,
+          access_token: accessToken,
+          access_token_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const session: LeadSession = {
+        leadId: lead.id,
+        accessToken,
+      };
+
+      // Store session
+      sessionStorage.setItem(`funnel_lead_${funnel.id}`, JSON.stringify(session));
+      setLeadSession(session);
+      setPhase('video');
+    } catch (err) {
+      console.error('Lead capture error:', err);
+      toast.error('Failed to submit. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Track video progress
+  const handleProgress = useCallback(async (currentTime: number, duration: number, percentage: number) => {
+    if (!leadSession || !funnel) return;
+
+    try {
+      await supabase.functions.invoke('funnel-track-progress', {
+        body: {
+          lead_id: leadSession.leadId,
+          access_token: leadSession.accessToken,
+          current_time: Math.floor(currentTime),
+          duration: Math.floor(duration),
+          event_type: 'progress',
+        },
+      });
+    } catch (err) {
+      console.error('Progress tracking error:', err);
+    }
+  }, [leadSession, funnel]);
+
+  // Handle video completion
+  const handleVideoComplete = useCallback(async () => {
+    if (!leadSession) return;
+
+    setIsCtaLocked(false);
+
+    try {
+      await supabase.functions.invoke('funnel-track-progress', {
+        body: {
+          lead_id: leadSession.leadId,
+          access_token: leadSession.accessToken,
+          current_time: 0,
+          duration: 0,
+          event_type: 'complete',
+        },
+      });
+    } catch (err) {
+      console.error('Completion tracking error:', err);
+    }
+  }, [leadSession]);
+
+  // Handle CTA click
+  const handleCtaClick = async () => {
+    if (!funnel) return;
+
+    if (funnel.price > 0 && funnel.payment_type === 'razorpay') {
+      // TODO: Implement Razorpay payment flow
+      toast.info('Payment integration coming soon');
+      return;
+    }
+
+    if (funnel.cta_redirect_url) {
+      window.location.href = funnel.cta_redirect_url;
+    } else {
+      setPhase('complete');
+    }
+  };
+
+  // Render based on phase
+  if (phase === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (phase === 'error') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Oops!</h2>
+          <p className="text-muted-foreground">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === 'capture' && funnel) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <LeadCaptureForm
+          funnelTitle={funnel.title}
+          onSubmit={handleLeadCapture}
+          isLoading={isSubmitting}
+        />
+      </div>
+    );
+  }
+
+  if (phase === 'video' && funnel && leadSession) {
+    const showLockedCta = funnel.lock_cta_until_complete && isCtaLocked;
+
+    return (
+      <div className="min-h-screen bg-black flex flex-col">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-full max-w-4xl">
+            <ControlledVideoPlayer
+              assetId={funnel.video_asset_id || undefined}
+              leadToken={leadSession.accessToken}
+              allowSpeedControl={funnel.allow_speed_control}
+              allowSeekForward={funnel.allow_forward_seek}
+              onProgress={handleProgress}
+              onComplete={handleVideoComplete}
+            />
+          </div>
+        </div>
+
+        {/* CTA Section */}
+        <div className="p-6 bg-background border-t">
+          <div className="max-w-md mx-auto text-center">
+            <Button
+              size="lg"
+              className="w-full text-lg py-6"
+              onClick={handleCtaClick}
+              disabled={showLockedCta}
+            >
+              {showLockedCta ? (
+                <>
+                  <Lock className="w-5 h-5 mr-2" />
+                  Watch video to unlock
+                </>
+              ) : (
+                <>
+                  {funnel.cta_button_text}
+                  {funnel.price > 0 && ` - ₹${funnel.price}`}
+                </>
+              )}
+            </Button>
+            {showLockedCta && (
+              <p className="text-sm text-muted-foreground mt-2">
+                Complete the video to access the next step
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === 'complete' && funnel) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="w-8 h-8 text-green-600" />
+          </div>
+          <h2 className="text-2xl font-bold mb-2">Thank You!</h2>
+          <p className="text-muted-foreground">
+            {funnel.success_message || 'Your submission has been received.'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
