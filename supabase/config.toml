@@ -44,3 +44,12 @@ verify_jwt = false
 
 [functions.funnel-track-progress]
 verify_jwt = false
+
+[functions.create-funnel-lead]
+verify_jwt = false
+
+[functions.submit-payment-proof]
+verify_jwt = false
+
+[functions.upload-payment-screenshot]
+verify_jwt = false

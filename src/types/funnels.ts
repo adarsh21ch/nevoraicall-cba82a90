@@ -52,6 +52,28 @@ export interface FunnelLeadStats {
   paymentConversionRate: number;
 }
 
+export interface FunnelPriceOption {
+  id: string;
+  funnel_id: string;
+  label: string;
+  amount: number;
+  upi_id: string | null;
+  qr_image_url: string | null;
+  sort_order: number;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PaymentProofSubmission {
+  lead_id: string;
+  funnel_id: string;
+  price_option_id?: string;
+  amount: number;
+  screenshot_url: string;
+  access_token?: string;
+}
+
 export interface CreateFunnelInput {
   title: string;
   slug: string;

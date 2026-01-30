@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useFunnel, useCreateFunnel, useUpdateFunnel, useCheckSlug } from '@/hooks/useFunnels';
 import { generateSlug, CreateFunnelInput } from '@/types/funnels';
 import { VideoAssetSelector } from '@/components/funnels/VideoAssetSelector';
+import { PriceOptionsManager } from '@/components/funnels/PriceOptionsManager';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -330,16 +331,35 @@ export default function FunnelEditor() {
               </div>
 
               {formData.payment_type === 'upi_manual' && (
-                <div className="space-y-2">
-                  <Label htmlFor="upi_id">UPI ID</Label>
-                  <Input
-                    id="upi_id"
-                    placeholder="yourname@upi"
-                    value={formData.upi_id}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, upi_id: e.target.value }))
-                    }
-                  />
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="upi_id">Default UPI ID</Label>
+                    <Input
+                      id="upi_id"
+                      placeholder="yourname@upi"
+                      value={formData.upi_id}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, upi_id: e.target.value }))
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Used as fallback if price options don't have a UPI ID
+                    </p>
+                  </div>
+
+                  {/* Price Options Manager - only show for existing funnels */}
+                  {isEditing && id && (
+                    <PriceOptionsManager 
+                      funnelId={id} 
+                      defaultUpiId={formData.upi_id}
+                    />
+                  )}
+                  
+                  {!isEditing && (
+                    <p className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">
+                      Save the funnel first, then you can add multiple price options with QR codes.
+                    </p>
+                  )}
                 </div>
               )}
 
