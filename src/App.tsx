@@ -28,6 +28,10 @@ import Privacy from "./pages/Privacy";
 import Refund from "./pages/Refund";
 import Admin from "./pages/Admin";
 import PaymentSuccess from "./pages/PaymentSuccess";
+import Funnels from "./pages/Funnels";
+import FunnelEditor from "./pages/FunnelEditor";
+import FunnelAnalytics from "./pages/FunnelAnalytics";
+import FunnelView from "./pages/FunnelView";
 
 // Error Boundary to catch rendering errors
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
@@ -101,6 +105,11 @@ function App() {
                       <Route path="/refund" element={<Refund />} />
                       <Route path="/admin" element={<Admin />} />
                       <Route path="/payment-success" element={<PaymentSuccess />} />
+                      <Route path="/funnels" element={<Funnels />} />
+                      <Route path="/funnels/new" element={<FunnelEditor />} />
+                      <Route path="/funnels/:id/edit" element={<FunnelEditor />} />
+                      <Route path="/funnels/:id/analytics" element={<FunnelAnalytics />} />
+                      <Route path="/f/:slug" element={<FunnelView />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </TodosProvider>
