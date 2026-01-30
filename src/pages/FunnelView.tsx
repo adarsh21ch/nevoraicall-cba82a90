@@ -3,8 +3,10 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { LeadCaptureForm } from '@/components/funnels/LeadCaptureForm';
 import { ControlledVideoPlayer } from '@/components/funnels/ControlledVideoPlayer';
+import { UPIPaymentModal } from '@/components/funnels/UPIPaymentModal';
+import { FunnelPriceOption } from '@/types/funnels';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle, Lock } from 'lucide-react';
+import { Loader2, CheckCircle, Lock, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface PublicFunnel {
@@ -31,16 +33,18 @@ interface LeadSession {
   accessToken: string;
 }
 
-type ViewPhase = 'loading' | 'capture' | 'video' | 'complete' | 'error';
+type ViewPhase = 'loading' | 'capture' | 'video' | 'payment_pending' | 'complete' | 'error';
 
 export default function FunnelView() {
   const { slug } = useParams();
   const [phase, setPhase] = useState<ViewPhase>('loading');
   const [funnel, setFunnel] = useState<PublicFunnel | null>(null);
+  const [priceOptions, setPriceOptions] = useState<FunnelPriceOption[]>([]);
   const [leadSession, setLeadSession] = useState<LeadSession | null>(null);
   const [isCtaLocked, setIsCtaLocked] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // Load funnel by slug
   useEffect(() => {
@@ -65,6 +69,19 @@ export default function FunnelView() {
       }
 
       setFunnel(data as PublicFunnel);
+
+      // Load price options for UPI manual payment
+      if (data.payment_type === 'upi_manual') {
+        const { data: options } = await supabase
+          .from('funnel_price_options')
+          .select('*')
+          .eq('funnel_id', data.id)
+          .order('sort_order', { ascending: true });
+        
+        if (options) {
+          setPriceOptions(options as FunnelPriceOption[]);
+        }
+      }
       
       // Check if we have an existing session
       const storedSession = sessionStorage.getItem(`funnel_lead_${data.id}`);
@@ -72,7 +89,21 @@ export default function FunnelView() {
         try {
           const session = JSON.parse(storedSession);
           setLeadSession(session);
-          setPhase('video');
+          
+          // Check if payment is pending
+          const { data: lead } = await supabase
+            .from('funnel_leads')
+            .select('payment_status_cache')
+            .eq('id', session.leadId)
+            .single();
+          
+          if (lead?.payment_status_cache === 'pending') {
+            setPhase('payment_pending');
+          } else if (lead?.payment_status_cache === 'paid') {
+            setPhase('complete');
+          } else {
+            setPhase('video');
+          }
           return;
         } catch {
           // Invalid session, continue to capture
@@ -173,6 +204,12 @@ export default function FunnelView() {
   const handleCtaClick = async () => {
     if (!funnel) return;
 
+    // For UPI manual payments, show the payment modal
+    if (funnel.payment_type === 'upi_manual' && funnel.price > 0) {
+      setShowPaymentModal(true);
+      return;
+    }
+
     if (funnel.price > 0 && funnel.payment_type === 'razorpay') {
       // TODO: Implement Razorpay payment flow
       toast.info('Payment integration coming soon');
@@ -184,6 +221,12 @@ export default function FunnelView() {
     } else {
       setPhase('complete');
     }
+  };
+
+  // Handle payment submission
+  const handlePaymentSubmitted = () => {
+    setShowPaymentModal(false);
+    setPhase('payment_pending');
   };
 
   // Render based on phase
@@ -264,6 +307,38 @@ export default function FunnelView() {
             )}
           </div>
         </div>
+
+        {/* UPI Payment Modal */}
+        <UPIPaymentModal
+          open={showPaymentModal}
+          onOpenChange={setShowPaymentModal}
+          priceOptions={priceOptions}
+          funnelId={funnel.id}
+          leadId={leadSession.leadId}
+          accessToken={leadSession.accessToken}
+          defaultAmount={funnel.price}
+          defaultUpiId={funnel.upi_id || undefined}
+          onPaymentSubmitted={handlePaymentSubmitted}
+        />
+      </div>
+    );
+  }
+
+  if (phase === 'payment_pending' && funnel) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Clock className="w-8 h-8 text-amber-600" />
+          </div>
+          <h2 className="text-2xl font-bold mb-2">Payment Pending</h2>
+          <p className="text-muted-foreground">
+            Your payment screenshot has been submitted. We'll verify it and grant you access shortly.
+          </p>
+          <p className="text-sm text-muted-foreground mt-4">
+            You'll receive access within 24 hours after verification.
+          </p>
+        </div>
       </div>
     );
   }
@@ -272,8 +347,8 @@ export default function FunnelView() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="text-center max-w-md">
-          <div className="w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="w-8 h-8 text-green-600" />
+          <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="w-8 h-8 text-emerald-600" />
           </div>
           <h2 className="text-2xl font-bold mb-2">Thank You!</h2>
           <p className="text-muted-foreground">
