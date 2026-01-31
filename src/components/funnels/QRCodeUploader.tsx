@@ -2,8 +2,9 @@ import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Upload, X, Loader2, QrCode } from 'lucide-react';
+import { X, Loader2, QrCode } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const APP_SUPABASE_URL = 'https://kisankusogixarejjphi.supabase.co';
 
@@ -36,16 +37,26 @@ export function QRCodeUploader({ value, onChange, disabled }: QRCodeUploaderProp
     setIsUploading(true);
 
     try {
+      // Get the current session token
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        toast.error('Please log in to upload files');
+        setIsUploading(false);
+        return;
+      }
+
       // Get presigned upload URL from R2
       const response = await fetch(`${APP_SUPABASE_URL}/functions/v1/r2-get-upload-url`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           file_name: file.name,
+          file_size: file.size,
           content_type: file.type,
-          folder: 'qr-codes',
         }),
       });
 

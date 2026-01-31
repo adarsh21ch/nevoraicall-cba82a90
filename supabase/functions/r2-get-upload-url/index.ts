@@ -103,23 +103,29 @@ Deno.serve(async (req) => {
         );
       }
     } else {
-      // For JWT auth (funnel owners), allow videos
-      const allowedTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
-      if (!allowedTypes.includes(content_type)) {
-        return new Response(
-          JSON.stringify({ error: 'Invalid file type. Only MP4, WebM, and MOV are allowed.' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      const maxSize = 500 * 1024 * 1024; // 500MB for videos
-      if (file_size > maxSize) {
-        return new Response(
-          JSON.stringify({ error: 'File too large. Maximum size is 500MB.' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+    // For JWT auth (funnel owners), allow videos AND images
+    const allowedVideoTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
+    const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    const allowedTypes = [...allowedVideoTypes, ...allowedImageTypes];
+    
+    if (!allowedTypes.includes(content_type)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid file type. Only MP4, WebM, MOV, JPEG, PNG, WebP, and GIF are allowed.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
+
+    // Different size limits for videos vs images
+    const isVideo = allowedVideoTypes.includes(content_type);
+    const maxSize = isVideo ? 500 * 1024 * 1024 : 10 * 1024 * 1024; // 500MB for videos, 10MB for images
+    
+    if (file_size > maxSize) {
+      return new Response(
+        JSON.stringify({ error: `File too large. Maximum size is ${isVideo ? '500MB' : '10MB'}.` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+  }
 
     const timestamp = Date.now();
     const sanitizedName = file_name.replace(/[^a-zA-Z0-9.-]/g, '_');
@@ -128,6 +134,8 @@ Deno.serve(async (req) => {
     let objectKey: string;
     if (isLeadAuth) {
       objectKey = `payment-proofs/${leadId}/${timestamp}-${sanitizedName}`;
+    } else if (content_type.startsWith('image/')) {
+      objectKey = `images/${userId}/${timestamp}-${sanitizedName}`;
     } else {
       objectKey = `videos/${userId}/${timestamp}-${sanitizedName}`;
     }
@@ -136,9 +144,9 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false }
     });
 
-    // Only create video_assets record for JWT auth (video uploads)
+    // Only create video_assets record for actual video uploads (not images)
     let assetId: string | null = null;
-    if (!isLeadAuth) {
+    if (!isLeadAuth && content_type.startsWith('video/')) {
       const { data: asset, error: insertError } = await serviceClient
         .from('video_assets')
         .insert({
