@@ -1,163 +1,166 @@
 
-# Implementation Plan: Complete Funnels Payment System
 
-## Overview
-This plan addresses the missing components identified in the audit to enable full UPI manual payment flow with QR codes and screenshot uploads.
+# Fix Plan: QR Code Upload Error
 
----
+## Problem Analysis
 
-## Phase 1: Backend Edge Functions
+The QR code upload is failing because:
 
-### 1.1 Create `submit-payment-proof` Edge Function
-**File:** `supabase/functions/submit-payment-proof/index.ts`
+1. **Missing `file_size`** - The frontend sends `file_name`, `content_type`, and `folder`, but the backend requires `file_size`
+2. **Missing Authorization** - The frontend doesn't send the JWT token, so the request fails authentication (returns 401)
+3. **Image type not allowed** - The backend only allows video types for JWT auth (`video/mp4`, `video/webm`, `video/quicktime`), not images
 
-Creates a new edge function that:
-- Accepts lead_id, funnel_id, price_option_id, amount, and screenshot_url
-- Validates the lead exists
-- Inserts a payment record with status `pending` into `funnel_payments` table
-- Uses service role key for database operations
+## Root Cause
 
-### 1.2 Update `supabase/config.toml`
-Add configuration for new edge functions:
-- `submit-payment-proof` with `verify_jwt = false` (public endpoint for leads)
-- `create-funnel-lead` with `verify_jwt = false` (currently missing from config)
+The `r2-get-upload-url` edge function was designed for video uploads, but `QRCodeUploader` is trying to use it for QR code images. The backend needs to support image uploads for authenticated funnel owners.
 
 ---
 
-## Phase 2: Frontend Components
+## Solution
 
-### 2.1 Create QR Code Uploader Component
-**File:** `src/components/funnels/QRCodeUploader.tsx`
+### 1. Update `QRCodeUploader.tsx`
 
-A component for funnel editors to upload QR code images:
-- Uses R2 presigned URL flow for image upload
-- Displays preview of uploaded QR code
-- Returns the public URL for storage
+**Changes needed:**
+- Add `file_size` to the request body
+- Include the user's JWT token in the Authorization header
+- Remove unused `folder` parameter
 
-### 2.2 Create UPI Payment Modal
-**File:** `src/components/funnels/UPIPaymentModal.tsx`
+```typescript
+// Current (broken):
+body: JSON.stringify({
+  file_name: file.name,
+  content_type: file.type,
+  folder: 'qr-codes',
+})
 
-Dialog shown to leads when making UPI payment:
-- Displays QR code image and UPI ID
-- Shows payment amount
-- Provides file upload for payment screenshot
-- Submits screenshot via `submit-payment-proof` edge function
-- Shows pending confirmation message
+// Fixed:
+body: JSON.stringify({
+  file_name: file.name,
+  file_size: file.size,
+  content_type: file.type,
+})
+```
 
-### 2.3 Create Price Options Manager
-**File:** `src/components/funnels/PriceOptionsManager.tsx`
-
-Component for managing multiple price tiers in FunnelEditor:
-- Add/edit/delete price options
-- Each option has: label, amount, UPI ID, QR image
-- Set default option
-- Reorderable list
+Also need to get the auth token from Supabase client.
 
 ---
 
-## Phase 3: Page Updates
+### 2. Update `r2-get-upload-url` Edge Function
 
-### 3.1 Update FunnelEditor.tsx
-Enhance the payment settings section:
-- When payment_type is `upi_manual`, show PriceOptionsManager
-- Load and save price options from `funnel_price_options` table
-- Add hooks for managing price options CRUD
+**Changes needed:**
+- Allow image types for JWT-authenticated users (funnel owners uploading QR codes)
+- Use different paths for different upload types
 
-### 3.2 Update FunnelView.tsx (Public Funnel Page)
-Enhance the CTA click handler:
-- For `upi_manual` funnels: Open UPIPaymentModal with price options
-- Handle price option selection
-- Track payment submission status
-- Show "Payment Pending Verification" state after screenshot upload
+Currently the backend only allows:
+- **JWT auth**: Videos only (`video/mp4`, `video/webm`, `video/quicktime`)
+- **Lead token**: Images only (for payment proofs)
 
----
-
-## Phase 4: Hooks & Types
-
-### 4.1 Create useFunnelPriceOptions Hook
-**File:** `src/hooks/useFunnelPriceOptions.ts`
-
-React Query hook for:
-- Fetching price options for a funnel
-- Creating new price options
-- Updating existing options
-- Deleting options
-- Reordering options
-
-### 4.2 Update Types
-**File:** `src/types/funnels.ts`
-
-Add interfaces:
-- `FunnelPriceOption` - represents a price tier
-- `PaymentProofSubmission` - payload for submit-payment-proof
+Need to change to:
+- **JWT auth**: Videos OR images (for QR codes, thumbnails, etc.)
+- **Lead token**: Images only (for payment proofs)
 
 ---
 
-## File Changes Summary
+## Files to Modify
 
-| File | Action |
+| File | Change |
 |------|--------|
-| `supabase/functions/submit-payment-proof/index.ts` | Create |
-| `supabase/config.toml` | Edit (add 2 function configs) |
-| `src/components/funnels/QRCodeUploader.tsx` | Create |
-| `src/components/funnels/UPIPaymentModal.tsx` | Create |
-| `src/components/funnels/PriceOptionsManager.tsx` | Create |
-| `src/hooks/useFunnelPriceOptions.ts` | Create |
-| `src/types/funnels.ts` | Edit (add types) |
-| `src/pages/FunnelEditor.tsx` | Edit (add PriceOptionsManager) |
-| `src/pages/FunnelView.tsx` | Edit (add UPI payment flow) |
+| `src/components/funnels/QRCodeUploader.tsx` | Add `file_size`, add Authorization header |
+| `supabase/functions/r2-get-upload-url/index.ts` | Allow image uploads for JWT auth |
 
 ---
 
-## Technical Details
+## Technical Implementation
 
-### Edge Function: submit-payment-proof
+### QRCodeUploader.tsx Changes
 
-```text
-Endpoint: POST /functions/v1/submit-payment-proof
-Body: {
-  lead_id: string,
-  funnel_id: string,
-  price_option_id?: string,
-  amount: number,
-  screenshot_url: string
-}
-Response: {
-  success: boolean,
-  payment_id: string,
-  status: 'pending'
+```typescript
+import { supabase } from '@/integrations/supabase/client';
+
+const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  // ... validation ...
+
+  setIsUploading(true);
+
+  try {
+    // Get the current session token
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session?.access_token) {
+      toast.error('Please log in to upload files');
+      return;
+    }
+
+    const response = await fetch(`${APP_SUPABASE_URL}/functions/v1/r2-get-upload-url`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        file_name: file.name,
+        file_size: file.size,  // ← Add this
+        content_type: file.type,
+      }),
+    });
+    // ... rest of upload logic
+  }
 }
 ```
 
-Uses `SUPABASE_SERVICE_ROLE_KEY` to insert into `funnel_payments` table since leads are not authenticated users.
+### r2-get-upload-url Changes
 
-### R2 Image Upload Flow (QR Codes & Screenshots)
+```typescript
+// For JWT auth, allow both videos AND images
+if (!isLeadAuth) {
+  const allowedVideoTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
+  const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  const allowedTypes = [...allowedVideoTypes, ...allowedImageTypes];
+  
+  if (!allowedTypes.includes(content_type)) {
+    return new Response(
+      JSON.stringify({ error: 'Invalid file type' }),
+      { status: 400, ... }
+    );
+  }
 
-The existing R2 functions work for authenticated users (funnel owners uploading QR codes). For lead screenshot uploads, we'll need to either:
-1. Create a public R2 upload endpoint specifically for payment screenshots
-2. Or use the existing flow with a lead token for authorization
+  // Different size limits
+  const isVideo = allowedVideoTypes.includes(content_type);
+  const maxSize = isVideo ? 500 * 1024 * 1024 : 10 * 1024 * 1024;
+  
+  if (file_size > maxSize) {
+    return new Response(
+      JSON.stringify({ error: `File too large. Max ${isVideo ? '500MB' : '10MB'}` }),
+      { status: 400, ... }
+    );
+  }
+}
 
-Recommended approach: Create a dedicated `upload-payment-screenshot` endpoint that validates the lead token instead of requiring auth.
+// Different storage paths based on content type
+let objectKey: string;
+if (isLeadAuth) {
+  objectKey = `payment-proofs/${leadId}/${timestamp}-${sanitizedName}`;
+} else if (content_type.startsWith('image/')) {
+  objectKey = `qr-codes/${userId}/${timestamp}-${sanitizedName}`;  // New path for images
+} else {
+  objectKey = `videos/${userId}/${timestamp}-${sanitizedName}`;
+}
 
-### Database Interactions
-
-Price options are stored in `funnel_price_options`:
-- `funnel_id`, `label`, `amount`, `upi_id`, `qr_image_url`, `sort_order`, `is_default`
-
-Payments are stored in `funnel_payments`:
-- `lead_id`, `funnel_id`, `provider: 'manual'`, `amount`, `status: 'pending'`, `upi_screenshot_url`
+// Only create video_assets record for actual videos
+if (!isLeadAuth && content_type.startsWith('video/')) {
+  // Create video_assets record
+}
+```
 
 ---
 
-## Implementation Order
+## Summary
 
-1. Create `submit-payment-proof` edge function
-2. Update `config.toml`
-3. Create `useFunnelPriceOptions` hook
-4. Update `src/types/funnels.ts`
-5. Create `QRCodeUploader` component
-6. Create `PriceOptionsManager` component
-7. Update `FunnelEditor.tsx`
-8. Create `UPIPaymentModal` component
-9. Update `FunnelView.tsx`
-10. Test end-to-end flow
+Two changes needed:
+
+1. **Frontend**: Add `file_size` and `Authorization` header to QRCodeUploader
+2. **Backend**: Allow image types for JWT-authenticated users and skip video_assets record for images
+
