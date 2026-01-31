@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { DynamicFunnelTracker } from '@/components/tracking/DynamicFunnelTracker';
 import { DynamicLeadsTracker } from '@/components/tracking/DynamicLeadsTracker';
@@ -10,13 +11,14 @@ import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { TopTabBar } from '@/components/ui/TopTabBar';
 import { Day1SetupDialog } from '@/components/trackup/Day1SetupDialog';
 import { Button } from '@/components/ui/button';
-import { TrendingUp, Calendar, Lock, RefreshCw, ExternalLink } from 'lucide-react';
+import { TrendingUp, Calendar, Lock, RefreshCw, ExternalLink, Loader2 } from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useFunnelConfig } from '@/hooks/useFunnelConfig';
 import { useLeadsTrackingStats, useFunnelTrackingStats } from '@/hooks/useTrackingStats';
 import { useTrackingFormat } from '@/hooks/useTrackingFormat';
 import { NEVORAI_WEBSITE_URL } from '@/config/siteUrl';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
 
 // Pull-to-refresh hook
@@ -116,9 +118,32 @@ export default function Tracking() {
     setActiveTab(newTab as 'leads' | 'funnel');
   };
 
-  // Open TrackUp Dashboard
-  const handleOpenDashboard = () => {
-    window.open(`${NEVORAI_WEBSITE_URL}/trackup`, '_blank');
+  // Open TrackUp Dashboard with SSO
+  const [ssoLoading, setSsoLoading] = useState(false);
+  const handleOpenDashboard = async () => {
+    setSsoLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('trackup-sso-link');
+      if (error) {
+        console.error('SSO link error:', error);
+        toast.error('Failed to generate login link. Opening login page...');
+        window.open(`${NEVORAI_WEBSITE_URL}/auth?redirect=/trackup`, '_blank');
+        return;
+      }
+      if (data?.action_link) {
+        // Open the magic link - user will be auto-logged in
+        window.open(data.action_link, '_blank');
+      } else {
+        toast.error('Failed to generate login link');
+        window.open(`${NEVORAI_WEBSITE_URL}/auth?redirect=/trackup`, '_blank');
+      }
+    } catch (err) {
+      console.error('SSO error:', err);
+      toast.error('Something went wrong. Opening login page...');
+      window.open(`${NEVORAI_WEBSITE_URL}/auth?redirect=/trackup`, '_blank');
+    } finally {
+      setSsoLoading(false);
+    }
   };
 
   // Save Day 1 date from setup dialog
@@ -184,9 +209,19 @@ export default function Tracking() {
             </div>
           </div>
           {/* Dashboard Link Button */}
-          <Button variant="ghost" size="sm" onClick={handleOpenDashboard} className="h-8 gap-1.5 text-xs font-medium">
-            <ExternalLink className="h-3.5 w-3.5" />
-            Team Tracking  
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleOpenDashboard} 
+            disabled={ssoLoading}
+            className="h-8 gap-1.5 text-xs font-medium"
+          >
+            {ssoLoading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <ExternalLink className="h-3.5 w-3.5" />
+            )}
+            {ssoLoading ? 'Opening...' : 'Team Tracking'}
           </Button>
         </div>
         
