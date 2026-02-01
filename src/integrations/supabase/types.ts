@@ -3592,6 +3592,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_products: {
+        Row: {
+          created_at: string | null
+          id: string
+          product: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          product: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          product?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -4240,7 +4261,15 @@ export type Database = {
         Returns: string
       }
       get_user_leader_id: { Args: { user_uuid: string }; Returns: string }
+      grant_product_access: {
+        Args: { p_product: string; p_user_id: string }
+        Returns: boolean
+      }
       has_nevorai_profile: { Args: { user_uuid: string }; Returns: boolean }
+      has_product_access: {
+        Args: { p_product: string; p_user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
