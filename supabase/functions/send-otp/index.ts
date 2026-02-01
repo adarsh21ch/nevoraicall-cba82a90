@@ -66,15 +66,39 @@ serve(async (req) => {
       }, 429);
     }
 
-    // Check if user already exists in auth
-    const { data: existingUsers } = await supabase.auth.admin.listUsers();
-    const existingUser = existingUsers?.users?.find(u => u.email?.toLowerCase() === normalizedEmail);
+    // ============================================
+    // PRODUCT-SCOPED AUTH: Check if user has Nevorai access
+    // Instead of checking if user exists in auth.users,
+    // we check if user has 'nevorai' product access
+    // ============================================
     
-    if (existingUser) {
-      return jsonResponse({ 
-        success: false, 
-        error: 'An account with this email already exists. Please sign in instead.' 
-      }, 400);
+    // First, get user_id from profiles by email
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('user_id')
+      .eq('email', normalizedEmail)
+      .maybeSingle();
+
+    if (existingProfile?.user_id) {
+      // User exists - check if they have Nevorai product access
+      const { data: hasNevorai } = await supabase
+        .from('user_products')
+        .select('id')
+        .eq('user_id', existingProfile.user_id)
+        .eq('product', 'nevorai')
+        .maybeSingle();
+
+      if (hasNevorai) {
+        // User already has Nevorai access - they should log in instead
+        return jsonResponse({ 
+          success: false, 
+          error: 'You already have a Nevorai account. Please sign in instead.' 
+        }, 400);
+      }
+      
+      // User exists but doesn't have Nevorai access (e.g., Achievers Club user)
+      // Allow them to continue with signup to get Nevorai access
+      console.log('Existing user without Nevorai access, allowing signup:', normalizedEmail);
     }
 
     // Generate OTP

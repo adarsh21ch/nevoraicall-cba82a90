@@ -89,87 +89,180 @@ serve(async (req) => {
       .update({ verified: true })
       .eq('id', otpRecord.id);
 
-    // Check if user already exists (edge case: signed up between OTP send and verify)
+    // ============================================
+    // PRODUCT-SCOPED AUTH: Handle existing users
+    // ============================================
+    
+    // Check if user already exists in auth
     const { data: existingUsers } = await supabase.auth.admin.listUsers();
     const existingUser = existingUsers?.users?.find(u => u.email?.toLowerCase() === normalizedEmail);
     
-    if (existingUser) {
-      return jsonResponse({ 
-        success: false, 
-        error: 'An account with this email already exists. Please sign in instead.' 
-      }, 400);
-    }
-
-    // Create the user account
-    const { data: newUserData, error: createError } = await supabase.auth.admin.createUser({
-      email: normalizedEmail,
-      password: password,
-      email_confirm: true, // Email is already verified via OTP
-      user_metadata: { 
-        display_name: name.trim(),
-        full_name: name.trim()
-      }
-    });
-
-    if (createError) {
-      console.error('Error creating user:', createError);
-      return jsonResponse({ success: false, error: 'Failed to create account. Please try again.' }, 500);
-    }
-
-    const newUserId = newUserData.user?.id;
-    console.log('User created successfully:', newUserId);
-
-    // Wait a moment for profile trigger to fire
-    await new Promise(resolve => setTimeout(resolve, 200));
-
-    // Update profile with display_name
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({ 
-        display_name: name.trim(),
-        email: normalizedEmail
-      })
-      .eq('user_id', newUserId);
-
-    if (profileError) {
-      console.error('Error updating profile:', profileError);
-      // Non-fatal, continue
-    }
-
-    // Check if this user is an Achievers Club member (from pending table)
+    let userId: string;
+    let isExistingUser = false;
     let isAchieversClubMember = false;
     let linkedLeaderId: string | null = null;
 
-    const { data: pendingAC, error: pendingError } = await supabase
-      .from('achievers_club_pending')
-      .select('*')
-      .eq('email', normalizedEmail)
-      .is('claimed_at', null)
-      .maybeSingle();
+    if (existingUser) {
+      // User exists in auth.users - check if they have Nevorai access
+      const { data: hasNevorai } = await supabase
+        .from('user_products')
+        .select('id')
+        .eq('user_id', existingUser.id)
+        .eq('product', 'nevorai')
+        .maybeSingle();
 
-    if (!pendingError && pendingAC) {
-      isAchieversClubMember = true;
-      linkedLeaderId = pendingAC.leader_id;
+      if (hasNevorai) {
+        // Already has Nevorai - tell them to sign in
+        return jsonResponse({ 
+          success: false, 
+          error: 'You already have a Nevorai account. Please sign in instead.' 
+        }, 400);
+      }
 
-      console.log('Linking Achievers Club membership:', normalizedEmail, linkedLeaderId);
+      // User exists but doesn't have Nevorai access (e.g., Achievers Club user)
+      // Grant them Nevorai access instead of creating new account
+      console.log('Granting Nevorai access to existing user:', normalizedEmail);
+      
+      userId = existingUser.id;
+      isExistingUser = true;
 
-      // Update the pending record as claimed
-      await supabase
-        .from('achievers_club_pending')
-        .update({ 
-          claimed_at: new Date().toISOString(),
-          claimed_user_id: newUserId
-        })
-        .eq('id', pendingAC.id);
+      // Update their password (they're creating their Nevorai account)
+      const { error: updateError } = await supabase.auth.admin.updateUserById(existingUser.id, { 
+        password: password,
+        user_metadata: {
+          ...existingUser.user_metadata,
+          display_name: name.trim(),
+          full_name: name.trim()
+        }
+      });
 
-      // Update profile with leader_id and source info
+      if (updateError) {
+        console.error('Error updating user password:', updateError);
+        return jsonResponse({ success: false, error: 'Failed to set up account. Please try again.' }, 500);
+      }
+
+      // Grant Nevorai product access
+      const { error: productError } = await supabase
+        .from('user_products')
+        .insert({ user_id: userId, product: 'nevorai' });
+
+      if (productError) {
+        console.error('Error granting product access:', productError);
+        // Non-fatal, continue
+      }
+
+      // Update profile with display_name
       await supabase
         .from('profiles')
         .update({ 
-          neverai_id: linkedLeaderId,
-          source_app: 'achievers_club_linked'
+          display_name: name.trim(),
+          source_app: 'achievers_club_linked' // Mark as AC user who linked to Nevorai
         })
-        .eq('user_id', newUserId);
+        .eq('user_id', userId);
+
+      // Check if this was an Achievers Club member
+      const { data: acCheck } = await supabase
+        .from('user_products')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('product', 'achievers_club')
+        .maybeSingle();
+
+      if (acCheck) {
+        isAchieversClubMember = true;
+        // Get their leader_id
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('neverai_id')
+          .eq('user_id', userId)
+          .maybeSingle();
+        linkedLeaderId = profile?.neverai_id || null;
+      }
+
+    } else {
+      // User doesn't exist - create new auth.user
+      const { data: newUserData, error: createError } = await supabase.auth.admin.createUser({
+        email: normalizedEmail,
+        password: password,
+        email_confirm: true, // Email is already verified via OTP
+        user_metadata: { 
+          display_name: name.trim(),
+          full_name: name.trim()
+        }
+      });
+
+      if (createError) {
+        console.error('Error creating user:', createError);
+        return jsonResponse({ success: false, error: 'Failed to create account. Please try again.' }, 500);
+      }
+
+      userId = newUserData.user!.id;
+      console.log('User created successfully:', userId);
+
+      // Wait a moment for profile trigger to fire
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // Update profile with display_name
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ 
+          display_name: name.trim(),
+          email: normalizedEmail
+        })
+        .eq('user_id', userId);
+
+      if (profileError) {
+        console.error('Error updating profile:', profileError);
+        // Non-fatal, continue
+      }
+
+      // Grant Nevorai product access
+      const { error: productError } = await supabase
+        .from('user_products')
+        .insert({ user_id: userId, product: 'nevorai' });
+
+      if (productError) {
+        console.error('Error granting product access:', productError);
+        // Non-fatal, continue
+      }
+
+      // Check if this user is an Achievers Club member (from pending table)
+      const { data: pendingAC, error: pendingError } = await supabase
+        .from('achievers_club_pending')
+        .select('*')
+        .eq('email', normalizedEmail)
+        .is('claimed_at', null)
+        .maybeSingle();
+
+      if (!pendingError && pendingAC) {
+        isAchieversClubMember = true;
+        linkedLeaderId = pendingAC.leader_id;
+
+        console.log('Linking Achievers Club membership:', normalizedEmail, linkedLeaderId);
+
+        // Update the pending record as claimed
+        await supabase
+          .from('achievers_club_pending')
+          .update({ 
+            claimed_at: new Date().toISOString(),
+            claimed_user_id: userId
+          })
+          .eq('id', pendingAC.id);
+
+        // Update profile with leader_id and source info
+        await supabase
+          .from('profiles')
+          .update({ 
+            neverai_id: linkedLeaderId,
+            source_app: 'achievers_club_linked'
+          })
+          .eq('user_id', userId);
+
+        // Grant Achievers Club product access
+        await supabase
+          .from('user_products')
+          .insert({ user_id: userId, product: 'achievers_club' });
+      }
     }
 
     // Clean up old OTPs for this email
@@ -178,11 +271,16 @@ serve(async (req) => {
       .delete()
       .eq('email', normalizedEmail);
 
+    const message = isExistingUser 
+      ? 'Nevorai account activated!' 
+      : 'Account created successfully!';
+
     return jsonResponse({ 
       success: true, 
-      message: 'Account created successfully!',
+      message,
       is_achievers_club_member: isAchieversClubMember,
-      leader_id: linkedLeaderId
+      leader_id: linkedLeaderId,
+      is_existing_user: isExistingUser
     });
 
   } catch (error) {
