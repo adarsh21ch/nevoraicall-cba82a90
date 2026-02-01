@@ -1,98 +1,132 @@
 
-# Fix Form Submission for Anonymous Users
+# Fix Nevorai Forms Anonymous Submission
 
-## Problem Summary
-The funnel forms are failing to submit because the `FunnelView.tsx` page attempts to directly insert records into the database using the Supabase client. This doesn't work for anonymous users (visitors without accounts) because:
-1. They cannot read certain data needed for the insert
-2. The database security blocks unauthorized direct writes
+## Problem
+The Nevorai Forms system is failing to accept submissions from anonymous users. Two issues have been identified:
+
+1. **Function Signature Mismatch**: External applications are calling `nevorai_submit_form(p_answers, p_form_id, p_share_token)` but the database function has signature `(p_token, p_answers_json, p_attachments_json)`
+
+2. **Authentication Block**: The current function throws an error if `auth.uid()` is null, which blocks anonymous submissions
 
 ## Solution
-Replace the direct database insert with a call to the existing backend function (`create-funnel-lead`) that is specifically designed to handle anonymous submissions securely.
+Create an updated `nevorai_submit_form` function that:
+- Accepts an optional submitter name parameter for anonymous users
+- Allows submissions without authentication (when `auth.uid()` is null)
+- Keeps the correct parameter signature that matches the types file
 
 ---
 
-## What Will Change
+## Technical Implementation
 
-### 1. Update the Form Submission Logic
-**File:** `src/pages/FunnelView.tsx`
+### Database Migration
+Update the `nevorai_submit_form` function to support anonymous submissions:
 
-Currently, when a visitor submits the lead capture form, the code tries to write directly to the database. We'll change it to call the backend function instead.
+```sql
+CREATE OR REPLACE FUNCTION public.nevorai_submit_form(
+    p_token text, 
+    p_answers_json jsonb, 
+    p_attachments_json jsonb DEFAULT '[]'::jsonb,
+    p_submitter_name text DEFAULT NULL
+)
+RETURNS TABLE(submission_id uuid, success boolean, message text)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+DECLARE
+    v_share_id uuid;
+    v_form_id uuid;
+    v_submission_id uuid;
+    v_user_id uuid;
+    v_user_email text;
+    v_answer jsonb;
+    v_attachment jsonb;
+BEGIN
+    -- Get current user (may be null for anonymous)
+    v_user_id := auth.uid();
+    
+    -- Get user email if authenticated
+    IF v_user_id IS NOT NULL THEN
+        SELECT email INTO v_user_email FROM auth.users WHERE id = v_user_id;
+    END IF;
 
-**Before (problematic):**
-- Direct database insert that requires user authentication
-- Fails silently for anonymous visitors
+    -- Get share and form info
+    SELECT s.id, s.form_id INTO v_share_id, v_form_id
+    FROM nevorai_form_shares s
+    JOIN nevorai_forms f ON f.id = s.form_id
+    WHERE s.token = p_token AND f.is_public = true;
 
-**After (fixed):**
-- Calls the `create-funnel-lead` backend function
-- Works for anyone, no account required
-- Returns a session token for video access
+    IF v_form_id IS NULL THEN
+        RAISE EXCEPTION 'Form not found or not accepting submissions';
+    END IF;
 
----
+    -- Create submission (supports anonymous)
+    INSERT INTO nevorai_form_submissions (
+        form_id, share_id, submitter_user_id, submitter_email, submitter_name
+    )
+    VALUES (v_form_id, v_share_id, v_user_id, v_user_email, p_submitter_name)
+    RETURNING id INTO v_submission_id;
 
-## Technical Details
+    -- Insert answers
+    FOR v_answer IN SELECT * FROM jsonb_array_elements(p_answers_json)
+    LOOP
+        INSERT INTO nevorai_submission_answers (submission_id, field_id, field_key, value, value_json)
+        VALUES (
+            v_submission_id,
+            (v_answer->>'field_id')::uuid,
+            v_answer->>'field_key',
+            v_answer->>'value',
+            v_answer->'value_json'
+        );
+    END LOOP;
 
-### Changes to `src/pages/FunnelView.tsx`
+    -- Insert attachments
+    FOR v_attachment IN SELECT * FROM jsonb_array_elements(p_attachments_json)
+    LOOP
+        INSERT INTO nevorai_submission_attachments (submission_id, field_id, storage_path, content_type, size)
+        VALUES (
+            v_submission_id,
+            (v_attachment->>'field_id')::uuid,
+            v_attachment->>'storage_path',
+            v_attachment->>'content_type',
+            (v_attachment->>'size')::bigint
+        );
+    END LOOP;
 
-The `handleLeadCapture` function (around line 120) will be updated:
+    RETURN QUERY SELECT v_submission_id, true, 'Form submitted successfully'::TEXT;
+END;
+$$;
 
-```typescript
-// Handle lead capture - using edge function for anonymous access
-const handleLeadCapture = async (data: { name: string; phone: string; email?: string }) => {
-  if (!funnel) return;
-
-  setIsSubmitting(true);
-
-  try {
-    // Call edge function instead of direct insert
-    const { data: result, error } = await supabase.functions.invoke('create-funnel-lead', {
-      body: {
-        funnel_id: funnel.id,
-        name: data.name,
-        phone: data.phone,
-        email: data.email || undefined,
-        source: 'funnel_view',
-      },
-    });
-
-    if (error || !result?.success) {
-      throw new Error(result?.error || 'Failed to create submission');
-    }
-
-    const session: LeadSession = {
-      leadId: result.lead_id,
-      accessToken: result.token,
-    };
-
-    // Store session for video access
-    sessionStorage.setItem(`funnel_lead_${funnel.id}`, JSON.stringify(session));
-    setLeadSession(session);
-    setPhase('video');
-  } catch (err) {
-    console.error('Lead capture error:', err);
-    toast.error('Failed to submit. Please try again.');
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+-- Grant anonymous users permission to call the function
+GRANT EXECUTE ON FUNCTION public.nevorai_submit_form(text, jsonb, jsonb, text) TO anon;
 ```
 
-### Key Benefits
-1. **Works for everyone** - No login required, just like Google Forms
-2. **Secure** - The backend function validates the funnel exists and is published
-3. **Duplicate handling** - If same phone/email submits again, returns existing session
-4. **Proper token management** - 7-day access tokens generated server-side
+### Key Changes
+| Current Behavior | New Behavior |
+|-----------------|--------------|
+| Throws error if `auth.uid()` is null | Allows null user ID for anonymous submissions |
+| No submitter name field | Accepts optional `p_submitter_name` parameter |
+| Requires login | Works for anyone, like Google Forms |
+
+---
+
+## Additional Note
+The error message shows the calling application is using parameter names `(p_answers, p_form_id, p_share_token)`. If you control that external "Team Tracking" application, you should update its RPC call to use the correct signature:
+
+```typescript
+// Correct call format
+const { data, error } = await supabase.rpc('nevorai_submit_form', {
+  p_token: shareToken,
+  p_answers_json: answers,
+  p_attachments_json: []
+});
+```
 
 ---
 
 ## Testing Checklist
-After implementation, verify:
-- [ ] Anonymous users can submit the form successfully
-- [ ] Form shows "Watch Video" phase after submission
-- [ ] Session is stored so refresh doesn't require re-submission
-- [ ] Duplicate submissions are handled gracefully (same phone returns existing lead)
-- [ ] Error messages display properly if something fails
-
----
-
-## No Database Changes Required
-The backend function `create-funnel-lead` already exists and works correctly. The only change needed is on the frontend to use it instead of direct database access.
+After implementation:
+- [ ] Anonymous users can submit forms without logging in
+- [ ] Authenticated users can still submit forms
+- [ ] Submissions appear in the form owner's dashboard
+- [ ] Submitter name is captured if provided
