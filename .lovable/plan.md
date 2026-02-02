@@ -1,62 +1,69 @@
 
 
-# Migrate R2 URLs to Public Format
+# Fix Broken R2 Image Display (Stability Fix)
 
-## Problem
-Images stored in Cloudflare R2 are using private signed URLs that may expire or require authentication. The `r2-get-upload-url` edge function already has logic to use public URLs, but:
+## Problem Summary
+Images stored in Cloudflare R2 are displaying as broken (❓ icon) because:
+1. **2 existing records** use private S3 API URLs (`r2.cloudflarestorage.com`) instead of the public endpoint
+2. Edge functions need to consistently return `r2.dev` URLs for new uploads
 
-1. The `R2_PUBLIC_URL` secret is **not configured**
-2. Existing records have private URLs that need updating
+## Current State Analysis
 
-## Current State
-- **2 records** need URL migration:
-  - 1 in `funnel_price_options` (QR code image)
-  - 1 in `funnel_payments` (payment screenshot)
-- **23 video assets** exist (these use the `r2-get-playback-url` function separately)
+### Database Records Needing Migration
+| Table | URL Type | Count |
+|-------|----------|-------|
+| `funnel_price_options` | QR code image | 1 |
+| `funnel_payments` | Payment screenshot | 1 |
+| `funnels` | Thumbnail | 0 |
 
-## Implementation
+### Edge Function Status
+- `R2_PUBLIC_URL` secret is **already configured** ✓
+- `r2-get-upload-url` has public URL logic but may not include bucket name in path
+- `upload-payment-screenshot` has similar issue
 
-### Step 1: Add R2_PUBLIC_URL Secret
-Add the public R2 URL secret so new uploads return accessible URLs.
+## Implementation Tasks
 
-**Secret Name:** `R2_PUBLIC_URL`
-**Value:** `https://pub-d0cae7c30eea4f949d9c33c730813937.r2.dev`
-
-### Step 2: Database Migration
-Update existing private URLs to use the public format:
+### Task 1: Database Migration (SQL)
+Update existing private URLs to public format:
 
 ```sql
--- Migrate funnel_price_options QR images
+-- Funnel price option QR images
 UPDATE funnel_price_options
 SET qr_image_url = REPLACE(
   qr_image_url,
   'https://b2cc3a6e16425fd28d16161e9acaa822.r2.cloudflarestorage.com/nevorai/',
-  'https://pub-d0cae7c30eea4f949d9c33c730813937.r2.dev/'
+  'https://pub-d0cae7c30eea4f949d9c33c730813937.r2.dev/nevorai/'
 )
-WHERE qr_image_url LIKE '%r2.cloudflarestorage.com%';
+WHERE qr_image_url IS NOT NULL
+  AND qr_image_url LIKE '%r2.cloudflarestorage.com%';
 
--- Migrate funnel_payments screenshots  
+-- Payment screenshots
 UPDATE funnel_payments
 SET upi_screenshot_url = REPLACE(
   upi_screenshot_url,
   'https://b2cc3a6e16425fd28d16161e9acaa822.r2.cloudflarestorage.com/nevorai/',
-  'https://pub-d0cae7c30eea4f949d9c33c730813937.r2.dev/'
+  'https://pub-d0cae7c30eea4f949d9c33c730813937.r2.dev/nevorai/'
 )
-WHERE upi_screenshot_url LIKE '%r2.cloudflarestorage.com%';
+WHERE upi_screenshot_url IS NOT NULL
+  AND upi_screenshot_url LIKE '%r2.cloudflarestorage.com%';
 
--- Migrate funnels thumbnails (if any)
+-- Funnel thumbnails (precautionary)
 UPDATE funnels
 SET thumbnail_url = REPLACE(
   thumbnail_url,
   'https://b2cc3a6e16425fd28d16161e9acaa822.r2.cloudflarestorage.com/nevorai/',
-  'https://pub-d0cae7c30eea4f949d9c33c730813937.r2.dev/'
+  'https://pub-d0cae7c30eea4f949d9c33c730813937.r2.dev/nevorai/'
 )
-WHERE thumbnail_url LIKE '%r2.cloudflarestorage.com%';
+WHERE thumbnail_url IS NOT NULL
+  AND thumbnail_url LIKE '%r2.cloudflarestorage.com%';
 ```
 
-### Step 3: Verify Edge Function
-The `r2-get-upload-url` function already handles public URLs correctly:
+### Task 2: Fix Edge Functions for Future Uploads
 
+#### `r2-get-upload-url/index.ts`
+**Issue:** The public URL construction doesn't include the bucket name (`nevorai/`) in the path when using `R2_PUBLIC_URL`.
+
+**Current code (line 242-245):**
 ```typescript
 const R2_PUBLIC_URL = Deno.env.get('R2_PUBLIC_URL');
 const publicUrl = R2_PUBLIC_URL 
@@ -64,17 +71,83 @@ const publicUrl = R2_PUBLIC_URL
   : `https://${host}/${R2_BUCKET_NAME}/${objectKey}`;
 ```
 
-Once `R2_PUBLIC_URL` secret is added, new uploads will automatically use public URLs.
+**Fixed code:**
+```typescript
+const R2_PUBLIC_URL = Deno.env.get('R2_PUBLIC_URL');
+const R2_BUCKET_NAME = Deno.env.get('R2_BUCKET_NAME')!;
+const publicUrl = R2_PUBLIC_URL 
+  ? `${R2_PUBLIC_URL}/${R2_BUCKET_NAME}/${objectKey}`
+  : `https://${host}/${R2_BUCKET_NAME}/${objectKey}`;
+```
+
+#### `upload-payment-screenshot/index.ts`
+**Issue:** Same problem - missing bucket name in public URL path.
+
+**Current code (line 151-154):**
+```typescript
+const publicUrl = Deno.env.get('R2_PUBLIC_URL') 
+  ? `${Deno.env.get('R2_PUBLIC_URL')}/${objectKey}`
+  : `https://${host}/${bucketName}/${objectKey}`;
+```
+
+**Fixed code:**
+```typescript
+const R2_PUBLIC_URL = Deno.env.get('R2_PUBLIC_URL');
+const publicUrl = R2_PUBLIC_URL 
+  ? `${R2_PUBLIC_URL}/${bucketName}/${objectKey}`
+  : `https://${host}/${bucketName}/${objectKey}`;
+```
+
+### Task 3: Add Download QR Button with Blob Fetch
+
+Add a download helper function to `QRCodeUploader.tsx` that fetches the image as a blob and triggers a browser download (avoiding cross-origin issues):
+
+```typescript
+const handleDownload = async () => {
+  if (!value) return;
+  
+  try {
+    const response = await fetch(value);
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'qr-code.png';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    URL.revokeObjectURL(url);
+    toast.success('QR code downloaded');
+  } catch (error) {
+    toast.error('Failed to download QR code');
+  }
+};
+```
 
 ## Files to Modify
 
-| File | Action |
+| File | Change |
 |------|--------|
-| Database migration | Create SQL to update existing URLs |
-| Project secrets | Add `R2_PUBLIC_URL` secret |
+| `supabase/functions/r2-get-upload-url/index.ts` | Fix public URL to include bucket name |
+| `supabase/functions/upload-payment-screenshot/index.ts` | Fix public URL to include bucket name |
+| `src/components/funnels/QRCodeUploader.tsx` | Add download button with blob fetch |
+| Database migration | Update 2 existing records |
 
-## Expected Result
-- Existing 2 image URLs will be publicly accessible
-- All new image uploads will return public URLs
-- No authentication/signing required for viewing images
+## Verification Checklist
+After implementation:
+- [ ] Existing QR code images display correctly
+- [ ] Existing payment screenshots display correctly  
+- [ ] New QR uploads store `r2.dev` URLs
+- [ ] New payment screenshots store `r2.dev` URLs
+- [ ] Download QR button works correctly
+- [ ] Thumbnails display in funnel cards
+- [ ] QR codes display in UPI payment modal
+
+## What's NOT Changing
+- Video playback (continues using signed URLs)
+- No new edge functions
+- No backend architecture changes
+- No signed URLs for images
 
