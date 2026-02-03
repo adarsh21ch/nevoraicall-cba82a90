@@ -240,7 +240,7 @@ Deno.serve(async (req) => {
 
     // Build public URL using r2.dev public endpoint
     const R2_PUBLIC_BASE = 'https://pub-d0cae7c30eea4f949d9c33c730813937.r2.dev';
-    const publicUrl = `${R2_PUBLIC_BASE}/${R2_BUCKET_NAME}/${objectKey}`;
+    const publicUrl = `${R2_PUBLIC_BASE}/${objectKey}`;
 
     console.log(`Created upload URL for ${isLeadAuth ? 'lead' : 'user'} - object: ${objectKey}`);
 
