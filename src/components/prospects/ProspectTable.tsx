@@ -35,7 +35,7 @@ interface ProspectTableProps {
   loading: boolean;
   onAdd: (prospect: Partial<Prospect>) => Promise<Prospect | null>;
   onUpdate: (id: string, updates: Partial<Prospect>) => Promise<Prospect | null>;
-  onDelete: (id: string) => Promise<boolean>;
+  onDelete: (id: string) => Promise<Prospect | null | boolean>;  // Returns deleted prospect for undo (or boolean for legacy)
   onImport: (prospects: Partial<Prospect>[], onProgress?: (imported: number, total: number) => void) => Promise<{
     imported: number;
     skipped: number;
@@ -43,6 +43,8 @@ interface ProspectTableProps {
   onReorderProspects?: (prospectIds: string[]) => Promise<boolean>;
   onRestoreProspect?: (prospect: Prospect) => Promise<Prospect | null>;
   onRestoreProspects?: (prospects: Prospect[]) => Promise<number>;
+  onUndoDelete?: (id: string) => Promise<boolean>;
+  onUndoBulkDelete?: (ids: string[]) => Promise<boolean>;
   onBulkDelete?: (ids: string[]) => Promise<{
     deleted: number;
     prospects: Prospect[];
@@ -132,7 +134,7 @@ interface TableContentProps {
   expandedRowId: string | null;
   handleToggleExpand: (id: string) => void;
   handleUpdateWithUndo: (id: string, updates: Partial<Prospect>) => Promise<Prospect | null>;
-  handleDeleteWithUndo: (id: string) => Promise<boolean>;
+  handleDeleteWithUndo: (id: string) => Promise<Prospect | null | boolean>;
   handleToggleSelect: (id: string) => void;
   enableDragAndDrop: boolean;
   callingTrackingTags: string[];

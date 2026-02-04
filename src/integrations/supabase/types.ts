@@ -2833,6 +2833,7 @@ export type Database = {
           age_or_dob: string | null
           batch_date: string | null
           date_added: string
+          deleted_at: string | null
           funnel_stage: string | null
           funnel_stage_at: string | null
           gender: string | null
@@ -2859,6 +2860,7 @@ export type Database = {
           age_or_dob?: string | null
           batch_date?: string | null
           date_added?: string
+          deleted_at?: string | null
           funnel_stage?: string | null
           funnel_stage_at?: string | null
           gender?: string | null
@@ -2885,6 +2887,7 @@ export type Database = {
           age_or_dob?: string | null
           batch_date?: string | null
           date_added?: string
+          deleted_at?: string | null
           funnel_stage?: string | null
           funnel_stage_at?: string | null
           gender?: string | null
