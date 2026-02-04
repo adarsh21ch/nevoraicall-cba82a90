@@ -1,211 +1,185 @@
 
-# Admin Panel & Core UX Bug Fixes
+# Fix: Retargeting Filter Persistence After Refresh
 
-## Issues Identified
+## Problem
+User-selected filter tags in the Retargeting dropdowns (Response Tags, Funnel Stages) are not persisting after:
+1. Page refresh
+2. Closing and reopening the app (PWA)
 
-### 1. Trial Banner Visibility - Config Not Applied to To-Do and TrackUp
-**Root Cause**: The Admin Panel config (`admin_config_text.trial_banner_tabs`) includes `todoup,tracking`, but the `TodoUp.tsx` and `Tracking.tsx` pages are **missing the `<TrialBanner>` component** entirely. Other pages (Dashboard, ListUp, Profile) properly include it.
+The user expects that if they select 2-3 tags in the Retargeting filters, those selections should remain when they return to the page.
 
-**Evidence**:
-- `admin_config_text` shows `config_value: "dashboard,listup,profile,todoup,tracking"` with `is_enabled: true`
-- Search results show `<TrialBanner tabId="...">` exists in Dashboard, ListUp, Profile, Home - but NOT in TodoUp.tsx or Tracking.tsx
+## Root Cause Analysis
 
-**Fix**: Add `<TrialBanner tabId="todoup" />` to TodoUp.tsx and `<TrialBanner tabId="tracking" />` to Tracking.tsx in the same location pattern as other pages.
+After thorough investigation of the codebase, the `usePersistedFilters` hook at `src/hooks/usePersistedFilters.ts` appears to have correct logic for saving and loading filters from localStorage. However, there are **two potential issues**:
 
----
+### Issue 1: Effect runs on initial mount and may overwrite persisted data
+The `useEffect` that saves filters to localStorage runs on **every change**, including the initial mount. In React StrictMode, the component mounts, unmounts, and remounts - which could cause timing issues.
 
-### 2. Audit Logs - Failed to Load
-**Root Cause**: The `admin_get_audit_logs` RPC function exists and works correctly. The table has data (verified: 5+ entries visible). The issue is likely a type mismatch similar to the `admin_get_pro_users` error visible in console logs.
+### Issue 2: Component key changes causing unnecessary remounts
+The `ProspectTable` component in `Dashboard.tsx` uses a dynamic `key` prop that changes when switching sheets or tabs. While this is intentional for scroll reset, it causes the component to fully remount, potentially triggering the save effect before the lazy initializer has properly loaded persisted data.
 
-**Console Errors Found**:
-```
-[useProUsers] Error: {
-  "code": "42804",
-  "details": "Returned type integer does not match expected type bigint in column 11.",
-  "message": "structure of query does not match function result type"
+## Solution
+
+### Fix 1: Prevent effect from running on initial mount
+Add a flag to skip the first effect execution, ensuring we don't accidentally overwrite persisted filters before they're properly loaded.
+
+### Fix 2: Use a ref to track initialization state
+Track whether the component has completed initialization from localStorage before allowing any writes.
+
+## Technical Changes
+
+**File: `src/hooks/usePersistedFilters.ts`**
+
+```typescript
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { FunnelStage, ProspectQuality, ExtendedActionTaken } from '@/types/prospect';
+
+export interface Filters {
+  search: string;
+  stages: FunnelStage[];
+  qualities: ProspectQuality[];
+  actions: ExtendedActionTaken[];
+  incompleteOnly: boolean;
+}
+
+interface PersistedFilterData {
+  actions: string[];
+  stages: string[];
+  incompleteOnly: boolean;
+}
+
+const STORAGE_KEY_PREFIX = 'nevorai-filters-';
+
+const DEFAULT_FILTERS: Filters = {
+  search: '',
+  stages: [],
+  qualities: [],
+  actions: [],
+  incompleteOnly: false,
+};
+
+/**
+ * Hook to persist filter state to localStorage.
+ * Filters are stored per filter mode (calling vs funnel).
+ */
+export function usePersistedFilters(filterMode: 'calling' | 'funnel') {
+  const storageKey = `${STORAGE_KEY_PREFIX}${filterMode}`;
+  
+  // Track if initial load is complete to prevent overwriting on mount
+  const isInitializedRef = useRef(false);
+  const isFirstRenderRef = useRef(true);
+
+  // Lazy initialization: read from localStorage only once on mount
+  const [filters, setFiltersState] = useState<Filters>(() => {
+    try {
+      const stored = localStorage.getItem(storageKey);
+      console.log('[usePersistedFilters] Init:', storageKey, stored);
+      if (stored) {
+        const parsed: PersistedFilterData = JSON.parse(stored);
+        // Mark as initialized since we found persisted data
+        isInitializedRef.current = true;
+        return {
+          search: '', // Never persist search
+          stages: Array.isArray(parsed.stages) ? parsed.stages : [],
+          qualities: [], // Never persist qualities
+          actions: Array.isArray(parsed.actions) ? parsed.actions : [],
+          incompleteOnly: typeof parsed.incompleteOnly === 'boolean' ? parsed.incompleteOnly : false,
+        };
+      }
+    } catch (error) {
+      console.warn('Failed to read persisted filters:', error);
+    }
+    // No persisted data found, use defaults
+    isInitializedRef.current = true;
+    return DEFAULT_FILTERS;
+  });
+
+  // Save to localStorage whenever filters change
+  // Skip the first render to prevent overwriting persisted data on mount
+  useEffect(() => {
+    // Skip the first render entirely
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      return;
+    }
+
+    // Only save if we've been initialized
+    if (!isInitializedRef.current) {
+      return;
+    }
+
+    try {
+      const dataToStore: PersistedFilterData = {
+        actions: filters.actions,
+        stages: filters.stages,
+        incompleteOnly: filters.incompleteOnly,
+      };
+      console.log('[usePersistedFilters] Save:', storageKey, dataToStore);
+      localStorage.setItem(storageKey, JSON.stringify(dataToStore));
+    } catch (error) {
+      console.warn('Failed to persist filters:', error);
+    }
+  }, [filters.actions, filters.stages, filters.incompleteOnly, storageKey]);
+
+  // Wrapped setFilters that also clears storage when clearing filters
+  const setFilters = useCallback((newFilters: Filters) => {
+    setFiltersState(newFilters);
+    
+    // If clearing all filters, also clear from storage
+    if (
+      newFilters.actions.length === 0 &&
+      newFilters.stages.length === 0 &&
+      !newFilters.incompleteOnly
+    ) {
+      try {
+        localStorage.removeItem(storageKey);
+      } catch (error) {
+        console.warn('Failed to clear persisted filters:', error);
+      }
+    }
+  }, [storageKey]);
+
+  return { filters, setFilters };
 }
 ```
 
-This indicates the return type declarations in one or more admin RPC functions have type mismatches. Need to verify the `admin_get_audit_logs` function signature matches its return values.
+## Key Changes Summary
 
-**Fix**: Create a migration to fix the type casting in `admin_get_pro_users` (cast `payment_amount` to `bigint`) and audit `admin_get_audit_logs` for similar issues.
+| Change | Purpose |
+|--------|---------|
+| Add `isFirstRenderRef` | Skip saving on initial mount to prevent overwriting persisted data |
+| Add `isInitializedRef` | Track initialization status for safety |
+| Add console.log for debugging | Helps verify filters are being read/written correctly |
+| Skip first effect execution | Ensures lazy initializer data is preserved |
 
----
+## Testing Steps
 
-### 3. Admin Analytics - Data Not Loading
-**Root Cause**: Similar type mismatch issues in RPC functions. The `admin_get_pro_users` error cascades because analytics depend on subscription data.
+After implementation:
+1. Open the Calling/Dashboard page
+2. Select 2-3 tags in the Response/Retargeting filter
+3. Verify the tags appear selected
+4. Refresh the page (Ctrl+R or pull down)
+5. Verify the same 2-3 tags are still selected
+6. Close the app completely
+7. Reopen the app
+8. Verify the same 2-3 tags are still selected
 
-The following need verification/fixes:
-- `admin_get_trial_analytics` - Uses `trial_duration_days` config key but admin uses `free_trial_days`
-- `admin_get_offer_analytics` - May have similar casting issues
-- `admin_get_recent_payments` - Revenue section depends on this
+## Files Modified
 
-**Fix**: 
-1. Update `admin_get_trial_analytics` to read from correct config key (`free_trial_days` instead of `trial_duration_days`)
-2. Fix type casting in `admin_get_pro_users` 
-3. Verify other analytics functions work correctly
-
----
-
-### 4. Safe Delete UX (Undo + Restore)
-**Current State**: 
-- Delete is immediate and permanent (hard delete)
-- `restoreProspect` and `restoreProspects` functions exist but require the deleted data to be preserved
-- No "Undo" toast with restore action
-- No "Recently Deleted" section in Profile
-
-**Required Implementation**:
-
-#### A. Undo on Delete (Toast with Undo)
-- After delete, show toast: "X item(s) deleted" with "Undo" button
-- Store deleted items temporarily in component state (3-5 second window)
-- Use existing `restoreProspect` / `restoreProspects` functions to restore
-
-#### B. Soft Delete Architecture (For Recently Deleted)
-- Add `deleted_at` column to `prospects` table (nullable timestamp)
-- Modify delete operations to SET `deleted_at = now()` instead of hard DELETE
-- Update all prospect queries to filter WHERE `deleted_at IS NULL`
-- Create "Recently Deleted" view in Profile with restore option
-- Background cleanup: Auto-purge items older than 30 days
-
----
-
-## Technical Implementation Plan
-
-### Phase 1: Trial Banner Visibility Fix
-**Files to modify:**
 | File | Change |
 |------|--------|
-| `src/pages/TodoUp.tsx` | Add `<TrialBanner tabId="todoup" />` after header |
-| `src/pages/Tracking.tsx` | Add `<TrialBanner tabId="tracking" />` after header |
+| `src/hooks/usePersistedFilters.ts` | Add first-render skip logic to prevent overwriting persisted data on mount |
 
-Both pages need to:
-1. Import `TrialBanner` from `@/components/subscription/TrialBanner`
-2. Add the component in the main content area, typically at the start of the container
+## Why This Works
 
----
+The root issue is that React's `useEffect` runs **after** the component renders, including on the initial render. Even though the lazy initializer correctly reads from localStorage, the effect immediately fires and writes the current state back to localStorage.
 
-### Phase 2: Admin RPC Type Fixes
-**Database Migration:**
+In React StrictMode (development), the component mounts twice, which can cause race conditions. By skipping the first effect execution with `isFirstRenderRef`, we ensure:
 
-```sql
--- Fix admin_get_pro_users type mismatch (payment_amount should be bigint)
-CREATE OR REPLACE FUNCTION public.admin_get_pro_users()
-RETURNS TABLE(
-  user_id uuid,
-  display_name text,
-  email text,
-  neverai_id text,
-  plan text,
-  subscribed_at timestamptz,
-  expires_at timestamptz,
-  is_admin_override boolean,
-  is_expired boolean,
-  days_remaining integer,
-  payment_amount bigint  -- This was the issue
-)
-LANGUAGE plpgsql SECURITY DEFINER AS $$
-BEGIN
-  -- Cast payment_amount to bigint explicitly
-  ...
-  COALESCE((SELECT pl.amount FROM payments_log pl WHERE pl.user_id = us.user_id AND pl.status = 'success' ORDER BY pl.created_at DESC LIMIT 1), 0)::bigint as payment_amount
-  ...
-END;
-$$;
+1. Lazy initializer reads persisted data from localStorage
+2. First render completes with correct persisted state
+3. Effect is skipped on first render (no overwrite)
+4. Subsequent user changes trigger the effect normally
+5. Filters are correctly persisted
 
--- Fix admin_get_trial_analytics config key
--- Change 'trial_duration_days' to 'free_trial_days' to match admin panel config
-```
-
----
-
-### Phase 3: Undo Delete with Toast
-**Implementation approach:**
-
-1. **Create `useDeleteUndo` hook** that:
-   - Stores recently deleted items in state
-   - Shows toast with "Undo" action button
-   - Auto-clears after 5 seconds
-   - Calls `restoreProspects` when Undo clicked
-
-2. **Update delete handlers** in:
-   - `src/pages/Dashboard.tsx` - For prospect delete
-   - `src/contexts/ProspectsContext.tsx` - Return deleted data for restoration
-   - `src/hooks/useSheets.ts` - For sheet delete (preserve deleted sheet data)
-
-3. **Toast pattern:**
-```tsx
-const handleDelete = async (id: string) => {
-  const deleted = await deleteProspect(id);
-  if (deleted) {
-    toast("Item deleted", {
-      action: {
-        label: "Undo",
-        onClick: () => restoreProspect(deletedItem)
-      },
-      duration: 5000
-    });
-  }
-};
-```
-
----
-
-### Phase 4: Soft Delete & Recently Deleted Section
-**Database Migration:**
-
-```sql
--- Add soft delete column to prospects
-ALTER TABLE prospects ADD COLUMN deleted_at timestamptz DEFAULT NULL;
-
--- Create index for efficient filtering
-CREATE INDEX idx_prospects_deleted_at ON prospects(deleted_at) WHERE deleted_at IS NOT NULL;
-
--- Update RLS policies to filter out deleted
--- (All existing SELECT policies should add: AND deleted_at IS NULL)
-```
-
-**Frontend Changes:**
-| File | Change |
-|------|--------|
-| `src/contexts/ProspectsContext.tsx` | Update delete to soft-delete (SET deleted_at) |
-| `src/hooks/useDeletedProspects.ts` | New hook to fetch deleted items |
-| `src/components/profile/RecentlyDeletedDrawer.tsx` | New component for restore UI |
-| `src/pages/Profile.tsx` | Add "Recently Deleted" menu item |
-
-**Recently Deleted UI:**
-- List deleted items with: Name, Phone (masked), Deleted date
-- "Restore" button per item
-- "Restore All" bulk action
-- "Permanently Delete" option
-- Auto-purge after 30 days (database trigger or scheduled function)
-
----
-
-## Files Summary
-
-| File | Phase | Change Type |
-|------|-------|-------------|
-| `src/pages/TodoUp.tsx` | 1 | Add TrialBanner import and component |
-| `src/pages/Tracking.tsx` | 1 | Add TrialBanner import and component |
-| `supabase/migrations/` | 2 | Fix RPC type mismatches |
-| `supabase/migrations/` | 2 | Fix trial_duration_days → free_trial_days |
-| `src/pages/Dashboard.tsx` | 3 | Add undo toast on delete |
-| `src/hooks/useSheets.ts` | 3 | Return deleted sheet for undo |
-| `supabase/migrations/` | 4 | Add deleted_at column |
-| `src/contexts/ProspectsContext.tsx` | 4 | Update to soft-delete |
-| `src/hooks/useDeletedProspects.ts` | 4 | New: fetch deleted items |
-| `src/components/profile/RecentlyDeletedDrawer.tsx` | 4 | New: restore UI |
-| `src/pages/Profile.tsx` | 4 | Add Recently Deleted menu |
-
----
-
-## Success Criteria
-
-| Requirement | Verification |
-|-------------|--------------|
-| Trial banner respects admin config in ALL tabs | Banner shows in To-Do and TrackUp when enabled |
-| Admin audit logs load correctly | Audit Log viewer shows entries with pagination |
-| Admin analytics load real data | Trials/Offers/Revenue sections display data |
-| Users can undo deletes | Toast with "Undo" appears after delete, restores on click |
-| Deleted data can be restored safely | Recently Deleted section in Profile shows restorable items |
+This approach is a standard pattern for preventing effects from running on initial mount when dealing with persisted state.
