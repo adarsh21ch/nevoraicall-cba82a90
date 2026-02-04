@@ -17,6 +17,7 @@ import { LeaderTrackingFormatDrawer } from '@/components/profile/LeaderTrackingF
 import { ProfileLevelDropdown } from '@/components/profile/ProfileLevelDropdown';
 import { HelpSupportDrawer } from '@/components/profile/HelpSupportDrawer';
 import { UserGuideDrawer } from '@/components/profile/UserGuideDrawer';
+import { RecentlyDeletedDrawer } from '@/components/profile/RecentlyDeletedDrawer';
 import { ProgressiveNudgeBanner } from '@/components/subscription/ProgressiveNudgeBanner';
 import { TrialBanner } from '@/components/subscription/TrialBanner';
 import { UpgradeButton } from '@/components/subscription/UpgradeButton';
@@ -24,7 +25,7 @@ import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { User, LogOut, ChevronRight, ChevronDown, Phone, Building2, MapPin, Loader2, FileText, Shield, Receipt, Mail, Settings, ExternalLink, BarChart3, Crown, Gift } from 'lucide-react';
+import { User, LogOut, ChevronRight, ChevronDown, Phone, Building2, MapPin, Loader2, FileText, Shield, Receipt, Mail, Settings, ExternalLink, BarChart3, Crown, Gift, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
@@ -467,6 +468,29 @@ export default function Profile() {
               </div>
             </CollapsibleContent>
           </Collapsible>
+
+          {/* Recently Deleted - Restore deleted prospects */}
+          <RecentlyDeletedDrawer 
+            trigger={
+              <button className={cn(
+                "w-full relative overflow-hidden rounded-xl p-4",
+                "bg-card border border-border/50",
+                "flex items-center justify-between",
+                "transition-all duration-300 hover:bg-muted/50"
+              )}>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-destructive/10">
+                    <Trash2 className="h-5 w-5 text-destructive" />
+                  </div>
+                  <div className="text-left">
+                    <span className="font-medium block">Recently Deleted</span>
+                    <span className="text-xs text-muted-foreground">Restore deleted prospects</span>
+                  </div>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </button>
+            }
+          />
 
           {/* User Guide - Video tutorials & help */}
           <UserGuideDrawer />

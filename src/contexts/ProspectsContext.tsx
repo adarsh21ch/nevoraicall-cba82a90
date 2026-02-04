@@ -46,10 +46,12 @@ interface ProspectsContextType {
   addProspect: (prospect: Partial<Prospect>) => Promise<Prospect | null>;
   updateProspect: (id: string, updates: Partial<Prospect>) => Promise<Prospect | null>;
   batchUpdateProspects: (updates: Array<{ id: string; changes: Partial<Prospect> }>) => Promise<boolean>;
-  deleteProspect: (id: string) => Promise<boolean>;
+  deleteProspect: (id: string) => Promise<Prospect | null>;  // Now returns deleted prospect for undo
   bulkDeleteProspects: (ids: string[]) => Promise<{ deleted: number; prospects: Prospect[] }>;
   restoreProspect: (prospect: Prospect) => Promise<Prospect | null>;
   restoreProspects: (prospects: Prospect[]) => Promise<number>;
+  undoDelete: (id: string) => Promise<boolean>;  // Undo soft-delete
+  undoBulkDelete: (ids: string[]) => Promise<boolean>;  // Undo bulk soft-delete
   importProspects: (data: Partial<Prospect>[], onProgress?: (imported: number, total: number) => void) => Promise<{ imported: number; skipped: number }>;
   reorderProspects: (ids: string[]) => Promise<boolean>;
   refetch: () => Promise<void>;
@@ -134,10 +136,12 @@ export function ProspectsProvider({ children }: { children: ReactNode }) {
     
     try {
       // Stable ordering: sort_order first, then date_added, then id for deterministic ties
+      // IMPORTANT: Only fetch non-deleted prospects (deleted_at IS NULL)
       const { data, error } = await supabase
         .from('prospects')
-        .select('id, name, phone, address, age_or_dob, gender, instagram, profession, why_need, notes, funnel_stage, action_taken, prospect_status, priority, personal_tags, sheet_id, batch_date, date_added, updated_at, sort_order, funnel_stage_at, action_taken_at')
+        .select('id, name, phone, address, age_or_dob, gender, instagram, profession, why_need, notes, funnel_stage, action_taken, prospect_status, priority, personal_tags, sheet_id, batch_date, date_added, updated_at, sort_order, funnel_stage_at, action_taken_at, deleted_at')
         .eq('user_id', user.id)
+        .is('deleted_at', null)  // Only fetch active (non-deleted) prospects
         .order('sort_order', { ascending: true, nullsFirst: false })
         .order('date_added', { ascending: true })
         .order('id', { ascending: true });
@@ -411,33 +415,43 @@ export function ProspectsProvider({ children }: { children: ReactNode }) {
     return true;
   }, [user, prospects, triggerDailyLog]);
 
-  const deleteProspect = useCallback(async (id: string) => {
+  // Soft-delete: set deleted_at instead of hard delete
+  const deleteProspect = useCallback(async (id: string): Promise<Prospect | null> => {
+    // Store the prospect before deleting for undo functionality
+    const prospectToDelete = prospects.find(p => p.id === id);
+    if (!prospectToDelete) return null;
+
+    // Soft delete: set deleted_at timestamp
     const { error } = await supabase
       .from('prospects')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq('id', id);
 
     if (error) {
       toast.error('Failed to delete prospect');
-      return false;
+      return null;
     }
 
+    // Remove from local state
     setProspects(prev => prev.filter(p => p.id !== id));
     
     // Trigger daily tracking log after delete
     triggerDailyLog();
     
-    return true;
-  }, [triggerDailyLog]);
+    // Return deleted prospect for undo functionality
+    return prospectToDelete;
+  }, [prospects, triggerDailyLog]);
 
+  // Soft bulk delete: set deleted_at for multiple prospects
   const bulkDeleteProspects = useCallback(async (ids: string[]) => {
     if (!user || ids.length === 0) return { deleted: 0, prospects: [] };
 
     const toDelete = prospects.filter(p => ids.includes(p.id));
 
+    // Soft delete: set deleted_at timestamp
     const { error } = await supabase
       .from('prospects')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .in('id', ids);
 
     if (error) {
@@ -452,6 +466,42 @@ export function ProspectsProvider({ children }: { children: ReactNode }) {
     
     return { deleted: toDelete.length, prospects: toDelete };
   }, [user, prospects, triggerDailyLog]);
+
+  // Undo soft-delete: clear deleted_at to restore prospect
+  const undoDelete = useCallback(async (id: string) => {
+    const { error } = await supabase
+      .from('prospects')
+      .update({ deleted_at: null })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Failed to undo delete:', error);
+      return false;
+    }
+
+    // Refetch to get the restored prospect back in the list
+    await fetchProspects(true);
+    return true;
+  }, [fetchProspects]);
+
+  // Undo bulk soft-delete
+  const undoBulkDelete = useCallback(async (ids: string[]) => {
+    if (ids.length === 0) return false;
+
+    const { error } = await supabase
+      .from('prospects')
+      .update({ deleted_at: null })
+      .in('id', ids);
+
+    if (error) {
+      console.error('Failed to undo bulk delete:', error);
+      return false;
+    }
+
+    // Refetch to get the restored prospects back in the list
+    await fetchProspects(true);
+    return true;
+  }, [fetchProspects]);
 
   const restoreProspect = useCallback(async (prospect: Prospect) => {
     if (!user) return null;
@@ -644,6 +694,8 @@ export function ProspectsProvider({ children }: { children: ReactNode }) {
       bulkDeleteProspects,
       restoreProspect,
       restoreProspects,
+      undoDelete,
+      undoBulkDelete,
       importProspects,
       reorderProspects,
       refetch,

@@ -12,6 +12,7 @@ import { CalendarStrip } from '@/components/calendar/CalendarStrip';
 import { useCalendarStrip } from '@/hooks/useCalendarStrip';
 import { DailyTasksView } from '@/components/todo/DailyTasksView';
 import { RecentActivityView } from '@/components/todo/RecentActivityView';
+import { TrialBanner } from '@/components/subscription/TrialBanner';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -275,6 +276,9 @@ export default function TodoUp() {
       <main ref={mainRef} className={cn("scrollable-content relative pb-24", isRecentActivity ? "pt-[132px]" : "pt-[168px]")}>
         <PullToRefreshIndicator isRefreshing={isRefreshing} pullDistance={pullDistance} showIndicator={showIndicator} />
         <div className="container py-3 px-4 space-y-4">
+          {/* Trial Banner - respects admin config */}
+          <TrialBanner tabId="todoup" />
+          
           {/* Recent Activity View */}
           {isRecentActivity && <RecentActivityView selectedDate={calendar.selectedDate} searchQuery={activitySearchQuery} onSearchChange={setActivitySearchQuery} />}
 

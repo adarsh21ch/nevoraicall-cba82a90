@@ -11,7 +11,7 @@ interface SortableProspectRowProps {
   isExpanded: boolean;
   onToggleExpand: () => void;
   onUpdate: (id: string, updates: Partial<Prospect>) => Promise<Prospect | null>;
-  onDelete: (id: string) => Promise<boolean>;
+  onDelete: (id: string) => Promise<boolean | Prospect | null>;
   isEven: boolean;
   columnOrder: string[];
   isMobileTable?: boolean;

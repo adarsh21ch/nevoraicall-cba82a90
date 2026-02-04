@@ -7,6 +7,7 @@ import { BottomNav } from '@/components/layout/BottomNav';
 import { DynamicFunnelTracker } from '@/components/tracking/DynamicFunnelTracker';
 import { DynamicLeadsTracker } from '@/components/tracking/DynamicLeadsTracker';
 import { UpgradeBar } from '@/components/subscription/UpgradeBar';
+import { TrialBanner } from '@/components/subscription/TrialBanner';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { TopTabBar } from '@/components/ui/TopTabBar';
 import { Day1SetupDialog } from '@/components/trackup/Day1SetupDialog';
@@ -243,6 +244,9 @@ export default function Tracking() {
       <main ref={containerRef} className="scrollable-content relative">
         <PullToRefreshIndicator isRefreshing={isRefreshing} pullDistance={pullDistance} showIndicator={showIndicator} />
         <div className={cn("container py-2 px-3", showProGate ? "pb-36" : "pb-24")}>
+          {/* Trial Banner - respects admin config */}
+          <TrialBanner tabId="tracking" className="mb-3" />
+          
           {/* Pro gate - show when user is not Pro */}
           {showProGate && <div className="relative mb-4">
               <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-background/80 backdrop-blur-sm rounded-xl py-8">

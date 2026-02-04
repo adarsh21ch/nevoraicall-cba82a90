@@ -17,7 +17,7 @@ import { useTrackingTags } from '@/hooks/useTrackingTags';
 interface InlineReportCardProps {
   prospect: Prospect;
   onUpdate: (id: string, updates: Partial<Prospect>) => Promise<Prospect | null>;
-  onDelete: (id: string) => Promise<boolean>;
+  onDelete: (id: string) => Promise<boolean | Prospect | null>;
   onClose: () => void;
   colSpan: number;
 }

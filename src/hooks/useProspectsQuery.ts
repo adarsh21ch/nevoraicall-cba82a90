@@ -53,10 +53,12 @@ export function useProspectsQuery(options: UseProspectsQueryOptions = {}) {
 
       // Fetch all prospects for this sheet/filter to compute tag counts
       // This is necessary because we need to count by action_taken/funnel_stage
+      // Only count active (non-deleted) prospects
       let query = supabase
         .from('prospects')
         .select('id, action_taken, funnel_stage')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .is('deleted_at', null);  // Only active prospects
 
       // Apply sheet filter SERVER-SIDE
       if (sheetId) {
@@ -121,10 +123,12 @@ export function useProspectsQuery(options: UseProspectsQueryOptions = {}) {
 
       // Use DIRECT query with server-side filtering instead of RPC
       // This ensures pagination applies AFTER sheet filter
+      // Only fetch active (non-deleted) prospects
       let query = supabase
         .from('prospects')
         .select('*', { count: 'exact' })
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .is('deleted_at', null);  // Only active prospects
 
       // Apply sheet filter SERVER-SIDE (before pagination)
       if (sheetId) {
@@ -378,12 +382,20 @@ export function useProspectsQuery(options: UseProspectsQueryOptions = {}) {
     },
   });
 
-  // Delete prospect mutation
+  // Soft-delete prospect mutation - returns deleted prospect for undo
   const deleteMutation = useMutation({
-    mutationFn: async (id: string): Promise<string> => {
-      const { error } = await supabase.from('prospects').delete().eq('id', id);
+    mutationFn: async (id: string): Promise<Prospect | null> => {
+      // Find the prospect before soft-deleting for return value
+      const prospectToDelete = prospects.find(p => p.id === id) || null;
+      
+      // Soft delete: set deleted_at timestamp
+      const { error } = await supabase
+        .from('prospects')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id);
+      
       if (error) throw error;
-      return id;
+      return prospectToDelete;
     },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: ['prospects', user?.id] });
@@ -409,12 +421,57 @@ export function useProspectsQuery(options: UseProspectsQueryOptions = {}) {
       // Invalidate tracking stats so deleted leads are not counted
       queryClient.invalidateQueries({ queryKey: ['tracking-leads', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['tracking-funnel', user?.id] });
+      // Invalidate deleted prospects query
+      queryClient.invalidateQueries({ queryKey: ['deleted-prospects', user?.id] });
     },
     onError: (err, id, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(queryKey, context.previousData);
       }
       toast.error('Failed to delete prospect');
+    },
+  });
+
+  // Undo soft-delete: clear deleted_at
+  const undoDeleteMutation = useMutation({
+    mutationFn: async (id: string): Promise<boolean> => {
+      const { error } = await supabase
+        .from('prospects')
+        .update({ deleted_at: null })
+        .eq('id', id);
+      
+      if (error) throw error;
+      return true;
+    },
+    onSuccess: () => {
+      // Invalidate all queries to refetch
+      queryClient.invalidateQueries({ queryKey: ['prospects', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['prospects-kpi', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['deleted-prospects', user?.id] });
+    },
+    onError: () => {
+      toast.error('Failed to undo delete');
+    },
+  });
+
+  // Undo bulk soft-delete
+  const undoBulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]): Promise<boolean> => {
+      const { error } = await supabase
+        .from('prospects')
+        .update({ deleted_at: null })
+        .in('id', ids);
+      
+      if (error) throw error;
+      return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['prospects', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['prospects-kpi', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['deleted-prospects', user?.id] });
+    },
+    onError: () => {
+      toast.error('Failed to undo delete');
     },
   });
 
