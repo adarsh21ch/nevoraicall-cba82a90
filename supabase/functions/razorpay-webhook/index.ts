@@ -24,15 +24,8 @@ async function verifySignature(payload: string, signature: string, secret: strin
   return expectedSignature === signature;
 }
 
-// Get plan duration based on amount
-// ₹99 (9900 paise) = 30 days
-// ₹299 (29900 paise) = 120 days
-function getPlanDuration(amountInPaise: number): number {
-  if (amountInPaise >= 29900) {
-    return 120; // 4 months
-  }
-  return 30; // 1 month
-}
+// NO HARDCODED DURATION MAPPING - Admin Panel is the single source of truth
+// Duration MUST come from order notes (set by create-razorpay-order from database)
 
 // Log payment to database
 async function logPayment(
@@ -184,8 +177,27 @@ Deno.serve(async (req) => {
       const userId = profileData.user_id;
       console.log(`Found user: ${userId} for email: ${email}`);
 
-      // Calculate expiration based on plan duration from notes or amount
-      const durationDays = notes.duration_days ? parseInt(notes.duration_days) : getPlanDuration(amount);
+      // CRITICAL: Get duration_days from order notes - NO FALLBACK
+      // Duration was set by create-razorpay-order from admin_subscription_plans database
+      const durationDays = notes.duration_days ? parseInt(notes.duration_days) : null;
+      
+      if (!durationDays) {
+        console.error('Missing duration_days in payment notes - cannot determine subscription length');
+        await logPayment(supabase, 'payment.captured', email, paymentId, amount, 'error', 'Missing duration_days in notes', userId, true, payload);
+        // Return 200 to prevent Razorpay from retrying, but log the error
+        // The payment was successful, but we need manual intervention to set duration
+        return new Response(JSON.stringify({ 
+          error: 'Payment processed but duration not found. Contact support.',
+          payment_id: paymentId,
+          user_id: userId
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      console.log(`Duration from order notes: ${durationDays} days`);
+
       const now = new Date();
       const expiresAt = new Date(now);
       expiresAt.setDate(expiresAt.getDate() + durationDays);

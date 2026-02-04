@@ -29,15 +29,8 @@ function checkRateLimit(userId: string): boolean {
   return true;
 }
 
-// Duration mapping based on amount (in paise)
-function getDurationFromAmount(amount: number): number {
-  // ₹99 (9900 paise) = 30 days
-  // ₹299 (29900 paise) = 120 days
-  if (amount >= 29900) {
-    return 120;
-  }
-  return 30;
-}
+// NO HARDCODED DURATION MAPPING - Admin Panel is the single source of truth
+// Duration MUST come from order notes (set by create-razorpay-order from database)
 
 async function verifySignature(orderId: string, paymentId: string, signature: string, secret: string): Promise<boolean> {
   const body = `${orderId}|${paymentId}`;
@@ -113,9 +106,10 @@ serve(async (req) => {
 
     console.log('Signature verified successfully');
 
+    // Fetch order details to get duration_days from notes
     const authHeader = btoa(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`);
-    let durationDays = 30; // Default to monthly
-    let amount = 9900;
+    let durationDays: number | null = null;
+    let amount: number | null = null;
 
     try {
       const orderResponse = await fetch(`https://api.razorpay.com/v1/orders/${razorpay_order_id}`, {
@@ -129,18 +123,28 @@ serve(async (req) => {
         const orderDurationDays = orderDetails.notes?.duration_days;
         const orderAmount = orderDetails.notes?.final_amount || orderDetails.amount;
         
-        // Get duration from order notes or calculate from amount
+        // CRITICAL: Get duration from order notes - this was set from database
         if (orderDurationDays) {
           durationDays = parseInt(orderDurationDays);
-        } else {
-          durationDays = getDurationFromAmount(parseInt(orderAmount));
+          console.log(`Duration from order notes: ${durationDays} days`);
         }
-        amount = parseInt(orderAmount) || orderDetails.amount;
         
+        amount = parseInt(orderAmount) || orderDetails.amount;
         console.log(`Order details: plan=pro, duration_days=${durationDays}, amount=${amount}`);
+      } else {
+        console.error('Failed to fetch order details:', await orderResponse.text());
       }
     } catch (orderError) {
-      console.error('Error fetching order details, defaulting to 30 days:', orderError);
+      console.error('Error fetching order details:', orderError);
+    }
+
+    // CRITICAL: Fail if duration not found - no fallback to hardcoded values
+    if (!durationDays) {
+      console.error('Could not determine plan duration from order notes');
+      return new Response(
+        JSON.stringify({ error: 'Payment verified but plan duration unknown. Contact support.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);

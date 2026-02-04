@@ -8,6 +8,21 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
 
+// Format duration dynamically based on days
+const formatDuration = (days: number): string => {
+  if (days >= 365) {
+    const years = Math.floor(days / 365);
+    return years === 1 ? '1 year' : `${years} years`;
+  }
+  if (days >= 180) return '6 months';
+  if (days >= 120) return '4 months';
+  if (days >= 90) return '3 months';
+  if (days >= 60) return '2 months';
+  const months = Math.round(days / 30);
+  if (months >= 1) return `${months} month${months > 1 ? 's' : ''}`;
+  return `${days} days`;
+};
+
 export default function PaymentSuccess() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -16,6 +31,7 @@ export default function PaymentSuccess() {
   const { toast } = useToast();
   const [status, setStatus] = useState<'processing' | 'success' | 'error' | 'missing_params'>('processing');
   const [errorMessage, setErrorMessage] = useState('');
+  const [durationDays, setDurationDays] = useState<number | null>(null);
 
   useEffect(() => {
     if (!user && !authLoading) {
@@ -61,12 +77,19 @@ export default function PaymentSuccess() {
         return;
       }
 
+      // Store duration from response for display
+      if (data?.duration_days) {
+        setDurationDays(data.duration_days);
+      }
+
       await refetch();
       setStatus('success');
       
+      // Dynamic toast message based on actual duration
+      const durationText = data?.duration_days ? formatDuration(data.duration_days) : '';
       toast({
         title: "Pro Plan Activated!",
-        description: "Welcome to NevorAI Pro! Enjoy all premium features for 30 days.",
+        description: `Welcome to NevorAI Pro! Enjoy all premium features${durationText ? ` for ${durationText}` : ''}.`,
       });
     } catch (err: any) {
       console.error('Activation error:', err);
@@ -110,7 +133,9 @@ export default function PaymentSuccess() {
               <CheckCircle className="h-12 w-12 text-green-500" />
             </div>
             <h1 className="text-2xl font-bold text-green-600">Payment Successful!</h1>
-            <p className="text-muted-foreground">Your Pro plan is now active for 30 days.</p>
+            <p className="text-muted-foreground">
+              Your Pro plan is now active{durationDays ? ` for ${formatDuration(durationDays)}` : ''}.
+            </p>
             
             <div className="bg-card border border-border/50 rounded-2xl p-4 mt-6">
               <div className="flex items-center justify-center gap-2 mb-2">
