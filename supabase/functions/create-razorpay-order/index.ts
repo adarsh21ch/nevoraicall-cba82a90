@@ -29,21 +29,8 @@ function checkRateLimit(userId: string): boolean {
   return true;
 }
 
-// Fallback plan config if database fetch fails
-const FALLBACK_PLAN_CONFIG = {
-  monthly: {
-    amount: 9900, // ₹99 in paise
-    duration_days: 30,
-    plan_name: 'pro',
-    description: 'Pro Monthly',
-  },
-  quarterly: {
-    amount: 29900, // ₹299 in paise
-    duration_days: 120,
-    plan_name: 'pro',
-    description: 'Pro 4-Month',
-  },
-};
+// NO FALLBACK CONFIG - Admin Panel is the single source of truth
+// If plan is not found in database, payment creation will fail with a clear error
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -91,45 +78,31 @@ serve(async (req) => {
       );
     }
 
-    // Fetch plan from database
-    let planConfig;
-    try {
-      const { data: planData, error: planError } = await supabase
-        .from('admin_subscription_plans')
-        .select('*')
-        .eq('plan_key', plan_type)
-        .eq('is_active', true)
-        .single();
+    // Fetch plan from database - REQUIRED, no fallbacks
+    const { data: planData, error: planError } = await supabase
+      .from('admin_subscription_plans')
+      .select('*')
+      .eq('plan_key', plan_type)
+      .eq('is_active', true)
+      .single();
 
-      if (planError || !planData) {
-        console.warn(`Plan ${plan_type} not found in database, using fallback`);
-        const fallbackPlan = FALLBACK_PLAN_CONFIG[plan_type as keyof typeof FALLBACK_PLAN_CONFIG] 
-          || FALLBACK_PLAN_CONFIG.quarterly;
-        planConfig = {
-          amount: fallbackPlan.amount,
-          duration_days: fallbackPlan.duration_days,
-          plan_name: fallbackPlan.plan_name,
-          description: fallbackPlan.description,
-        };
-      } else {
-        planConfig = {
-          amount: planData.price_inr * 100, // Convert rupees to paise
-          duration_days: planData.duration_days,
-          plan_name: 'pro', // All plans grant Pro access
-          description: planData.plan_name,
-        };
-      }
-    } catch (dbError) {
-      console.error('Database error fetching plan:', dbError);
-      const fallbackPlan = FALLBACK_PLAN_CONFIG[plan_type as keyof typeof FALLBACK_PLAN_CONFIG] 
-        || FALLBACK_PLAN_CONFIG.quarterly;
-      planConfig = {
-        amount: fallbackPlan.amount,
-        duration_days: fallbackPlan.duration_days,
-        plan_name: fallbackPlan.plan_name,
-        description: fallbackPlan.description,
-      };
+    if (planError || !planData) {
+      console.error(`Plan ${plan_type} not found in database or inactive:`, planError);
+      return new Response(
+        JSON.stringify({ error: 'Selected plan is not available. Please refresh and try again.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
+
+    // Plan found - extract config from database
+    const planConfig = {
+      amount: planData.price_inr * 100, // Convert rupees to paise
+      duration_days: planData.duration_days,
+      plan_name: 'pro', // All plans grant Pro access
+      description: planData.plan_name,
+    };
+
+    console.log(`Plan loaded from database: ${plan_type}, amount: ${planConfig.amount}, duration: ${planConfig.duration_days} days`);
 
     // Calculate final amount - use discounted amount if offer is present
     let finalAmount = planConfig.amount;
@@ -189,7 +162,7 @@ serve(async (req) => {
         user_email: user_email,
         plan: 'pro', // Always Pro
         plan_variant: plan_type, // Plan key for reference
-        duration_days: planConfig.duration_days,
+        duration_days: planConfig.duration_days, // CRITICAL: Pass duration to webhook/verify
         original_amount: planConfig.amount,
         final_amount: finalAmount,
         // Include offer details if present
@@ -233,6 +206,7 @@ serve(async (req) => {
         currency: order.currency,
         key_id: RAZORPAY_KEY_ID,
         plan_type: plan_type,
+        duration_days: planConfig.duration_days, // Return duration for UI
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
