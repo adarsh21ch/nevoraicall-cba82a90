@@ -3713,6 +3713,7 @@ export type Database = {
           duration_seconds: number | null
           file_size_bytes: number
           id: string
+          is_shareable: boolean | null
           mime_type: string | null
           owner_user_id: string
           r2_object_key: string
@@ -3727,6 +3728,7 @@ export type Database = {
           duration_seconds?: number | null
           file_size_bytes: number
           id?: string
+          is_shareable?: boolean | null
           mime_type?: string | null
           owner_user_id: string
           r2_object_key: string
@@ -3741,6 +3743,7 @@ export type Database = {
           duration_seconds?: number | null
           file_size_bytes?: number
           id?: string
+          is_shareable?: boolean | null
           mime_type?: string | null
           owner_user_id?: string
           r2_object_key?: string
@@ -3750,6 +3753,41 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      video_assets_access: {
+        Row: {
+          granted_at: string | null
+          granted_by_user_id: string
+          id: string
+          revoked_at: string | null
+          user_id: string
+          video_asset_id: string
+        }
+        Insert: {
+          granted_at?: string | null
+          granted_by_user_id: string
+          id?: string
+          revoked_at?: string | null
+          user_id: string
+          video_asset_id: string
+        }
+        Update: {
+          granted_at?: string | null
+          granted_by_user_id?: string
+          id?: string
+          revoked_at?: string | null
+          user_id?: string
+          video_asset_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_assets_access_video_asset_id_fkey"
+            columns: ["video_asset_id"]
+            isOneToOne: false
+            referencedRelation: "video_assets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
