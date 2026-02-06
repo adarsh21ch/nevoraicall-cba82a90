@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAdminUsageLimits } from '@/hooks/useAdminConfig';
 import { logAdminAction } from '@/hooks/useAuditLogs';
 import { Card } from '@/components/ui/card';
@@ -6,8 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Save, RotateCcw, AlertTriangle, Users, Upload, Bell, Ban, Clock, Timer } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Loader2, Save, RotateCcw, AlertTriangle, Users, Upload, Bell, Ban, Clock, Timer, Lock as LockIcon, CalendarDays } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { TrialBannerTabsManager } from './TrialBannerTabsManager';
 
 const LIMIT_ICONS: Record<string, React.ReactNode> = {
@@ -24,6 +27,9 @@ const LIMIT_ICONS: Record<string, React.ReactNode> = {
   warning_threshold_3: <AlertTriangle className="h-4 w-4" />,
   // Hard Limits
   hard_limit: <Ban className="h-4 w-4" />,
+  // Historical Access
+  restrict_historical_data: <LockIcon className="h-4 w-4" />,
+  allowed_past_days: <CalendarDays className="h-4 w-4" />,
 };
 
 const LIMIT_CATEGORIES = {
@@ -31,7 +37,10 @@ const LIMIT_CATEGORIES = {
   'Lead Limits': ['free_total_leads', 'free_daily_upload', 'pro_daily_upload'],
   'Warning Thresholds': ['warning_threshold_1', 'warning_threshold_2', 'warning_threshold_3'],
   'Hard Limits': ['hard_limit'],
+  'Historical Access': ['restrict_historical_data', 'allowed_past_days'],
 };
+
+const BOOLEAN_FIELDS = ['trial_only_mode', 'restrict_historical_data'];
 
 export function UsageLimitsManager() {
   const { limits, loading, updateLimit } = useAdminUsageLimits();
@@ -136,8 +145,8 @@ export function UsageLimitsManager() {
                 const currentEnabled = pending?.enabled ?? limit.is_enabled;
                 const hasChange = !!pending;
                 
-                // Boolean-like fields don't need value input (trial_only_mode)
-                const isBooleanField = limit.config_key === 'trial_only_mode';
+                // Boolean-like fields don't need value input
+                const isBooleanField = BOOLEAN_FIELDS.includes(limit.config_key);
 
                 return (
                   <Card key={limit.id} className={`p-4 ${hasChange ? 'ring-2 ring-primary/50' : ''}`}>
@@ -251,8 +260,99 @@ export function UsageLimitsManager() {
         );
       })()}
 
+      {/* Historical Restriction Scope */}
+      <HistoricalScopeManager />
+
       {/* Trial Banner Tab Visibility */}
       <TrialBannerTabsManager />
+    </div>
+  );
+}
+
+/** Manages the historical_restriction_scope checkboxes */
+function HistoricalScopeManager() {
+  const queryClient = useQueryClient();
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin-historical-scope'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('admin_config_text')
+        .select('*')
+        .eq('config_key', 'historical_restriction_scope')
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const currentScopes = (data?.config_value || 'leads,funnel').split(',').map((s: string) => s.trim().toLowerCase());
+  const [leadsChecked, setLeadsChecked] = useState(true);
+  const [funnelChecked, setFunnelChecked] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (data) {
+      const scopes = data.config_value.split(',').map((s: string) => s.trim().toLowerCase());
+      setLeadsChecked(scopes.includes('leads'));
+      setFunnelChecked(scopes.includes('funnel'));
+    }
+  }, [data]);
+
+  const handleSave = async () => {
+    const scopes: string[] = [];
+    if (leadsChecked) scopes.push('leads');
+    if (funnelChecked) scopes.push('funnel');
+    const newValue = scopes.join(',') || 'none';
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('admin_config_text')
+        .update({ config_value: newValue })
+        .eq('config_key', 'historical_restriction_scope');
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['admin-historical-scope'] });
+      queryClient.invalidateQueries({ queryKey: ['historical-restriction-scope'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-config'] });
+      toast.success('Scope updated');
+    } catch {
+      toast.error('Failed to update scope');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const hasChanges = data && (
+    leadsChecked !== currentScopes.includes('leads') ||
+    funnelChecked !== currentScopes.includes('funnel')
+  );
+
+  if (isLoading) return null;
+
+  return (
+    <div className="space-y-3">
+      <h3 className="text-sm font-medium text-muted-foreground">Historical Restriction Scope</h3>
+      <Card className="p-4">
+        <div className="flex items-center gap-6">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <Checkbox checked={leadsChecked} onCheckedChange={(v) => setLeadsChecked(!!v)} />
+            <span className="text-sm font-medium">Leads Tracking</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <Checkbox checked={funnelChecked} onCheckedChange={(v) => setFunnelChecked(!!v)} />
+            <span className="text-sm font-medium">Funnel Tracking</span>
+          </label>
+          {hasChanges && (
+            <Button size="sm" onClick={handleSave} disabled={saving} className="ml-auto">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
+              Save
+            </Button>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground mt-2">
+          Select which trackers enforce historical data restrictions for free users.
+        </p>
+      </Card>
     </div>
   );
 }

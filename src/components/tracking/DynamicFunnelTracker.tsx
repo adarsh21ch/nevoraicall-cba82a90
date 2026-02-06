@@ -8,10 +8,12 @@
 import { useFunnelTrackingStats } from '@/hooks/useTrackingStats';
 import { useTrackingFormat } from '@/hooks/useTrackingFormat';
 import { useFunnelConfig } from '@/hooks/useFunnelConfig';
+import { useHistoricalAccess } from '@/hooks/useHistoricalAccess';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronLeft, ChevronRight, Layers, Star, ChevronDown, ChevronUp } from 'lucide-react';
+import { UpgradeModal } from '@/components/subscription/UpgradeModal';
+import { ChevronLeft, ChevronRight, Layers, Star, ChevronDown, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, parse } from 'date-fns';
 import { useRef, useMemo, useEffect, useState } from 'react';
@@ -34,11 +36,12 @@ interface FunnelPeriod {
   label: string;
   dateRange: string;
   tagCounts: Record<string, number>;
+  startDay: number;
+  endDay: number;
 }
 
 interface DynamicFunnelTrackerProps {
   isPro?: boolean;
-  // Insights data (passed from parent)
   funnelCounts?: number[];
   stageTags?: string[];
 }
@@ -51,12 +54,21 @@ export function DynamicFunnelTracker({
   const { dailyMetrics, totals, loading, monthYear, changeMonth, daysInMonth, daysRemaining, tags } = useFunnelTrackingStats();
   const { stageFinalTargetTag } = useTrackingFormat();
   const { getEffectiveConfig } = useFunnelConfig();
+  const { isDateRestricted, isMonthFullyRestricted, triggerRestriction, showUpgradeModal, setShowUpgradeModal } = useHistoricalAccess();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showInsights, setShowInsights] = useState(false);
 
   const formattedMonth = format(parse(monthYear, 'yyyy-MM', new Date()), 'MMMM yyyy');
   const effectiveConfig = getEffectiveConfig();
   const funnelLength = effectiveConfig?.funnel_length || 3;
+
+  const monthRestricted = isMonthFullyRestricted(monthYear, 'funnel');
+
+  // Helper: get Date for a day number in current monthYear
+  const getDayDate = (dayNumber: number) => {
+    const [year, month] = monthYear.split('-').map(Number);
+    return new Date(year, month - 1, dayNumber);
+  };
 
   // Group daily metrics into funnel periods
   const funnelPeriods = useMemo((): FunnelPeriod[] => {
@@ -69,7 +81,6 @@ export function DynamicFunnelTracker({
       const periodDays = dailyMetrics.slice(i, i + funnelLength);
       if (periodDays.length === 0) break;
 
-      // Aggregate counts for this period
       const aggregatedCounts: Record<string, number> = {};
       tags.forEach(tag => { aggregatedCounts[tag] = 0; });
       
@@ -87,6 +98,8 @@ export function DynamicFunnelTracker({
         label: `F${periodIndex}`,
         dateRange,
         tagCounts: aggregatedCounts,
+        startDay: periodDays[0].dayNumber,
+        endDay: periodDays[periodDays.length - 1].dayNumber,
       });
 
       periodIndex++;
@@ -95,31 +108,30 @@ export function DynamicFunnelTracker({
     return periods;
   }, [dailyMetrics, funnelLength, tags]);
 
-  // Calculate which funnel contains today (for highlighting and auto-scroll)
+  // Check if a funnel period is restricted (use the last day of the period)
+  const isPeriodRestricted = (period: FunnelPeriod) => {
+    return isDateRestricted(getDayDate(period.endDay), 'funnel');
+  };
+
   const currentFunnelIndex = useMemo(() => {
     const today = new Date();
     const todayDate = today.getDate();
     const currentMonthYear = format(today, 'yyyy-MM');
-    
     if (monthYear !== currentMonthYear) return -1;
-    
     return Math.floor((todayDate - 1) / funnelLength);
   }, [monthYear, funnelLength]);
 
-  // Auto-scroll to center current funnel on mount/month change
+  // Auto-scroll to center current funnel
   useEffect(() => {
     if (!scrollContainerRef.current || loading || currentFunnelIndex < 0) return;
-    
     requestAnimationFrame(() => {
       if (!scrollContainerRef.current) return;
-      
-      const columnWidth = 60; // min-w-[60px] per funnel column
+      const columnWidth = 60;
       const containerWidth = scrollContainerRef.current.clientWidth;
-      const stickyColumnWidth = 80; // min-w-[80px] for stage label column
+      const stickyColumnWidth = 80;
       const visibleWidth = containerWidth - stickyColumnWidth;
       const columnsVisible = Math.floor(visibleWidth / columnWidth);
       const centerOffset = Math.floor(columnsVisible / 2);
-      
       const scrollPosition = Math.max(0, (currentFunnelIndex - centerOffset) * columnWidth);
       scrollContainerRef.current.scrollLeft = scrollPosition;
     });
@@ -134,7 +146,6 @@ export function DynamicFunnelTracker({
     );
   }
 
-  // Build stages array with colors (NO "Leads" row)
   const stages = tags.map((tag, idx) => ({
     key: tag,
     label: tag,
@@ -142,31 +153,20 @@ export function DynamicFunnelTracker({
     isFinal: tag === stageFinalTargetTag,
   }));
 
-  // Get funnel counts for drop-off calculation
   const actualFunnelCounts = stageTags.length > 0 ? funnelCounts : tags.map(tag => totals.tagCounts[tag] || 0);
 
   return (
     <div className="flex flex-col gap-3 animate-fade-in pb-4">
-      {/* KPI Summary Row - Sticky at top while scrolling */}
+      {/* KPI Summary Row */}
       <div className="sticky top-0 z-30 bg-card/95 backdrop-blur-sm rounded-xl p-3 border border-border/50 shadow-sm">
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Entry (Total) */}
           <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-blue-500/10">
             <Layers className="h-3 w-3 text-blue-600" />
             <span className="text-[10px] font-medium text-blue-600">Entry</span>
             <span className="text-xs font-bold">{isPro ? totals.responses : '–'}</span>
           </div>
-          
-          {/* Stage KPIs - compact, non-scrolling */}
           {stages.map((stage) => (
-            <div 
-              key={stage.key} 
-              className={cn(
-                "flex items-center gap-1 px-2 py-1 rounded-lg",
-                stage.color.bg,
-                stage.isFinal && "ring-1 ring-amber-500/50"
-              )}
-            >
+            <div key={stage.key} className={cn("flex items-center gap-1 px-2 py-1 rounded-lg", stage.color.bg, stage.isFinal && "ring-1 ring-amber-500/50")}>
               {stage.isFinal && <Star className="h-3 w-3 text-amber-500 fill-amber-500" />}
               <span className="text-[10px] font-medium truncate max-w-[50px]">{stage.label}</span>
               <span className="text-xs font-bold">{isPro ? (totals.tagCounts[stage.key] || 0) : '–'}</span>
@@ -183,7 +183,8 @@ export function DynamicFunnelTracker({
         <div className="text-center min-w-[130px]">
           <p className="font-semibold text-sm">{formattedMonth}</p>
           <p className="text-[10px] text-muted-foreground">
-            {funnelPeriods.length} funnels ({funnelLength}-day cycles)
+            {monthRestricted && <span className="text-amber-500 flex items-center justify-center gap-1"><Lock className="h-3 w-3" /> Pro only</span>}
+            {!monthRestricted && <span>{funnelPeriods.length} funnels ({funnelLength}-day cycles)</span>}
           </p>
         </div>
         <Button variant="ghost" size="icon" onClick={() => changeMonth('next')} className="h-7 w-7 rounded-full">
@@ -191,7 +192,7 @@ export function DynamicFunnelTracker({
         </Button>
       </div>
 
-      {/* Data Grid - Horizontally scrollable table */}
+      {/* Data Grid */}
       <div className="bg-card rounded-xl border border-border/50 overflow-hidden">
         <div className="px-3 py-2 border-b border-border/50">
           <div className="flex items-center gap-2">
@@ -200,35 +201,32 @@ export function DynamicFunnelTracker({
           </div>
         </div>
 
-        {/* Horizontally Scrollable Grid */}
-        <div 
-          ref={scrollContainerRef}
-          className="overflow-x-auto"
-        >
+        <div ref={scrollContainerRef} className="overflow-x-auto">
           <table className="w-max min-w-full">
-            {/* Header Row - Funnel Periods */}
             <thead className="bg-card">
               <tr>
-                {/* Sticky First Column - Stage Label */}
                 <th className="sticky left-0 z-10 bg-card py-2 px-3 text-left text-[10px] font-semibold text-muted-foreground border-b border-r border-border/30 min-w-[80px]">
                   Stage
                 </th>
                 {funnelPeriods.map((period, idx) => {
                   const isCurrentFunnel = idx === currentFunnelIndex;
+                  const restricted = isPeriodRestricted(period);
                   return (
-                    <th 
-                      key={idx} 
+                    <th
+                      key={idx}
                       className={cn(
                         "py-2 px-2 text-center border-b border-border/30 min-w-[60px]",
-                        isCurrentFunnel && "bg-primary/5 ring-1 ring-inset ring-primary/20"
+                        isCurrentFunnel && "bg-primary/5 ring-1 ring-inset ring-primary/20",
+                        restricted && "opacity-60 cursor-pointer"
                       )}
+                      onClick={restricted ? triggerRestriction : undefined}
                     >
                       <div className="text-[10px] font-bold text-foreground">{period.label}</div>
                       <div className="text-[8px] text-muted-foreground">{period.dateRange}</div>
+                      {restricted && <Lock className="h-2.5 w-2.5 mx-auto mt-0.5 text-amber-500" />}
                     </th>
                   );
                 })}
-                {/* Total Column */}
                 <th className="py-2 px-3 text-center text-[10px] font-bold text-primary border-b border-l border-border/30 bg-primary/5 min-w-[56px]">
                   Total
                 </th>
@@ -236,10 +234,8 @@ export function DynamicFunnelTracker({
             </thead>
 
             <tbody>
-              {/* Stage Rows (NO Leads row) */}
               {stages.map((stage, stageIdx) => (
                 <tr key={stage.key} className={stageIdx % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
-                  {/* Sticky First Column - Stage Name */}
                   <td className={cn(
                     "sticky left-0 z-10 py-1.5 px-2 text-xs font-medium border-r border-border/30 min-w-[80px]",
                     stageIdx % 2 === 0 ? 'bg-background' : 'bg-muted/20'
@@ -255,28 +251,30 @@ export function DynamicFunnelTracker({
                       <span className="truncate max-w-[50px]">{stage.label}</span>
                     </div>
                   </td>
-                  
-                  {/* Data Cells - Funnel Period Values */}
                   {funnelPeriods.map((period, periodIdx) => {
                     const value = period.tagCounts[stage.key] || 0;
                     const isCurrentFunnel = periodIdx === currentFunnelIndex;
-                    
+                    const restricted = isPeriodRestricted(period);
                     return (
-                      <td 
-                        key={periodIdx} 
+                      <td
+                        key={periodIdx}
                         className={cn(
                           "py-1 px-1 text-center",
-                          isCurrentFunnel && "bg-primary/5"
+                          isCurrentFunnel && "bg-primary/5",
+                          restricted && "cursor-pointer"
                         )}
+                        onClick={restricted ? triggerRestriction : undefined}
                       >
                         <div className="h-6 flex items-center justify-center text-[11px] font-medium rounded bg-background/50">
-                          {isPro ? (value > 0 ? value : '–') : '–'}
+                          {restricted ? (
+                            <Lock className="h-3 w-3 text-amber-500/70" />
+                          ) : (
+                            isPro ? (value > 0 ? value : '–') : '–'
+                          )}
                         </div>
                       </td>
                     );
                   })}
-                  
-                  {/* Total Cell */}
                   <td className="py-1 px-2 text-center border-l border-border/30 bg-primary/5">
                     <div className="h-6 flex items-center justify-center text-xs font-bold rounded bg-card shadow-sm">
                       {isPro ? (totals.tagCounts[stage.key] || 0) : '–'}
@@ -289,50 +287,32 @@ export function DynamicFunnelTracker({
         </div>
       </div>
 
-      {/* View Insights - Expands naturally, full-page scroll */}
+      {/* View Insights */}
       <Collapsible open={showInsights} onOpenChange={setShowInsights}>
         <CollapsibleTrigger asChild>
-          <Button 
-            variant="outline" 
-            className="w-full justify-between py-3 px-4 bg-card border-border/50 hover:bg-muted/50 transition-colors"
-          >
+          <Button variant="outline" className="w-full justify-between py-3 px-4 bg-card border-border/50 hover:bg-muted/50 transition-colors">
             <span className="text-sm font-semibold text-foreground">
               {showInsights ? 'Hide Insights' : 'View Insights'}
             </span>
-            <div className={cn(
-              "transition-transform duration-200",
-              showInsights && "rotate-180"
-            )}>
+            <div className={cn("transition-transform duration-200", showInsights && "rotate-180")}>
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </div>
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-3 pt-3 data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden">
-          {/* Funnel Drop-Off Analysis */}
-          <FunnelDropOff 
-            funnelCounts={actualFunnelCounts}
-            stageTags={stageTags.length > 0 ? stageTags : tags}
-          />
-          
-          {/* AI Tip of the Day - funnel focused */}
-          <AITipCard 
-            leads={0}
-            responses={totals.responses}
-            enrollments={actualFunnelCounts[actualFunnelCounts.length - 1] || 0}
-            videosSent={0}
-            notPicked={0}
-          />
-          
-          {/* Weekly Report */}
-          <WeeklyReportCard 
-            leads={0}
-            responses={totals.responses}
-            enrollments={actualFunnelCounts[actualFunnelCounts.length - 1] || 0}
-            funnelCounts={actualFunnelCounts}
-            stageTags={stageTags.length > 0 ? stageTags : tags}
-          />
+          <FunnelDropOff funnelCounts={actualFunnelCounts} stageTags={stageTags.length > 0 ? stageTags : tags} />
+          <AITipCard leads={0} responses={totals.responses} enrollments={actualFunnelCounts[actualFunnelCounts.length - 1] || 0} videosSent={0} notPicked={0} />
+          <WeeklyReportCard leads={0} responses={totals.responses} enrollments={actualFunnelCounts[actualFunnelCounts.length - 1] || 0} funnelCounts={actualFunnelCounts} stageTags={stageTags.length > 0 ? stageTags : tags} />
         </CollapsibleContent>
       </Collapsible>
+
+      {/* Historical Data Upgrade Modal */}
+      <UpgradeModal
+        open={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        title="Historical Data is a Pro Feature"
+        description="Upgrade to Pro to view past leads and funnel performance data."
+      />
     </div>
   );
 }
