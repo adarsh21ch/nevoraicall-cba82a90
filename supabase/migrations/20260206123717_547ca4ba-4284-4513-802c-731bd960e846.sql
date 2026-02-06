@@ -1,0 +1,1 @@
+ALTER TABLE public.nevorai_form_submissions ALTER COLUMN submitter_email DROP NOT NULL;
