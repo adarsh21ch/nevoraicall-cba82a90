@@ -1,185 +1,125 @@
 
-# Fix: Retargeting Filter Persistence After Refresh
 
-## Problem
-User-selected filter tags in the Retargeting dropdowns (Response Tags, Funnel Stages) are not persisting after:
-1. Page refresh
-2. Closing and reopening the app (PWA)
+# Restrict Historical Data Access for Free Users (Post-Trial)
 
-The user expects that if they select 2-3 tags in the Retargeting filters, those selections should remain when they return to the page.
+## Overview
 
-## Root Cause Analysis
+Add admin-controlled gating that prevents free (post-trial) users from viewing past-date data in the TrackUp dashboard (Leads and Funnel trackers). Pro and trial users retain full access. Admin settings are the single source of truth.
 
-After thorough investigation of the codebase, the `usePersistedFilters` hook at `src/hooks/usePersistedFilters.ts` appears to have correct logic for saving and loading filters from localStorage. However, there are **two potential issues**:
+---
 
-### Issue 1: Effect runs on initial mount and may overwrite persisted data
-The `useEffect` that saves filters to localStorage runs on **every change**, including the initial mount. In React StrictMode, the component mounts, unmounts, and remounts - which could cause timing issues.
+## 1. Database: Add Admin Config Keys
 
-### Issue 2: Component key changes causing unnecessary remounts
-The `ProspectTable` component in `Dashboard.tsx` uses a dynamic `key` prop that changes when switching sheets or tabs. While this is intentional for scroll reset, it causes the component to fully remount, potentially triggering the save effect before the lazy initializer has properly loaded persisted data.
+Insert three new rows into `admin_usage_limits`:
 
-## Solution
+| config_key | config_value | description |
+|---|---|---|
+| `restrict_historical_data` | 0 | Boolean toggle (1=ON, 0=OFF) |
+| `allowed_past_days` | 0 | Number of past days free users can access (0 = today only) |
 
-### Fix 1: Prevent effect from running on initial mount
-Add a flag to skip the first effect execution, ensuring we don't accidentally overwrite persisted filters before they're properly loaded.
+Insert one row into `admin_config_text`:
 
-### Fix 2: Use a ref to track initialization state
-Track whether the component has completed initialization from localStorage before allowing any writes.
+| config_key | config_value | description |
+|---|---|---|
+| `historical_restriction_scope` | `leads,funnel` | Comma-separated list of scopes (leads, funnel) |
 
-## Technical Changes
+---
 
-**File: `src/hooks/usePersistedFilters.ts`**
+## 2. Admin Panel: Update UsageLimitsManager
 
-```typescript
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { FunnelStage, ProspectQuality, ExtendedActionTaken } from '@/types/prospect';
+**File:** `src/components/admin/UsageLimitsManager.tsx`
 
-export interface Filters {
-  search: string;
-  stages: FunnelStage[];
-  qualities: ProspectQuality[];
-  actions: ExtendedActionTaken[];
-  incompleteOnly: boolean;
-}
+- Add a new category `'Historical Access'` to `LIMIT_CATEGORIES` with keys `['restrict_historical_data', 'allowed_past_days']`
+- Add icons for the new keys (e.g., `Lock` for restrict_historical_data, `CalendarDays` for allowed_past_days)
+- Mark `restrict_historical_data` as a boolean field (like `trial_only_mode`) so it shows a toggle instead of numeric input
+- Add a new section below the limits for scope selection (checkboxes for "Leads Tracking" and "Funnel Tracking") that reads/writes the `historical_restriction_scope` value from `admin_config_text`
 
-interface PersistedFilterData {
-  actions: string[];
-  stages: string[];
-  incompleteOnly: boolean;
-}
+---
 
-const STORAGE_KEY_PREFIX = 'nevorai-filters-';
+## 3. New Hook: useHistoricalAccess
 
-const DEFAULT_FILTERS: Filters = {
-  search: '',
-  stages: [],
-  qualities: [],
-  actions: [],
-  incompleteOnly: false,
-};
+**File:** `src/hooks/useHistoricalAccess.ts` (new)
 
-/**
- * Hook to persist filter state to localStorage.
- * Filters are stored per filter mode (calling vs funnel).
- */
-export function usePersistedFilters(filterMode: 'calling' | 'funnel') {
-  const storageKey = `${STORAGE_KEY_PREFIX}${filterMode}`;
-  
-  // Track if initial load is complete to prevent overwriting on mount
-  const isInitializedRef = useRef(false);
-  const isFirstRenderRef = useRef(true);
+This hook encapsulates all historical access logic:
 
-  // Lazy initialization: read from localStorage only once on mount
-  const [filters, setFiltersState] = useState<Filters>(() => {
-    try {
-      const stored = localStorage.getItem(storageKey);
-      console.log('[usePersistedFilters] Init:', storageKey, stored);
-      if (stored) {
-        const parsed: PersistedFilterData = JSON.parse(stored);
-        // Mark as initialized since we found persisted data
-        isInitializedRef.current = true;
-        return {
-          search: '', // Never persist search
-          stages: Array.isArray(parsed.stages) ? parsed.stages : [],
-          qualities: [], // Never persist qualities
-          actions: Array.isArray(parsed.actions) ? parsed.actions : [],
-          incompleteOnly: typeof parsed.incompleteOnly === 'boolean' ? parsed.incompleteOnly : false,
-        };
-      }
-    } catch (error) {
-      console.warn('Failed to read persisted filters:', error);
-    }
-    // No persisted data found, use defaults
-    isInitializedRef.current = true;
-    return DEFAULT_FILTERS;
-  });
+- Reads `restrict_historical_data` and `allowed_past_days` from `useAdminConfig().config.limits`
+- Reads `historical_restriction_scope` from `admin_config_text` table
+- Uses `useSubscription()` for Pro status
+- Uses `useFreeTrial()` for trial status
+- Exposes:
+  - `isDateRestricted(date: Date, scope: 'leads' | 'funnel'): boolean` -- returns true if the date should be blocked
+  - `restrictionEnabled: boolean` -- master toggle
+  - `allowedPastDays: number`
+  - `showUpgradeModal: boolean` + `setShowUpgradeModal` state
+  - `triggerRestriction()` -- sets showUpgradeModal to true
 
-  // Save to localStorage whenever filters change
-  // Skip the first render to prevent overwriting persisted data on mount
-  useEffect(() => {
-    // Skip the first render entirely
-    if (isFirstRenderRef.current) {
-      isFirstRenderRef.current = false;
-      return;
-    }
+Logic:
+- If user is Pro or trial is active: never restrict
+- If toggle is OFF: never restrict
+- If scope doesn't include the tracker type: never restrict
+- Otherwise: restrict dates older than `allowedPastDays` from today
 
-    // Only save if we've been initialized
-    if (!isInitializedRef.current) {
-      return;
-    }
+---
 
-    try {
-      const dataToStore: PersistedFilterData = {
-        actions: filters.actions,
-        stages: filters.stages,
-        incompleteOnly: filters.incompleteOnly,
-      };
-      console.log('[usePersistedFilters] Save:', storageKey, dataToStore);
-      localStorage.setItem(storageKey, JSON.stringify(dataToStore));
-    } catch (error) {
-      console.warn('Failed to persist filters:', error);
-    }
-  }, [filters.actions, filters.stages, filters.incompleteOnly, storageKey]);
+## 4. Update DynamicLeadsTracker
 
-  // Wrapped setFilters that also clears storage when clearing filters
-  const setFilters = useCallback((newFilters: Filters) => {
-    setFiltersState(newFilters);
-    
-    // If clearing all filters, also clear from storage
-    if (
-      newFilters.actions.length === 0 &&
-      newFilters.stages.length === 0 &&
-      !newFilters.incompleteOnly
-    ) {
-      try {
-        localStorage.removeItem(storageKey);
-      } catch (error) {
-        console.warn('Failed to clear persisted filters:', error);
-      }
-    }
-  }, [storageKey]);
+**File:** `src/components/tracking/DynamicLeadsTracker.tsx`
 
-  return { filters, setFilters };
-}
+- Import and use `useHistoricalAccess`
+- On the **month selector**: when user navigates to a past month and restriction applies, block the entire view and show the upgrade modal instead of loading data
+- On **individual date columns**: for restricted dates, show a lock icon instead of data (not zeros, not blank)
+- When clicking a restricted column or navigating to a restricted month, call `triggerRestriction()` to show the upgrade modal
+- Render the `UpgradeModal` at the bottom of the component with custom title/description about historical data
+
+---
+
+## 5. Update DynamicFunnelTracker
+
+**File:** `src/components/tracking/DynamicFunnelTracker.tsx`
+
+- Same pattern as LeadsTracker:
+  - Import `useHistoricalAccess`
+  - Block past month navigation when restricted
+  - Show lock icons on restricted funnel period columns
+  - Show upgrade modal on interaction with restricted data
+
+---
+
+## 6. Update Tracking Page (Month Navigation Guard)
+
+**File:** `src/pages/Tracking.tsx`
+
+- No major changes needed; the restriction logic lives in the child tracker components
+- The month selector `changeMonth('prev')` calls already exist in the trackers -- restriction is enforced there
+
+---
+
+## Technical Details
+
+### Boolean Toggle Convention
+`restrict_historical_data` follows the existing convention: stored as integer (1/0) in `admin_usage_limits.config_value`, detected via `'restrict_historical_data' in config.limits` (presence = enabled, since `get_app_config` RPC only returns enabled keys).
+
+### Date Restriction Logic (in useHistoricalAccess)
+```text
+const today = startOfDay(new Date())
+const cutoffDate = subDays(today, allowedPastDays)
+isRestricted = targetDate < cutoffDate
 ```
 
-## Key Changes Summary
+### Month-Level Restriction
+When user navigates to a past month in either tracker:
+- If ALL days in that month are restricted, block the entire month view
+- Show upgrade modal immediately instead of loading restricted data
+- The `changeMonth('prev')` still works (dates are visible) but data cells show lock icons and clicking triggers the modal
 
-| Change | Purpose |
-|--------|---------|
-| Add `isFirstRenderRef` | Skip saving on initial mount to prevent overwriting persisted data |
-| Add `isInitializedRef` | Track initialization status for safety |
-| Add console.log for debugging | Helps verify filters are being read/written correctly |
-| Skip first effect execution | Ensures lazy initializer data is preserved |
+### Scope Filtering
+The `historical_restriction_scope` text config allows admins to selectively apply restrictions to only Leads, only Funnel, or both. Default: both.
 
-## Testing Steps
+### Cache Invalidation
+Changes saved in Admin Panel automatically invalidate `admin-config` query key (existing behavior), ensuring immediate reflection in the user-facing app.
 
-After implementation:
-1. Open the Calling/Dashboard page
-2. Select 2-3 tags in the Response/Retargeting filter
-3. Verify the tags appear selected
-4. Refresh the page (Ctrl+R or pull down)
-5. Verify the same 2-3 tags are still selected
-6. Close the app completely
-7. Reopen the app
-8. Verify the same 2-3 tags are still selected
+### Upgrade Modal Messaging
+Title: "Historical Data is a Pro Feature"
+Description: "Upgrade to Pro to view past leads and funnel performance data."
+CTA: Standard plan selection via existing UpgradeModal component.
 
-## Files Modified
-
-| File | Change |
-|------|--------|
-| `src/hooks/usePersistedFilters.ts` | Add first-render skip logic to prevent overwriting persisted data on mount |
-
-## Why This Works
-
-The root issue is that React's `useEffect` runs **after** the component renders, including on the initial render. Even though the lazy initializer correctly reads from localStorage, the effect immediately fires and writes the current state back to localStorage.
-
-In React StrictMode (development), the component mounts twice, which can cause race conditions. By skipping the first effect execution with `isFirstRenderRef`, we ensure:
-
-1. Lazy initializer reads persisted data from localStorage
-2. First render completes with correct persisted state
-3. Effect is skipped on first render (no overwrite)
-4. Subsequent user changes trigger the effect normally
-5. Filters are correctly persisted
-
-This approach is a standard pattern for preventing effects from running on initial mount when dealing with persisted state.
