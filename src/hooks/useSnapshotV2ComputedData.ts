@@ -143,7 +143,7 @@ export function useSnapshotV2ComputedData(
 
     const sortedKeys = Array.from(buckets.keys()).sort((a, b) => a - b);
 
-    return sortedKeys.map((key) => {
+    return sortedKeys.map((key, index) => {
       const days = buckets.get(key)!;
       const stageTotals: Record<string, number> = {};
       stageTagNames.forEach((name) => {
@@ -153,7 +153,7 @@ export function useSnapshotV2ComputedData(
         );
       });
       return {
-        label: `F${key}`,
+        label: `F${index + 1}`, // Reset to F1 each month
         startDate: days[0].date,
         endDate: days[days.length - 1].date,
         days,
