@@ -66,7 +66,7 @@ export function ManualUpdateDrawer({
     prevOpen.current = open;
   }, [open]);
 
-  // Hydrate helper
+  // Hydrate helper — always loads BOTH categories to prevent overwriting
   const hydrateFromSnapshots = useCallback(() => {
     const pSnap = personalSnapshots.find((s) => s.date === dateStr);
     const tSnap = totalSnapshots.find((s) => s.date === dateStr);
@@ -77,10 +77,13 @@ export function ManualUpdateDrawer({
     if (pSnap) {
       pVals['leads'] = pSnap.total_leads > 0 ? String(pSnap.total_leads) : '';
       pVals['responses'] = pSnap.total_responses > 0 ? String(pSnap.total_responses) : '';
-      const tags = category === 'leads' ? responseTagNames : stageTagNames;
-      const source = category === 'leads' ? pSnap.response_tags : pSnap.stage_tags;
-      tags.forEach((name) => {
-        const v = source[name];
+      // Always hydrate BOTH response and stage tags so saving one tab doesn't zero out the other
+      responseTagNames.forEach((name) => {
+        const v = pSnap.response_tags[name];
+        pVals[name] = v && v > 0 ? String(v) : '';
+      });
+      stageTagNames.forEach((name) => {
+        const v = pSnap.stage_tags[name];
         pVals[name] = v && v > 0 ? String(v) : '';
       });
     }
@@ -88,24 +91,26 @@ export function ManualUpdateDrawer({
     if (tSnap) {
       tVals['leads'] = tSnap.total_leads > 0 ? String(tSnap.total_leads) : '';
       tVals['responses'] = tSnap.total_responses > 0 ? String(tSnap.total_responses) : '';
-      const tags = category === 'leads' ? responseTagNames : stageTagNames;
-      const source = category === 'leads' ? tSnap.response_tags : tSnap.stage_tags;
-      tags.forEach((name) => {
-        const v = source[name];
+      responseTagNames.forEach((name) => {
+        const v = tSnap.response_tags[name];
+        tVals[name] = v && v > 0 ? String(v) : '';
+      });
+      stageTagNames.forEach((name) => {
+        const v = tSnap.stage_tags[name];
         tVals[name] = v && v > 0 ? String(v) : '';
       });
     }
 
     setPersonalValues(pVals);
     setTotalValues(tVals);
-  }, [dateStr, personalSnapshots, totalSnapshots, category, responseTagNames, stageTagNames]);
+  }, [dateStr, personalSnapshots, totalSnapshots, responseTagNames, stageTagNames]);
 
-  // Re-hydrate when date or category changes while drawer is open
+  // Re-hydrate when date changes while drawer is open
   useEffect(() => {
     if (open) {
       hydrateFromSnapshots();
     }
-  }, [dateStr, category, open, hydrateFromSnapshots]);
+  }, [dateStr, open, hydrateFromSnapshots]);
 
   // Date strip
   const weekDays = useMemo(() => {
