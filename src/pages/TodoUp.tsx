@@ -106,8 +106,16 @@ export default function TodoUp() {
     markTask: markDailyTask,
     refetch: refetchDailyTasks
   } = useUserDailyTasks(calendar.selectedDateString);
-  const [viewMode, setViewMode] = useState<ViewMode>('todo-list');
-  const [previousViewMode, setPreviousViewMode] = useState<'todo-list' | 'daily-tasks'>('todo-list');
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const saved = localStorage.getItem('nevorai-todoup-tab');
+    if (saved === 'daily-tasks' || saved === 'todo-list') return saved;
+    return 'daily-tasks';
+  });
+  const [previousViewMode, setPreviousViewMode] = useState<'todo-list' | 'daily-tasks'>(() => {
+    const saved = localStorage.getItem('nevorai-todoup-tab');
+    if (saved === 'daily-tasks' || saved === 'todo-list') return saved;
+    return 'daily-tasks';
+  });
   const [newTodoInput, setNewTodoInput] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
@@ -128,6 +136,7 @@ export default function TodoUp() {
     if (value === 'todo-list' || value === 'daily-tasks') {
       setViewMode(value);
       setPreviousViewMode(value);
+      localStorage.setItem('nevorai-todoup-tab', value);
     }
   };
 
@@ -257,11 +266,11 @@ export default function TodoUp() {
         {!isRecentActivity && <div className="px-4 pb-2">
             <Tabs value={viewMode} onValueChange={handleTabChange} className="w-full">
               <TabsList className="grid w-full grid-cols-2 h-9">
-                <TabsTrigger value="todo-list" className="text-xs font-medium">
-                  To-Do List
-                </TabsTrigger>
                 <TabsTrigger value="daily-tasks" className="text-xs font-medium">
                   Daily Tasks
+                </TabsTrigger>
+                <TabsTrigger value="todo-list" className="text-xs font-medium">
+                  To-Do List
                 </TabsTrigger>
               </TabsList>
             </Tabs>
