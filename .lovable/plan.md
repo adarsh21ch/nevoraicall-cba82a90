@@ -1,54 +1,71 @@
 
 
-# Fix: Upline Not Seeing Downline's Tracking Numbers
+# Fix: TrackUp Data Loading Inconsistency
 
-## Root Cause
+## Root Cause Analysis
 
-There is a **value mismatch** between what gets saved and what gets queried:
+There are three interconnected issues causing the inconsistent data display:
 
-- **When saving**: The app passes `uplineLeaderId` = the leader's `neverai_id` (e.g., "ABC123") because `directLeaderId` in TrackingFormatContext maps to `neverai_id`
-- **When the upline reads downline data**: The query uses `.eq('upline_leader_id', user.id)` where `user.id` is the leader's **UUID** (e.g., "550e8400-e29b-...")
-- Since "ABC123" does not equal "550e8400-e29b-...", the query returns **zero rows** and the upline sees nothing
+### Problem 1: Unstable React Query Keys
+The snapshot read hooks (`usePersonalSnapshotV2Read`, `useTotalSnapshotV2Read`) include the full tag name arrays (`leadsTrackingTagNames`, `stageTagNames`) in their query keys. These arrays are loaded asynchronously from the leader's profile. When they resolve (or change reference), React Query sees a completely **new query key**, discards the old cached data, and starts a fresh fetch. This causes the "data appears then disappears" symptom.
 
-## Fix
+### Problem 2: Cache Invalidation Doesn't Match
+Write hooks invalidate queries using a 3-part key: `['personal-snapshot-v2', userId, monthYear]`. But the actual query key has 5 parts (includes tag arrays). While React Query's prefix matching should still work, the constant key changes from Problem 1 mean the invalidation might target a stale key that no longer has an active observer.
 
-We need to save the leader's **UUID** (not `neverai_id`) as `upline_leader_id` so the upline's downline query matches correctly.
+### Problem 3: Drawer Closes Before Data Refreshes
+After saving, the ManualUpdateDrawer closes immediately. The cache invalidation fires in the background, but the main page may briefly show stale or empty data until the refetch completes.
 
-### Changes
+## Solution
 
-**1. `src/hooks/useTrackingFormat.ts`** -- Expose `directLeaderUserId` (UUID)
+### 1. Remove tag arrays from query keys (Read Hooks)
+**Files:** `usePersonalSnapshotV2Read.ts`, `useTotalSnapshotV2Read.ts`
 
-- Add `directLeaderUserId: string | null` to the `TrackingFormat` interface
-- Set it from `fetchLeaderFormat`'s returned `leaderUserId` (which already contains the UUID)
-- Root leaders get `null` for this field
+Move the slot-to-name conversion **out of the query function** and into a post-processing step using `useMemo`. The query should only depend on `userId` and `monthYear` -- these are stable values that don't change during the session.
 
-**2. `src/contexts/TrackingFormatContext.tsx`** -- Pass through the new field
-
-- Add `directLeaderUserId` to the context type
-- Expose it from the provider
-
-**3. `src/pages/Tracking.tsx`** -- Use UUID instead of neverai_id
-
-- Read `directLeaderUserId` from the context (instead of `directLeaderId`)
-- Pass it as `uplineLeaderId` to the ManualUpdateDrawer
-
-This ensures that when a team member saves their snapshot with `upline_leader_id = <leader's UUID>`, the upline's query `.eq('upline_leader_id', user.id)` will find a match.
-
-### Technical Detail
-
-```text
-BEFORE (broken):
-  Save:  upline_leader_id = "ABC123"     (neverai_id)
-  Query: upline_leader_id = "550e8400-..." (UUID)
-  Result: NO MATCH
-
-AFTER (fixed):
-  Save:  upline_leader_id = "550e8400-..." (UUID)
-  Query: upline_leader_id = "550e8400-..." (UUID)
-  Result: MATCH -- upline sees data
+```
+BEFORE query key: ['personal-snapshot-v2', userId, monthYear, tagNames[], stageNames[]]
+AFTER query key:  ['personal-snapshot-v2', userId, monthYear]
 ```
 
-### Safety
-- No database schema changes needed
-- No edge function changes needed
-- Only affects new saves going forward; existing mismatched rows can be corrected by the user re-saving their tracking for those dates
+The tag name conversion will happen in a `useMemo` that depends on the raw query data and the tag names. This way:
+- The query fetches once and stays cached
+- Tag name mapping re-runs reactively when tag config loads
+- No more data disappearing when tag arrays resolve
+
+### 2. Await invalidation before closing drawer
+**File:** `ManualUpdateDrawer.tsx`
+
+After saving, wait for query invalidation to complete before closing:
+```
+await queryClient.invalidateQueries(...)  // wait for refetch
+onOpenChange(false)                       // then close
+```
+
+This is done by moving the invalidation + close logic into the drawer's `handleSave`, using the query client directly.
+
+### 3. Add `refetchOnMount: 'always'` to read hooks
+**Files:** `usePersonalSnapshotV2Read.ts`, `useTotalSnapshotV2Read.ts`
+
+Ensure that when the Tracking page mounts (e.g., after tab switch), fresh data is always fetched rather than relying solely on potentially stale cache.
+
+## Technical Changes
+
+### File 1: `src/hooks/usePersonalSnapshotV2Read.ts`
+- Remove `leadsTrackingTagNames` and `stageTagNames` from the query key
+- Return raw snapshot data from query (no tag conversion inside queryFn)
+- Add a `useMemo` that converts slot keys to tag names using the tag arrays
+- Add `refetchOnMount: 'always'`
+
+### File 2: `src/hooks/useTotalSnapshotV2Read.ts`
+- Same changes as personal read hook
+
+### File 3: `src/components/trackup-v2/ManualUpdateDrawer.tsx`
+- Import `useQueryClient` from `@tanstack/react-query`
+- In `handleSave`: after both saves complete, explicitly `await queryClient.invalidateQueries` for both snapshot keys
+- Only close the drawer after invalidation completes
+
+## Expected Result
+- Data loads once and stays visible (no flickering or disappearing)
+- Tab switches show cached data instantly
+- After saving, the drawer waits until fresh data is loaded, then closes -- user sees updated numbers immediately
+- Tag name resolution happens reactively without triggering refetches
