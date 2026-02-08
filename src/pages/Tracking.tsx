@@ -85,26 +85,38 @@ export default function Tracking() {
   // SSO redirect to website team tracking
   const handleOpenDashboard = useCallback(async () => {
     setSsoLoading(true);
+    // Open window IMMEDIATELY on user click (before any await) to bypass popup blocker
+    const newWindow = window.open('about:blank', '_blank');
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
+        newWindow?.close();
         toast.error('Please log in first');
         window.location.href = '/auth';
         return;
       }
       const { data, error } = await supabase.functions.invoke('trackup-sso-link');
       if (error) {
-        toast.error('Failed to generate login link');
-        window.open(`${NEVORAI_WEBSITE_URL}/auth?redirect=/trackup`, '_blank');
+        if (newWindow) {
+          newWindow.location.href = `${NEVORAI_WEBSITE_URL}/auth?redirect=/trackup`;
+        }
         return;
       }
       if (data?.action_link) {
-        window.open(data.action_link, '_blank');
+        if (newWindow) {
+          newWindow.location.href = data.action_link;
+        } else {
+          window.location.href = data.action_link;
+        }
       } else {
-        window.open(`${NEVORAI_WEBSITE_URL}/auth?redirect=/trackup`, '_blank');
+        if (newWindow) {
+          newWindow.location.href = `${NEVORAI_WEBSITE_URL}/auth?redirect=/trackup`;
+        }
       }
     } catch {
-      window.open(`${NEVORAI_WEBSITE_URL}/auth?redirect=/trackup`, '_blank');
+      if (newWindow) {
+        newWindow.location.href = `${NEVORAI_WEBSITE_URL}/auth?redirect=/trackup`;
+      }
     } finally {
       setSsoLoading(false);
     }
