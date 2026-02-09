@@ -1,35 +1,36 @@
 import { useMemo, useCallback } from 'react';
 import { useProfile } from '@/hooks/useProfile';
-import { useSubscription } from '@/hooks/useSubscription';
+import { useFeatureAccess } from '@/hooks/useFeatureAccess';
 import { useAdminConfig } from '@/hooks/useAdminConfig';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-/** Default free tier limit - overridden by admin config */
+/** Default free tier limit - overridden by feature registry */
 export const FREE_LIFETIME_LEAD_LIMIT = 200;
 /** Default warning threshold - overridden by admin config */
 export const LEAD_WARNING_THRESHOLD = 190;
 
 /**
  * Hook to check lifetime lead limits for free users.
- * Now reads limits dynamically from admin_usage_limits table.
+ * Now reads limits from the Feature Registry via useFeatureAccess.
  */
 export function useLifetimeLeadLimit() {
   const { user } = useAuth();
   const { profile, loading: profileLoading, refetch: refetchProfile } = useProfile();
-  const { isPaid, plan, loading: subLoading } = useSubscription();
+  const { canAccess, limit, isLoading: featureLoading } = useFeatureAccess('total_lead_limit');
   const { config, loading: configLoading } = useAdminConfig();
 
   const totalLeadsAdded = profile?.total_leads_added ?? 0;
-  const isLoading = profileLoading || subLoading || configLoading;
+  const isLoading = profileLoading || featureLoading || configLoading;
 
-  // Get dynamic limits from admin config
-  const freeLimit = config.limits.free_total_leads ?? FREE_LIFETIME_LEAD_LIMIT;
+  // Get limit from feature registry (null = unlimited for paid/trial users)
+  const freeLimit = limit ?? Infinity;
   const warningThreshold = config.limits.warning_threshold_3 ?? LEAD_WARNING_THRESHOLD;
+  const isPaid = limit === null; // null limit means unlimited (paid/trial)
 
   const limitInfo = useMemo(() => {
-    // Paid users have no limit
-    if (isPaid) {
+    // Unlimited users (paid/trial)
+    if (freeLimit === Infinity) {
       return {
         isAtLimit: false,
         isNearLimit: false,
@@ -43,7 +44,7 @@ export function useLifetimeLeadLimit() {
       };
     }
 
-    // Free users have lifetime limit from admin config
+    // Free users have lifetime limit from feature registry
     const isAtLimit = totalLeadsAdded >= freeLimit;
     const isNearLimit = totalLeadsAdded >= warningThreshold;
     const remaining = Math.max(0, freeLimit - totalLeadsAdded);
@@ -60,11 +61,10 @@ export function useLifetimeLeadLimit() {
       percentUsed,
       showWarning: isNearLimit && !isPaid,
     };
-  }, [totalLeadsAdded, isPaid, freeLimit, warningThreshold]);
+  }, [totalLeadsAdded, freeLimit, warningThreshold, isPaid]);
 
   /**
    * Increment the lifetime lead counter after adding leads.
-   * This should be called after successfully adding leads.
    */
   const incrementLeadCount = useCallback(async (count: number = 1): Promise<number | null> => {
     if (!user) return null;
@@ -81,9 +81,7 @@ export function useLifetimeLeadLimit() {
         return null;
       }
       
-      // Refetch profile to update the local state
       refetchProfile?.();
-      
       return data;
     } catch (err) {
       console.error('Failed to increment lead count:', err);
@@ -93,12 +91,11 @@ export function useLifetimeLeadLimit() {
 
   return {
     ...limitInfo,
-    plan,
+    plan: isPaid ? 'pro' : 'free',
     isPaid,
     isLoading,
     incrementLeadCount,
-    // Expose the dynamic limits for reference
-    configuredLimit: freeLimit,
+    configuredLimit: typeof freeLimit === 'number' && freeLimit !== Infinity ? freeLimit : FREE_LIFETIME_LEAD_LIMIT,
     configuredWarningThreshold: warningThreshold,
   };
 }

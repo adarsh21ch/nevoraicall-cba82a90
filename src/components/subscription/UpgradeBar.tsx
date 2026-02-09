@@ -1,11 +1,12 @@
 import { Lock, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useSubscription } from '@/hooks/useSubscription';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import { usePaymentLinks } from '@/hooks/usePaymentLinks';
 import { useRazorpay } from '@/hooks/useRazorpay';
 import { useToast } from '@/hooks/use-toast';
 import { useLeadLimit } from '@/hooks/useLeadLimit';
 import { useAdminConfig } from '@/hooks/useAdminConfig';
+import { useSubscription } from '@/hooks/useSubscription';
 
 interface UpgradeBarProps {
   /** Which app context - affects messaging and plan suggestion */
@@ -20,7 +21,8 @@ interface UpgradeBarProps {
  * NOW USES DYNAMIC PLANS AND THRESHOLDS FROM ADMIN CONFIG.
  */
 export function UpgradeBar({ appContext = 'nevorai', suggestPro = true, onUpgrade }: UpgradeBarProps) {
-  const { isPaid, loading, refetch } = useSubscription();
+  const { isPaid, isLoading } = usePermissions();
+  const { refetch } = useSubscription();
   const { currentCount } = useLeadLimit();
   const { initiatePayment, loading: paymentLoading } = useRazorpay();
   const { toast } = useToast();
@@ -52,7 +54,7 @@ export function UpgradeBar({ appContext = 'nevorai', suggestPro = true, onUpgrad
   };
 
   // Hide upgrade bar for paid users OR free users below threshold
-  if (loading || isPaid || currentCount < upgradeThreshold) return null;
+  if (isLoading || isPaid || currentCount < upgradeThreshold) return null;
 
   // Calculate duration text dynamically
   const months = defaultPlan ? Math.round(defaultPlan.durationDays / 30) : 4;

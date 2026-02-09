@@ -1,28 +1,21 @@
 import { useMemo } from 'react';
 import { useGlobalProspects } from '@/contexts/ProspectsContext';
-import { useSubscription } from '@/hooks/useSubscription';
-import { useAdminConfig } from '@/hooks/useAdminConfig';
-
-/** Default free lead limit - overridden by admin config */
-const DEFAULT_FREE_LEAD_LIMIT = 200;
+import { useFeatureAccess } from '@/hooks/useFeatureAccess';
 
 /**
  * Hook to check if user has reached the free lead limit.
- * Now reads limits dynamically from admin_usage_limits table.
+ * Now reads limits from the Feature Registry via useFeatureAccess.
  */
 export function useLeadLimit() {
   const { prospects } = useGlobalProspects();
-  const { isPaid, plan } = useSubscription();
-  const { config, loading: configLoading } = useAdminConfig();
+  const { canAccess, limit, isLoading } = useFeatureAccess('total_lead_limit');
 
   const totalLeads = prospects?.length ?? 0;
-  
-  // Get dynamic limit from admin config
-  const freeLeadLimit = config.limits.free_total_leads ?? DEFAULT_FREE_LEAD_LIMIT;
-  
+  const freeLeadLimit = limit ?? Infinity; // null = unlimited
+
   const limitInfo = useMemo(() => {
-    // Paid users have no limit
-    if (isPaid) {
+    // If no limit (paid/unlimited), no restriction
+    if (freeLeadLimit === Infinity || limit === null) {
       return {
         isAtLimit: false,
         canAddLead: true,
@@ -33,7 +26,7 @@ export function useLeadLimit() {
       };
     }
 
-    // Free users have dynamic lead limit
+    // Free users have dynamic lead limit from feature registry
     const isAtLimit = totalLeads >= freeLeadLimit;
     const remaining = Math.max(0, freeLeadLimit - totalLeads);
     const percentUsed = Math.min(100, (totalLeads / freeLeadLimit) * 100);
@@ -46,12 +39,11 @@ export function useLeadLimit() {
       remaining,
       percentUsed,
     };
-  }, [totalLeads, isPaid, freeLeadLimit]);
+  }, [totalLeads, freeLeadLimit, limit]);
 
   return {
     ...limitInfo,
-    plan,
-    isPaid,
-    loading: configLoading,
+    isPaid: limit === null,
+    loading: isLoading,
   };
 }

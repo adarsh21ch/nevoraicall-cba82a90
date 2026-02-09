@@ -1,6 +1,7 @@
 import { Crown, Sparkles, Check, Calendar, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import { PLAN_CONFIG, PlanType } from '@/hooks/usePaymentLinks';
 import { useRazorpay } from '@/hooks/useRazorpay';
 import { format } from 'date-fns';
@@ -14,6 +15,7 @@ interface UpgradeCardProps {
 
 export function UpgradeCard({ appContext = 'nevorai' }: UpgradeCardProps) {
   const { isPro, isPaid, isAdminOverride, daysRemaining, subscription, loading, refetch } = useSubscription();
+  const { isPaid: permPaid, isLoading: permLoading } = usePermissions();
   const { initiatePayment, loading: paymentLoading } = useRazorpay();
   const { toast } = useToast();
   const [selectedPlan, setSelectedPlan] = useState<PlanType>('quarterly');
@@ -34,10 +36,10 @@ export function UpgradeCard({ appContext = 'nevorai' }: UpgradeCardProps) {
     });
   };
 
-  if (loading) return null;
+  if (loading || permLoading) return null;
 
   // If user has active paid plan, show status
-  if (isPaid) {
+  if (permPaid || isPaid) {
     const expiryDate = subscription?.expires_at 
       ? format(new Date(subscription.expires_at), 'MMM d, yyyy')
       : null;

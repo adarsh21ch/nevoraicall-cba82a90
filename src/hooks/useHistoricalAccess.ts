@@ -3,7 +3,7 @@ import { startOfDay, subDays } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdminConfig } from '@/hooks/useAdminConfig';
-import { useSubscription } from '@/hooks/useSubscription';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import { useFreeTrial } from '@/hooks/useFreeTrial';
 
 type Scope = 'leads' | 'funnel';
@@ -24,7 +24,7 @@ async function fetchHistoricalScope(): Promise<string[]> {
 
 export function useHistoricalAccess() {
   const { config, loading: configLoading } = useAdminConfig();
-  const { isPro, loading: subLoading } = useSubscription();
+  const { isPaid, isLoading: permLoading } = usePermissions();
   const { isTrialActive, loading: trialLoading } = useFreeTrial();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
@@ -40,11 +40,10 @@ export function useHistoricalAccess() {
   const restrictionEnabled = 'restrict_historical_data' in config.limits;
   const allowedPastDays = config.limits.allowed_past_days ?? 0;
 
-  const loading = configLoading || subLoading || trialLoading;
+  const loading = configLoading || permLoading || trialLoading;
 
   const isDateRestricted = useCallback((date: Date, scope: Scope): boolean => {
-    // Never restrict Pro or trial users
-    if (isPro || isTrialActive) return false;
+    if (isPaid || isTrialActive) return false;
     // Never restrict if toggle is off
     if (!restrictionEnabled) return false;
     // Never restrict if scope not included
@@ -54,11 +53,11 @@ export function useHistoricalAccess() {
     const cutoffDate = subDays(today, allowedPastDays);
     const targetDate = startOfDay(date);
     return targetDate < cutoffDate;
-  }, [isPro, isTrialActive, restrictionEnabled, allowedPastDays, scopeList]);
+  }, [isPaid, isTrialActive, restrictionEnabled, allowedPastDays, scopeList]);
 
   // Check if an entire month is restricted (all days in that month are before cutoff)
   const isMonthFullyRestricted = useCallback((monthYear: string, scope: Scope): boolean => {
-    if (isPro || isTrialActive || !restrictionEnabled) return false;
+    if (isPaid || isTrialActive || !restrictionEnabled) return false;
     if (!scopeList.includes(scope)) return false;
 
     // monthYear format: 'yyyy-MM'
@@ -66,7 +65,7 @@ export function useHistoricalAccess() {
     // Last day of the month
     const lastDayOfMonth = new Date(year, month, 0); // day 0 of next month = last day of this month
     return isDateRestricted(lastDayOfMonth, scope);
-  }, [isPro, isTrialActive, restrictionEnabled, scopeList, isDateRestricted]);
+  }, [isPaid, isTrialActive, restrictionEnabled, scopeList, isDateRestricted]);
 
   const triggerRestriction = useCallback(() => {
     setShowUpgradeModal(true);
