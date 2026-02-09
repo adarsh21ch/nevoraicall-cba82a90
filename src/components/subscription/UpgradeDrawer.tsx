@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
 import { useSubscription } from '@/hooks/useSubscription';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import { usePaymentLinks, PlanConfig } from '@/hooks/usePaymentLinks';
 import { useAdminConfig, Offer } from '@/hooks/useAdminConfig';
 import { useRazorpay } from '@/hooks/useRazorpay';
@@ -17,7 +18,7 @@ interface UpgradeDrawerProps {
 }
 
 export function UpgradeDrawer({ variant = 'default', triggerText }: UpgradeDrawerProps) {
-  const { isPaid, loading } = useSubscription();
+  const { isPaid: permPaid, isLoading: permLoading } = usePermissions();
   const { initiatePayment, loading: paymentLoading } = useRazorpay();
   const { toast } = useToast();
   const { refetch } = useSubscription();
@@ -144,7 +145,7 @@ export function UpgradeDrawer({ variant = 'default', triggerText }: UpgradeDrawe
     }
   };
 
-  if (loading || isPaid) return null;
+  if (permLoading || permPaid) return null;
 
   const buttonText = triggerText || 'Upgrade to Pro';
   const sortedPlans = [...plans].sort((a, b) => a.sortOrder - b.sortOrder);
