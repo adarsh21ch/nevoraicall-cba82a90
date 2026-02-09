@@ -1,34 +1,39 @@
 
 
-## Add "Accepting Responses" Toggle and Close Date to Nevorai Forms
+## Fix TrackUp Date-wise Table and Funnel-wise Table Issues
 
-### What This Does
-Adds two new columns to the `nevorai_forms` table:
-- **`is_accepting`** (boolean, default `true`) -- Controls whether the form is currently accepting new submissions
-- **`close_date`** (timestamp, nullable) -- Optional date after which the form automatically stops accepting responses
+### Problem 1: Date-wise table only shows dates with existing data
+The `DateWiseTable` currently only renders columns for dates that have snapshot rows in the database. If data exists only for Feb 8, only that one column appears. It should show **all days of the selected month** (1-28/29/30/31) with zeros for days without data.
 
-### Database Migration
-```sql
-ALTER TABLE nevorai_forms 
-  ADD COLUMN IF NOT EXISTS is_accepting boolean NOT NULL DEFAULT true,
-  ADD COLUMN IF NOT EXISTS close_date timestamptz DEFAULT NULL;
-```
+### Problem 2: "No funnel data available" despite KPI showing stage totals
+The KPI section correctly aggregates stage tag totals from snapshots. However, the `FunnelWiseTable` requires a `funnel_configs` entry with a `day_1_start` date to calculate funnel periods (F1, F2, etc.). If no funnel config exists (for the user or their leader), `funnelPeriods` is empty and the "no data" message shows -- even though stage data exists in snapshots.
 
-### Technical Details
+### Solution
 
-1. **Migration**: Run the SQL above to add both columns. Existing forms will default to `is_accepting = true` (no disruption).
+**Fix 1 -- Generate full month of dates in DateWiseTable**
 
-2. **Submission Guard**: Update the `nevorai_submit_form` RPC or the form submission logic to check:
-   - `is_accepting = true`
-   - `close_date IS NULL OR close_date > now()`
-   
-   If either condition fails, reject the submission with a clear error message.
+Modify `useSnapshotV2ComputedData` to accept the `monthYear` string and generate `dailyMetrics` for **every day of the month**, filling missing dates with zero values. This ensures the table always shows all dates regardless of whether snapshot rows exist.
 
-3. **Form Builder UI**: Add controls in the form editor for the form owner to:
-   - Toggle "Accepting Responses" on/off
-   - Set an optional close date/time
+- Add `monthYear` parameter to the hook
+- Generate a complete date array for the month (e.g., Feb 2026 = 28 days)
+- Merge existing snapshot data onto the full date array
+- Days without data show zeros
 
-4. **Public Form View**: When a form is closed (either manually or by date), show a "This form is no longer accepting responses" message instead of the form fields.
+**Fix 2 -- Fallback for Funnel-wise when no funnel config exists**
 
-5. **No RLS changes needed** -- these columns follow the same row-level ownership rules as the existing `nevorai_forms` table.
+When `funnelStartDate` is null (no funnel config), instead of showing "No funnel data," fall back to showing stage data grouped by a sensible default (e.g., assume day 1 of the month as the start). Alternatively, show a flat stage summary table so the user still sees their stage tag data.
+
+- In `useSnapshotV2ComputedData`, when `funnelStartDate` is null, default to day 1 of the viewing month
+- This way funnel periods are always computed when stage data exists
+- The "set up funnel start date" message only shows when there are truly zero snapshots
+
+### Files to Change
+
+1. **`src/hooks/useSnapshotV2ComputedData.ts`**
+   - Add `monthYear` parameter
+   - Generate all days of the month in `dailyMetrics` (fill gaps with zeros)
+   - Default `funnelStartDate` to 1st of the month when null
+
+2. **`src/pages/Tracking.tsx`**
+   - Pass `monthYear` to `useSnapshotV2ComputedData`
 
