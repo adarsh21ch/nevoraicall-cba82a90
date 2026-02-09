@@ -35,6 +35,13 @@ const LIMIT_ICONS: Record<string, React.ReactNode> = {
   streak_grace_days: <Clock className="h-4 w-4" />,
 };
 
+// Detect plan type from config_key
+function getPlanType(key: string): 'free' | 'pro' | 'general' {
+  if (key.startsWith('free_')) return 'free';
+  if (key.startsWith('pro_')) return 'pro';
+  return 'general';
+}
+
 const LIMIT_CATEGORIES = {
   'Trial Period': ['free_trial_days', 'trial_only_mode'],
   'Lead Limits': ['free_total_leads', 'free_daily_upload', 'pro_daily_upload'],
@@ -160,6 +167,21 @@ export function UsageLimitsManager() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
+                          {/* Plan type badge */}
+                          {(() => {
+                            const plan = getPlanType(limit.config_key);
+                            if (plan === 'free') return (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-blue-500/10 text-blue-600 border-blue-500/30">
+                                Free
+                              </Badge>
+                            );
+                            if (plan === 'pro') return (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-emerald-500/10 text-emerald-600 border-emerald-500/30">
+                                Pro
+                              </Badge>
+                            );
+                            return null;
+                          })()}
                           <span className="font-medium">{formatLimitKey(limit.config_key)}</span>
                           {!currentEnabled && (
                             <Badge variant="outline" className="text-xs bg-muted">
