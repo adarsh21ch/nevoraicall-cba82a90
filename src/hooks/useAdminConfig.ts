@@ -40,7 +40,12 @@ export interface FeatureFlag {
   description: string | null;
   free_access: boolean;
   pro_access: boolean;
+  trial_access: boolean;
   is_enabled: boolean;
+  free_limit: number | null;
+  pro_limit: number | null;
+  trial_limit: number | null;
+  category: string;
 }
 
 export interface AppConfig {
@@ -113,11 +118,11 @@ export const SAFE_DEFAULTS: AppConfig = {
     hard_limit: 200,
   },
   features: {
-    insights: { feature_name: 'View Insights', description: null, free_access: true, pro_access: true, is_enabled: true },
-    export: { feature_name: 'Export Data', description: null, free_access: true, pro_access: true, is_enabled: true },
-    ai_tips: { feature_name: 'AI Tips', description: null, free_access: true, pro_access: true, is_enabled: true },
-    team_sync: { feature_name: 'Team Sync', description: null, free_access: false, pro_access: true, is_enabled: true },
-    team_view: { feature_name: 'Team View', description: null, free_access: false, pro_access: true, is_enabled: true },
+    insights: { feature_name: 'View Insights', description: null, free_access: true, pro_access: true, trial_access: true, is_enabled: true, free_limit: null, pro_limit: null, trial_limit: null, category: 'analytics' },
+    export: { feature_name: 'Export Data', description: null, free_access: true, pro_access: true, trial_access: true, is_enabled: true, free_limit: null, pro_limit: null, trial_limit: null, category: 'export' },
+    ai_tips: { feature_name: 'AI Tips', description: null, free_access: true, pro_access: true, trial_access: true, is_enabled: true, free_limit: null, pro_limit: null, trial_limit: null, category: 'analytics' },
+    team_sync: { feature_name: 'Team Sync', description: null, free_access: false, pro_access: true, trial_access: true, is_enabled: true, free_limit: null, pro_limit: null, trial_limit: null, category: 'team' },
+    team_view: { feature_name: 'Team View', description: null, free_access: false, pro_access: true, trial_access: true, is_enabled: true, free_limit: null, pro_limit: null, trial_limit: null, category: 'team' },
   },
 };
 
@@ -381,7 +386,12 @@ export function useAdminFeatureFlags() {
   const updateFlag = async (id: string, updates: Partial<{
     free_access: boolean;
     pro_access: boolean;
+    trial_access: boolean;
     is_enabled: boolean;
+    free_limit: number | null;
+    pro_limit: number | null;
+    trial_limit: number | null;
+    category: string;
   }>) => {
     const { error } = await supabase
       .from('admin_feature_flags')
@@ -391,10 +401,21 @@ export function useAdminFeatureFlags() {
     invalidateAllCaches();
   };
 
-  const createFlag = async (feature_key: string, feature_name: string, description: string) => {
+  const createFlag = async (flag: {
+    feature_key: string;
+    feature_name: string;
+    description?: string;
+    category?: string;
+    free_access?: boolean;
+    pro_access?: boolean;
+    trial_access?: boolean;
+    free_limit?: number | null;
+    pro_limit?: number | null;
+    trial_limit?: number | null;
+  }) => {
     const { error } = await supabase
       .from('admin_feature_flags')
-      .insert({ feature_key, feature_name, description });
+      .insert(flag);
     if (error) throw error;
     invalidateAllCaches();
   };
