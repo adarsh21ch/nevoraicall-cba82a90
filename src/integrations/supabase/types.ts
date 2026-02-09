@@ -952,36 +952,51 @@ export type Database = {
       }
       admin_feature_flags: {
         Row: {
+          category: string | null
           created_at: string | null
           description: string | null
           feature_key: string
           feature_name: string
           free_access: boolean | null
+          free_limit: number | null
           id: string
           is_enabled: boolean | null
           pro_access: boolean | null
+          pro_limit: number | null
+          trial_access: boolean | null
+          trial_limit: number | null
           updated_at: string | null
         }
         Insert: {
+          category?: string | null
           created_at?: string | null
           description?: string | null
           feature_key: string
           feature_name: string
           free_access?: boolean | null
+          free_limit?: number | null
           id?: string
           is_enabled?: boolean | null
           pro_access?: boolean | null
+          pro_limit?: number | null
+          trial_access?: boolean | null
+          trial_limit?: number | null
           updated_at?: string | null
         }
         Update: {
+          category?: string | null
           created_at?: string | null
           description?: string | null
           feature_key?: string
           feature_name?: string
           free_access?: boolean | null
+          free_limit?: number | null
           id?: string
           is_enabled?: boolean | null
           pro_access?: boolean | null
+          pro_limit?: number | null
+          trial_access?: boolean | null
+          trial_limit?: number | null
           updated_at?: string | null
         }
         Relationships: []

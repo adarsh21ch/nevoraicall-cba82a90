@@ -6,6 +6,7 @@ import { TrackingFormatProvider } from "@/contexts/TrackingFormatContext";
 import { CustomOptionsProvider } from "@/contexts/CustomOptionsContext";
 import { ProspectsProvider } from "@/contexts/ProspectsContext";
 import { TodosProvider } from "@/contexts/TodosContext";
+import { PermissionsProvider } from "@/contexts/PermissionsContext";
 import { Toaster } from "sonner";
 import { InstallPromptBanner } from "@/components/pwa/InstallPromptBanner";
 import { UpdateBanner } from "@/components/pwa/UpdateBanner";
@@ -81,10 +82,11 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <AuthProvider>
-            <CustomOptionsProvider>
-              <TrackingFormatProvider>
-                <ProspectsProvider>
-                  <TodosProvider>
+            <PermissionsProvider>
+              <CustomOptionsProvider>
+                <TrackingFormatProvider>
+                  <ProspectsProvider>
+                    <TodosProvider>
                     <Toaster position="top-center" />
                     <InstallPromptBanner />
                     <UpdateBanner />
@@ -112,10 +114,11 @@ function App() {
                       <Route path="/f/:slug" element={<FunnelView />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
-                  </TodosProvider>
-                </ProspectsProvider>
-              </TrackingFormatProvider>
-            </CustomOptionsProvider>
+                    </TodosProvider>
+                  </ProspectsProvider>
+                </TrackingFormatProvider>
+              </CustomOptionsProvider>
+            </PermissionsProvider>
           </AuthProvider>
         </BrowserRouter>
       </QueryClientProvider>

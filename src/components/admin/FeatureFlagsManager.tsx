@@ -1,39 +1,78 @@
+import { useState } from 'react';
 import { useAdminFeatureFlags } from '@/hooks/useAdminConfig';
 import { logAdminAction } from '@/hooks/useAuditLogs';
 import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Sparkles, Users, Crown, Power } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Loader2, Sparkles, Users, Crown, Power, FlaskConical, Plus, Hash } from 'lucide-react';
 import { toast } from 'sonner';
 
+const CATEGORY_ORDER = ['calling', 'leads', 'tracking', 'todo', 'export', 'automation', 'analytics', 'team', 'general'];
+const CATEGORY_LABELS: Record<string, string> = {
+  calling: '📞 Calling',
+  leads: '📋 Leads',
+  tracking: '📊 Tracking',
+  todo: '✅ To-Do',
+  export: '📤 Export',
+  automation: '⚙️ Automation',
+  analytics: '📈 Analytics',
+  team: '👥 Team',
+  general: '🔧 General',
+};
+
 export function FeatureFlagsManager() {
-  const { flags, loading, updateFlag } = useAdminFeatureFlags();
+  const { flags, loading, updateFlag, createFlag } = useAdminFeatureFlags();
+  const [showAdd, setShowAdd] = useState(false);
+  const [newKey, setNewKey] = useState('');
+  const [newName, setNewName] = useState('');
+  const [newCategory, setNewCategory] = useState('general');
 
   const handleToggle = async (
-    id: string, 
-    field: 'free_access' | 'pro_access' | 'is_enabled', 
+    id: string,
+    field: 'free_access' | 'pro_access' | 'trial_access' | 'is_enabled',
     value: boolean,
-    flag: { feature_name: string; feature_key: string; free_access: boolean; pro_access: boolean; is_enabled: boolean }
+    flag: any
   ) => {
     try {
       const oldValue = { [field]: flag[field] };
       const newValue = { [field]: value };
-      
       await updateFlag(id, newValue);
-      
-      // Log audit action
-      await logAdminAction(
-        'feature_flag_updated',
-        'feature',
-        id,
-        oldValue,
-        newValue,
-        `Feature "${flag.feature_name}" - ${field} changed to ${value}`
-      );
-      
+      await logAdminAction('feature_flag_updated', 'feature', id, oldValue, newValue, `Feature "${flag.feature_name}" - ${field} changed to ${value}`);
       toast.success('Feature flag updated');
     } catch (err) {
       toast.error('Failed to update feature flag');
+    }
+  };
+
+  const handleLimitChange = async (id: string, field: 'free_limit' | 'pro_limit' | 'trial_limit', value: string, flag: any) => {
+    const numVal = value === '' ? null : parseInt(value, 10);
+    if (value !== '' && isNaN(numVal!)) return;
+    try {
+      const oldValue = { [field]: flag[field] };
+      const newValue = { [field]: numVal };
+      await updateFlag(id, newValue);
+      await logAdminAction('feature_flag_updated', 'feature', id, oldValue, newValue, `Feature "${flag.feature_name}" - ${field} changed to ${numVal ?? 'unlimited'}`);
+      toast.success('Limit updated');
+    } catch (err) {
+      toast.error('Failed to update limit');
+    }
+  };
+
+  const handleAddFlag = async () => {
+    if (!newKey.trim() || !newName.trim()) {
+      toast.error('Key and name are required');
+      return;
+    }
+    try {
+      await createFlag({ feature_key: newKey.trim().toLowerCase(), feature_name: newName.trim(), category: newCategory });
+      toast.success('Feature added');
+      setNewKey('');
+      setNewName('');
+      setShowAdd(false);
+    } catch (err) {
+      toast.error('Failed to add feature');
     }
   };
 
@@ -45,80 +84,137 @@ export function FeatureFlagsManager() {
     );
   }
 
+  // Group flags by category
+  const grouped = flags.reduce((acc: Record<string, typeof flags>, flag: any) => {
+    const cat = flag.category || 'general';
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(flag);
+    return acc;
+  }, {} as Record<string, typeof flags>);
+
+  const sortedCategories = CATEGORY_ORDER.filter(c => grouped[c]?.length > 0);
+  // Add any categories not in the predefined order
+  Object.keys(grouped).forEach(c => { if (!sortedCategories.includes(c)) sortedCategories.push(c); });
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold">Feature Flags</h2>
-        <p className="text-sm text-muted-foreground">Control feature access for free and pro users</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Feature Registry</h2>
+          <p className="text-sm text-muted-foreground">Control feature access for Free, Pro, and Trial users</p>
+        </div>
+        <Button size="sm" variant="outline" onClick={() => setShowAdd(!showAdd)}>
+          <Plus className="h-4 w-4 mr-1" /> Add Feature
+        </Button>
       </div>
 
-      <div className="grid gap-3">
-        {flags.map((flag) => (
-          <Card key={flag.id} className={`p-4 ${!flag.is_enabled ? 'opacity-60' : ''}`}>
-            <div className="flex items-start gap-4">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Sparkles className="h-4 w-4 text-primary" />
-              </div>
-              
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-medium">{flag.feature_name}</span>
-                  <Badge variant="outline" className="text-xs font-mono">
-                    {flag.feature_key}
-                  </Badge>
-                  {!flag.is_enabled && (
-                    <Badge variant="destructive" className="text-xs">
-                      Disabled
-                    </Badge>
+      {showAdd && (
+        <Card className="p-4 space-y-3">
+          <div className="grid grid-cols-3 gap-2">
+            <Input placeholder="feature_key" value={newKey} onChange={e => setNewKey(e.target.value)} />
+            <Input placeholder="Feature Name" value={newName} onChange={e => setNewName(e.target.value)} />
+            <select className="border rounded-md px-2 text-sm" value={newCategory} onChange={e => setNewCategory(e.target.value)}>
+              {CATEGORY_ORDER.map(c => <option key={c} value={c}>{CATEGORY_LABELS[c] || c}</option>)}
+            </select>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handleAddFlag}>Add</Button>
+            <Button size="sm" variant="ghost" onClick={() => setShowAdd(false)}>Cancel</Button>
+          </div>
+        </Card>
+      )}
+
+      {sortedCategories.map(category => (
+        <div key={category} className="space-y-2">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            {CATEGORY_LABELS[category] || category}
+          </h3>
+          <div className="grid gap-2">
+            {grouped[category].map((flag: any) => (
+              <Card key={flag.id} className={`p-3 ${!flag.is_enabled ? 'opacity-50' : ''}`}>
+                <div className="space-y-2">
+                  {/* Header row */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium text-sm">{flag.feature_name}</span>
+                    <Badge variant="outline" className="text-[10px] font-mono">{flag.feature_key}</Badge>
+                    {!flag.is_enabled && <Badge variant="destructive" className="text-[10px]">Off</Badge>}
+                  </div>
+                  {flag.description && <p className="text-xs text-muted-foreground">{flag.description}</p>}
+
+                  {/* Toggles row */}
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex items-center gap-1.5">
+                      <Power className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-[11px] text-muted-foreground">Enabled</span>
+                      <Switch checked={flag.is_enabled} onCheckedChange={v => handleToggle(flag.id, 'is_enabled', v, flag)} />
+                    </div>
+                    <div className="h-4 w-px bg-border" />
+                    <div className="flex items-center gap-1.5">
+                      <Users className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-[11px] text-muted-foreground">Free</span>
+                      <Switch checked={flag.free_access} disabled={!flag.is_enabled} onCheckedChange={v => handleToggle(flag.id, 'free_access', v, flag)} />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Crown className="h-3 w-3 text-amber-500" />
+                      <span className="text-[11px] text-muted-foreground">Pro</span>
+                      <Switch checked={flag.pro_access} disabled={!flag.is_enabled} onCheckedChange={v => handleToggle(flag.id, 'pro_access', v, flag)} />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <FlaskConical className="h-3 w-3 text-blue-500" />
+                      <span className="text-[11px] text-muted-foreground">Trial</span>
+                      <Switch checked={flag.trial_access ?? true} disabled={!flag.is_enabled} onCheckedChange={v => handleToggle(flag.id, 'trial_access', v, flag)} />
+                    </div>
+                  </div>
+
+                  {/* Numeric limits row (only show if any limit is set or feature is a limit-type) */}
+                  {flag.is_enabled && (
+                    <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-border/50">
+                      <Hash className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-[11px] text-muted-foreground">Limits:</span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] text-muted-foreground">Free</span>
+                        <Input
+                          type="number"
+                          className="h-6 w-16 text-xs px-1"
+                          placeholder="∞"
+                          value={flag.free_limit ?? ''}
+                          onBlur={e => handleLimitChange(flag.id, 'free_limit', e.target.value, flag)}
+                          onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                          onChange={() => {}} // controlled by onBlur
+                        />
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] text-muted-foreground">Pro</span>
+                        <Input
+                          type="number"
+                          className="h-6 w-16 text-xs px-1"
+                          placeholder="∞"
+                          value={flag.pro_limit ?? ''}
+                          onBlur={e => handleLimitChange(flag.id, 'pro_limit', e.target.value, flag)}
+                          onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                          onChange={() => {}}
+                        />
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] text-muted-foreground">Trial</span>
+                        <Input
+                          type="number"
+                          className="h-6 w-16 text-xs px-1"
+                          placeholder="∞"
+                          value={flag.trial_limit ?? ''}
+                          onBlur={e => handleLimitChange(flag.id, 'trial_limit', e.target.value, flag)}
+                          onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                          onChange={() => {}}
+                        />
+                      </div>
+                    </div>
                   )}
                 </div>
-                {flag.description && (
-                  <p className="text-xs text-muted-foreground mb-3">{flag.description}</p>
-                )}
-
-                <div className="flex flex-wrap items-center gap-4">
-                  {/* Global Enable */}
-                  <div className="flex items-center gap-2">
-                    <Power className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Enabled</span>
-                  <Switch
-                      checked={flag.is_enabled}
-                      onCheckedChange={(value) => handleToggle(flag.id, 'is_enabled', value, flag)}
-                      aria-label="Toggle feature"
-                    />
-                  </div>
-
-                  <div className="h-4 w-px bg-border" />
-
-                  {/* Free Access */}
-                  <div className="flex items-center gap-2">
-                    <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Free</span>
-                    <Switch
-                      checked={flag.free_access}
-                      onCheckedChange={(value) => handleToggle(flag.id, 'free_access', value, flag)}
-                      disabled={!flag.is_enabled}
-                      aria-label="Free user access"
-                    />
-                  </div>
-
-                  {/* Pro Access */}
-                  <div className="flex items-center gap-2">
-                    <Crown className="h-3.5 w-3.5 text-amber-500" />
-                    <span className="text-xs text-muted-foreground">Pro</span>
-                    <Switch
-                      checked={flag.pro_access}
-                      onCheckedChange={(value) => handleToggle(flag.id, 'pro_access', value, flag)}
-                      disabled={!flag.is_enabled}
-                      aria-label="Pro user access"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      ))}
 
       {flags.length === 0 && (
         <Card className="p-8 text-center">

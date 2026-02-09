@@ -1,98 +1,125 @@
-import { useAdminConfig } from './useAdminConfig';
+import { useAdminConfig, FeatureFlag } from './useAdminConfig';
 import { useSubscription } from './useSubscription';
+import { useFreeTrial } from './useFreeTrial';
 import { useMemo } from 'react';
 
+export type AccessReason = 
+  | 'allowed'
+  | 'feature_not_found'
+  | 'feature_disabled'
+  | 'plan_restriction'
+  | 'trial_active'
+  | 'trial_expired';
+
+export interface FeatureAccessResult {
+  canAccess: boolean;
+  limit: number | null;
+  feature: FeatureFlag | null;
+  isLoading: boolean;
+  reason: AccessReason;
+}
+
 /**
- * Hook to check if the current user has access to a specific feature.
- * Uses admin-configured feature flags from the database.
+ * Central hook to check if the current user has access to a specific feature.
+ * Reads from admin-configured feature flags and integrates subscription + trial state.
  * 
- * @param featureKey - The unique key of the feature to check (e.g., 'insights', 'export', 'team_sync')
- * @returns Object containing access status and feature details
+ * @param featureKey - The unique key of the feature to check
+ * @returns FeatureAccessResult with access status, numeric limit, and reason
  * 
  * @example
  * ```tsx
- * const { canAccess, feature } = useFeatureAccess('team_sync');
- * 
- * if (!canAccess) {
- *   return <UpgradePrompt feature={feature?.feature_name} />;
- * }
- * return <TeamSyncComponent />;
+ * const { canAccess, limit } = useFeatureAccess('daily_lead_limit');
+ * if (!canAccess) return <UpgradePrompt />;
+ * // limit is 50 for free, null (unlimited) for pro
  * ```
  */
-export function useFeatureAccess(featureKey: string) {
+export function useFeatureAccess(featureKey: string): FeatureAccessResult {
   const { config, loading: configLoading } = useAdminConfig();
   const { isPaid, loading: subLoading } = useSubscription();
+  const { isTrialActive, loading: trialLoading } = useFreeTrial();
 
-  const result = useMemo(() => {
-    const feature = config.features[featureKey];
-    
+  const isLoading = configLoading || subLoading || trialLoading;
+
+  return useMemo(() => {
+    const feature = config.features[featureKey] ?? null;
+
     // If feature doesn't exist in config, default to allowing access
     if (!feature) {
-      return {
-        canAccess: true,
-        feature: null,
-        isLoading: configLoading || subLoading,
-        reason: 'feature_not_found',
-      };
+      return { canAccess: true, limit: null, feature: null, isLoading, reason: 'feature_not_found' as AccessReason };
     }
 
     // Check if feature is globally disabled
     if (!feature.is_enabled) {
+      return { canAccess: false, limit: null, feature, isLoading, reason: 'feature_disabled' as AccessReason };
+    }
+
+    // Determine access based on user state: Trial > Paid > Free
+    if (isTrialActive) {
+      const hasAccess = feature.trial_access;
+      const limit = feature.trial_limit; // null = unlimited (follows pro)
       return {
-        canAccess: false,
+        canAccess: hasAccess,
+        limit: hasAccess ? limit : null,
         feature,
-        isLoading: false,
-        reason: 'feature_disabled',
+        isLoading,
+        reason: hasAccess ? 'trial_active' as AccessReason : 'plan_restriction' as AccessReason,
       };
     }
 
-    // Check access based on user's plan
-    const hasAccess = isPaid ? feature.pro_access : feature.free_access;
+    if (isPaid) {
+      return {
+        canAccess: feature.pro_access,
+        limit: feature.pro_limit, // null = unlimited
+        feature,
+        isLoading,
+        reason: feature.pro_access ? 'allowed' as AccessReason : 'plan_restriction' as AccessReason,
+      };
+    }
 
+    // Free user
     return {
-      canAccess: hasAccess,
+      canAccess: feature.free_access,
+      limit: feature.free_limit,
       feature,
-      isLoading: configLoading || subLoading,
-      reason: hasAccess ? 'allowed' : 'plan_restriction',
+      isLoading,
+      reason: feature.free_access ? 'allowed' as AccessReason : 'plan_restriction' as AccessReason,
     };
-  }, [config.features, featureKey, isPaid, configLoading, subLoading]);
-
-  return result;
+  }, [config.features, featureKey, isPaid, isTrialActive, isLoading]);
 }
 
 /**
  * Hook to check multiple features at once.
  * Useful for components that depend on multiple feature flags.
- * 
- * @param featureKeys - Array of feature keys to check
- * @returns Object with access info for each feature and a combined allAllowed flag
  */
 export function useMultipleFeatureAccess(featureKeys: string[]) {
   const { config, loading: configLoading } = useAdminConfig();
   const { isPaid, loading: subLoading } = useSubscription();
+  const { isTrialActive, loading: trialLoading } = useFreeTrial();
 
-  const result = useMemo(() => {
-    const accessMap: Record<string, boolean> = {};
-    
+  const isLoading = configLoading || subLoading || trialLoading;
+
+  return useMemo(() => {
+    const accessMap: Record<string, { canAccess: boolean; limit: number | null }> = {};
+
     for (const key of featureKeys) {
       const feature = config.features[key];
       if (!feature || !feature.is_enabled) {
-        accessMap[key] = !feature; // Allow if feature not found, deny if disabled
+        accessMap[key] = { canAccess: !feature, limit: null }; // Allow if not found, deny if disabled
+        continue;
+      }
+
+      if (isTrialActive) {
+        accessMap[key] = { canAccess: feature.trial_access, limit: feature.trial_limit };
+      } else if (isPaid) {
+        accessMap[key] = { canAccess: feature.pro_access, limit: feature.pro_limit };
       } else {
-        accessMap[key] = isPaid ? feature.pro_access : feature.free_access;
+        accessMap[key] = { canAccess: feature.free_access, limit: feature.free_limit };
       }
     }
 
-    const allAllowed = featureKeys.every(key => accessMap[key]);
-    const anyAllowed = featureKeys.some(key => accessMap[key]);
+    const allAllowed = featureKeys.every(key => accessMap[key]?.canAccess);
+    const anyAllowed = featureKeys.some(key => accessMap[key]?.canAccess);
 
-    return {
-      accessMap,
-      allAllowed,
-      anyAllowed,
-      isLoading: configLoading || subLoading,
-    };
-  }, [config.features, featureKeys, isPaid, configLoading, subLoading]);
-
-  return result;
+    return { accessMap, allAllowed, anyAllowed, isLoading };
+  }, [config.features, featureKeys, isPaid, isTrialActive, isLoading]);
 }
