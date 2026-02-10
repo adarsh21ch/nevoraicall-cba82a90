@@ -133,18 +133,67 @@ async function resolveLabels(supabase: any, userId: string): Promise<LabelMap> {
   return { responseLabels: [], stageLabels: [], enrollmentSlotKey: null };
 }
 
-function resolveTagNames(tags: Record<string, number>, labels: string[], prefix: string): Record<string, number> {
+/**
+ * Normalize a tags object (which may have slot keys, human names, or both)
+ * into a canonical slot-key form: { response_tag_1: N, response_tag_2: N, ... }
+ */
+function coerceToSlots(
+  tags: Record<string, number>,
+  labelCount: number,
+  ownerLabels: string[] | undefined,
+  slotPrefix: string,
+  rootLabels?: string[]
+): Record<string, number> {
   const result: Record<string, number> = {};
-  for (const [key, value] of Object.entries(tags)) {
-    const match = key.match(new RegExp(`^${prefix}_(\\d+)$`));
+  for (let i = 1; i <= labelCount; i++) {
+    result[`${slotPrefix}${i}`] = 0;
+  }
+
+  // Pass 1: Extract slot keys (authoritative)
+  const positionsWithSlotKeys = new Set<number>();
+  for (const [key, count] of Object.entries(tags)) {
+    const match = key.match(new RegExp(`^${slotPrefix}(\\d+)$`));
     if (match) {
-      const idx = parseInt(match[1]) - 1;
-      const name = labels[idx] || key;
-      result[name] = value;
-    } else {
-      result[key] = value; // Already a human name
+      const pos = parseInt(match[1], 10);
+      if (pos >= 1 && pos <= labelCount) {
+        result[key] = (result[key] || 0) + (count || 0);
+        positionsWithSlotKeys.add(pos);
+      }
     }
   }
+
+  // Pass 2: Fill missing positions from legacy human-readable labels
+  for (const [key, count] of Object.entries(tags)) {
+    if (key.startsWith(slotPrefix)) continue;
+    let pos = -1;
+    if (ownerLabels?.length) {
+      pos = ownerLabels.findIndex(l => l?.toLowerCase() === key.toLowerCase());
+    }
+    if (pos === -1 && rootLabels?.length) {
+      pos = rootLabels.findIndex(l => l?.toLowerCase() === key.toLowerCase());
+    }
+    if (pos !== -1 && pos < labelCount) {
+      const slotKey = `${slotPrefix}${pos + 1}`;
+      if (!positionsWithSlotKeys.has(pos + 1) || result[slotKey] === 0) {
+        result[slotKey] = (result[slotKey] || 0) + (count || 0);
+      }
+    }
+  }
+  return result;
+}
+
+/**
+ * Convert slot-keyed values back to human-readable label names.
+ */
+function slotsToLabels(
+  slotValues: Record<string, number>,
+  labels: string[],
+  slotPrefix: string
+): Record<string, number> {
+  const result: Record<string, number> = {};
+  labels.forEach((label, i) => {
+    result[label] = slotValues[`${slotPrefix}${i + 1}`] || 0;
+  });
   return result;
 }
 
@@ -373,7 +422,9 @@ function computeEnrollments(rows: any[], labels: LabelMap): number {
     let total = 0;
     for (const r of rows) {
       if (r.response_tags && typeof r.response_tags === "object") {
-        total += (typeof r.response_tags[labels.enrollmentSlotKey] === "number" ? r.response_tags[labels.enrollmentSlotKey] : 0);
+        // Coerce to slots first to handle both human-name and slot-key formats
+        const slots = coerceToSlots(r.response_tags, labels.responseLabels.length, labels.responseLabels, "response_tag_");
+        total += slots[labels.enrollmentSlotKey] || 0;
       }
     }
     return total;
@@ -411,23 +462,26 @@ async function executeTool(
         const totalResponses = rows.reduce((s: number, r: any) => s + (r.total_responses || 0), 0);
         const totalEnrollments = computeEnrollments(rows, labels);
         
-        const rawResponseTags: Record<string, number> = {};
-        const rawStageTags: Record<string, number> = {};
+        // Aggregate: coerce each row to slot keys, then sum
+        const aggResponseSlots: Record<string, number> = {};
+        const aggStageSlots: Record<string, number> = {};
         for (const r of rows) {
           if (r.response_tags && typeof r.response_tags === "object") {
-            for (const [k, v] of Object.entries(r.response_tags)) {
-              rawResponseTags[k] = (rawResponseTags[k] || 0) + (typeof v === "number" ? v : 0);
+            const slots = coerceToSlots(r.response_tags, labels.responseLabels.length, labels.responseLabels, "response_tag_");
+            for (const [k, v] of Object.entries(slots)) {
+              aggResponseSlots[k] = (aggResponseSlots[k] || 0) + v;
             }
           }
           if (r.stage_tags && typeof r.stage_tags === "object") {
-            for (const [k, v] of Object.entries(r.stage_tags)) {
-              rawStageTags[k] = (rawStageTags[k] || 0) + (typeof v === "number" ? v : 0);
+            const slots = coerceToSlots(r.stage_tags, labels.stageLabels.length, labels.stageLabels, "stage_tag_");
+            for (const [k, v] of Object.entries(slots)) {
+              aggStageSlots[k] = (aggStageSlots[k] || 0) + v;
             }
           }
         }
         
-        const responseTags = resolveTagNames(rawResponseTags, labels.responseLabels, "response_tag");
-        const stageTags = resolveTagNames(rawStageTags, labels.stageLabels, "stage_tag");
+        const responseTags = slotsToLabels(aggResponseSlots, labels.responseLabels, "response_tag_");
+        const stageTags = slotsToLabels(aggStageSlots, labels.stageLabels, "stage_tag_");
         
         return JSON.stringify({
           source: table,
@@ -593,19 +647,20 @@ async function executeTool(
           .lte("date", args.end_date);
         
         const rows = data || [];
-        const rawStageTags: Record<string, number> = {};
+        const aggStageSlots: Record<string, number> = {};
         const totalLeads = rows.reduce((s: number, r: any) => s + (r.total_leads || 0), 0);
         const totalEnrollments = computeEnrollments(rows, labels);
         
         for (const r of rows) {
           if (r.stage_tags && typeof r.stage_tags === "object") {
-            for (const [k, v] of Object.entries(r.stage_tags)) {
-              rawStageTags[k] = (rawStageTags[k] || 0) + (typeof v === "number" ? v : 0);
+            const slots = coerceToSlots(r.stage_tags, labels.stageLabels.length, labels.stageLabels, "stage_tag_");
+            for (const [k, v] of Object.entries(slots)) {
+              aggStageSlots[k] = (aggStageSlots[k] || 0) + v;
             }
           }
         }
         
-        const stageTags = resolveTagNames(rawStageTags, labels.stageLabels, "stage_tag");
+        const stageTags = slotsToLabels(aggStageSlots, labels.stageLabels, "stage_tag_");
         
         return JSON.stringify({
           source: table,
@@ -626,18 +681,19 @@ async function executeTool(
           .lte("date", args.end_date);
         
         const rows = data || [];
-        const rawStageTags: Record<string, number> = {};
+        const aggStageSlots: Record<string, number> = {};
         const totalLeads = rows.reduce((s: number, r: any) => s + (r.total_leads || 0), 0);
         
         for (const r of rows) {
           if (r.stage_tags && typeof r.stage_tags === "object") {
-            for (const [k, v] of Object.entries(r.stage_tags)) {
-              rawStageTags[k] = (rawStageTags[k] || 0) + (typeof v === "number" ? v : 0);
+            const slots = coerceToSlots(r.stage_tags, labels.stageLabels.length, labels.stageLabels, "stage_tag_");
+            for (const [k, v] of Object.entries(slots)) {
+              aggStageSlots[k] = (aggStageSlots[k] || 0) + v;
             }
           }
         }
         
-        const stageTags = resolveTagNames(rawStageTags, labels.stageLabels, "stage_tag");
+        const stageTags = slotsToLabels(aggStageSlots, labels.stageLabels, "stage_tag_");
         const stageEntries = Object.entries(stageTags).sort((a, b) => {
           const numA = parseInt(a[0].replace(/\D/g, "")) || 0;
           const numB = parseInt(b[0].replace(/\D/g, "")) || 0;
@@ -711,8 +767,10 @@ async function executeTool(
         };
         
         if (todayData) {
-          const rTags = resolveTagNames(todayData.response_tags || {}, labels.responseLabels, "response_tag");
-          const sTags = resolveTagNames(todayData.stage_tags || {}, labels.stageLabels, "stage_tag");
+          const rSlots = coerceToSlots(todayData.response_tags || {}, labels.responseLabels.length, labels.responseLabels, "response_tag_");
+          const rTags = slotsToLabels(rSlots, labels.responseLabels, "response_tag_");
+          const sSlots = coerceToSlots(todayData.stage_tags || {}, labels.stageLabels.length, labels.stageLabels, "stage_tag_");
+          const sTags = slotsToLabels(sSlots, labels.stageLabels, "stage_tag_");
           const enrollToday = labels.enrollmentSlotKey && todayData.response_tags
             ? (typeof todayData.response_tags[labels.enrollmentSlotKey] === "number" ? todayData.response_tags[labels.enrollmentSlotKey] : 0)
             : (todayData.final_tag_count || 0);
