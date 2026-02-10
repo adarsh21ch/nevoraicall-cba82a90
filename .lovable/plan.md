@@ -1,67 +1,48 @@
 
+## Fix: Application Mode Not Showing Leads Data in TrackUp
 
-## Fix: Application Source Data Not Appearing in TrackUp
+### Root Cause Found
 
-### Root Cause
+The auto-sync (`useAutoTrackingSync`) only counts prospects added **today** (filters by `date_added` between today's start and end). But the user's 300+ leads were imported on previous days (Feb 1-8). So when auto-sync runs, it finds 0 prospects for today and writes `total_leads: 0` to the snapshot.
 
-There are two separate issues preventing APPLICATION mode from working:
+Additionally, the auto-sync only triggers on prospect mutations (add/import/delete). If the user just switches to Application mode, nothing triggers a sync for historical dates.
 
-1. **No source filter on reads**: `usePersonalSnapshotV2Read` fetches ALL rows from `personal_snapshot_v2` regardless of their `source` column. When a user switches to APPLICATION, they still see MANUAL data (or a mix of both).
+Database proof:
+- User has leads spread across Jan 13 - Feb 8 (various import batches)
+- The APPLICATION snapshot row for Feb 10 shows `total_leads: 0` because no prospects were added on Feb 10
+- Previous days have no APPLICATION rows at all
 
-2. **No auto-write bridge**: When prospects are added/updated (imports, tag changes), `useDailyTrackingLog` writes to `daily_tracking_logs` -- a table that TrackUp never reads. Nobody writes APPLICATION-sourced rows into `personal_snapshot_v2`. So there is nothing to show.
+### Solution: Compute Application Data from Prospects at Read Time
 
-### The Fix (3 Parts)
-
----
-
-### Part 1: Filter snapshots by source preference
-
-**File:** `src/hooks/usePersonalSnapshotV2Read.ts`
-
-- Accept a new optional parameter: `sourceFilter?: 'MANUAL' | 'APPLICATION' | null`
-- When provided, add `.eq('source', sourceFilter)` to the Supabase query
-- Include `sourceFilter` in the query key so switching sources triggers a fresh fetch
-- Default: `null` (no filter, backward compatible)
-
-**File:** `src/pages/Tracking.tsx`
-
-- Import `useTrackingSourcePreferences`
-- Map `personalSource` to the DB source value: `'AUTO'` maps to `'APPLICATION'`, `'MANUAL'` maps to `'MANUAL'`
-- Pass this mapped value to `usePersonalSnapshotV2Read` as `sourceFilter`
-
-**File:** `src/components/profile/ProfileTrackUp.tsx`
-
-- Same change: read source preference and pass filter to the read hook
+Instead of trying to write snapshot rows for every historical date (which would require dozens of slow edge function calls), we compute the data **directly from the prospects table** when the source is APPLICATION. This guarantees the data is always fresh and correct.
 
 ---
 
-### Part 2: Auto-write APPLICATION snapshots from prospects
+### Changes
 
-**File:** `src/hooks/useAutoTrackingSync.ts` (NEW)
+**1. New Hook: `src/hooks/useApplicationSnapshots.ts`**
 
-A new hook that computes today's tracking numbers from the prospects table and writes them to `personal_snapshot_v2` with `source: 'APPLICATION'`.
+A new hook that replaces snapshot reads when source = APPLICATION:
+- Queries ALL prospects for the given month (grouped by `date(date_added)`)
+- Counts leads, response tags, and stage tags per day
+- Returns data in the same `SnapshotRow[]` format that the dashboard expects
+- No edge function calls needed -- pure client-side computation from the prospects table
 
-Logic:
-- Query today's prospects (same logic as `useDailyTrackingLog`)
-- Count leads, responses, and tag distributions
-- Call `usePersonalSnapshotV2Write.savePersonal()` with `source: 'APPLICATION'`
-- Debounced (1 second) to batch rapid updates
-- Only runs when `personalSource === 'AUTO'`
+**2. Update: `src/pages/Tracking.tsx`**
 
-**File:** `src/contexts/ProspectsContext.tsx`
+- When `personalSource === 'AUTO'`, use `useApplicationSnapshots` for personal data instead of `usePersonalSnapshotV2Read`
+- When `personalSource === 'MANUAL'`, keep using the existing snapshot read (unchanged behavior)
+- The switch is seamless -- both return the same `SnapshotRow[]` format
 
-- After every prospect add/update/delete/import, call the auto-sync function
-- This replaces the current `triggerDailyLog()` call (which writes to the unused table) with a call that actually writes APPLICATION data to the snapshot table TrackUp reads from
+**3. Update: `src/components/profile/ProfileTrackUp.tsx`**
 
----
+- Same source-based switching as Tracking.tsx
 
-### Part 3: Ensure ManualUpdateDrawer respects source
+**4. Cleanup: `src/hooks/useAutoTrackingSync.ts`**
 
-**File:** `src/components/trackup-v2/ManualUpdateDrawer.tsx`
-
-- Already correctly disables manual inputs when `personalSource === 'AUTO'` (line 129)
-- Already writes with the correct source mapping (line 163)
-- No changes needed here
+- Keep for future use (writing APPLICATION rows for team aggregation)
+- Fix it to compute per-date snapshots when triggered (not just today)
+- But the dashboard no longer depends on it for display
 
 ---
 
@@ -69,32 +50,29 @@ Logic:
 
 ```text
 Source = MANUAL:
-  User opens ManualUpdateDrawer -> saves with source='MANUAL'
-  -> personal_snapshot_v2 (source=MANUAL)
-  -> usePersonalSnapshotV2Read(sourceFilter='MANUAL') -> TrackUp shows manual data
+  Read from personal_snapshot_v2 (existing behavior, unchanged)
 
 Source = APPLICATION:
-  User adds/imports/tags prospects -> ProspectsContext triggers auto-sync
-  -> useAutoTrackingSync computes counts from prospects table
-  -> writes to personal_snapshot_v2 (source='APPLICATION') via edge function
-  -> usePersonalSnapshotV2Read(sourceFilter='APPLICATION') -> TrackUp shows app data
+  Query prospects table directly for the month
+  -> Group by date_added
+  -> Count leads, responses, tags per day
+  -> Return as SnapshotRow[] (same format)
+  -> Dashboard renders correctly with real data
 ```
 
----
+### What This Fixes
+
+- 300+ imported leads now appear in TrackUp immediately when source = Application
+- Tags applied in the Calling tab are reflected in real-time
+- Historical data (all past days) shows correctly, not just today
+- Switching between Manual and Application instantly changes the data source
+- No dependency on edge function writes for display
 
 ### Files Changed
 
 | File | Change |
 |------|--------|
-| `src/hooks/usePersonalSnapshotV2Read.ts` | Add `sourceFilter` parameter and include in query |
-| `src/hooks/useAutoTrackingSync.ts` | NEW -- computes prospect-based tracking and writes APPLICATION snapshots |
-| `src/pages/Tracking.tsx` | Read source preference, pass filter to read hook |
-| `src/components/profile/ProfileTrackUp.tsx` | Read source preference, pass filter to read hook |
-| `src/contexts/ProspectsContext.tsx` | Call auto-sync after prospect mutations when source=AUTO |
-
-### What This Does NOT Change
-- No funnel logic changes
-- No response counting rule changes
-- No historical data modifications
-- No time-based rules
-- ManualUpdateDrawer behavior unchanged
+| `src/hooks/useApplicationSnapshots.ts` | NEW -- computes daily snapshots from prospects table |
+| `src/pages/Tracking.tsx` | Use application snapshots when source = AUTO |
+| `src/components/profile/ProfileTrackUp.tsx` | Same source-based switch |
+| `src/hooks/useAutoTrackingSync.ts` | Fix to group by date instead of today-only (for team aggregation) |
