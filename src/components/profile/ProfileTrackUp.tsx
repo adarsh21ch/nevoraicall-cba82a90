@@ -8,8 +8,10 @@ import { useRazorpay } from '@/hooks/useRazorpay';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/useSubscription';
 import { usePersonalSnapshotV2Read } from '@/hooks/usePersonalSnapshotV2Read';
+import { useApplicationSnapshots } from '@/hooks/useApplicationSnapshots';
 import { useSnapshotV2ComputedData } from '@/hooks/useSnapshotV2ComputedData';
 import { useTrackingFormat } from '@/hooks/useTrackingFormat';
+import { useTrackingSourcePreferences } from '@/hooks/useTrackingSourcePreferences';
 import { useFunnelConfig } from '@/hooks/useFunnelConfig';
 import { formatTrackingValue } from '@/lib/snapshotSlotUtils';
 
@@ -32,9 +34,14 @@ export function ProfileTrackUp({ isPro }: ProfileTrackUpProps) {
   const defaultPlan = getDefaultPlan();
 
   // V2 data — tag names must be resolved before read hook
-  const { leadsTrackingTags, stageTags, leadsTrackingTagNames, stageTagNames, stageFinalTargetTag } = useTrackingFormat();
+  const { leadsTrackingTags, stageTags, leadsTrackingTagNames, stageTagNames, stageFinalTargetTag, leadsFinalTargetTag } = useTrackingFormat();
+  const { personalSource } = useTrackingSourcePreferences();
   const monthYear = format(new Date(), 'yyyy-MM');
-  const { snapshots: personalSnapshots } = usePersonalSnapshotV2Read(monthYear, leadsTrackingTagNames, stageTagNames);
+  const { snapshots: manualSnapshots } = usePersonalSnapshotV2Read(monthYear, leadsTrackingTagNames, stageTagNames);
+  const { snapshots: appSnapshots } = useApplicationSnapshots(
+    monthYear, leadsTrackingTagNames, stageTagNames, leadsFinalTargetTag, stageFinalTargetTag,
+  );
+  const personalSnapshots = personalSource === 'AUTO' ? appSnapshots : manualSnapshots;
   const { getEffectiveConfig } = useFunnelConfig();
   const effectiveConfig = getEffectiveConfig();
 

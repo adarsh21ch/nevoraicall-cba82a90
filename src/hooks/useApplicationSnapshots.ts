@@ -1,0 +1,118 @@
+/**
+ * useApplicationSnapshots
+ *
+ * Computes daily tracking snapshots directly from the prospects table
+ * for a given month. Used when the user's tracking source is APPLICATION.
+ * Returns data in the same SnapshotRow[] format as usePersonalSnapshotV2Read.
+ */
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
+import type { SnapshotRow } from '@/lib/snapshotSlotUtils';
+
+export function useApplicationSnapshots(
+  monthYear: string,
+  leadsTrackingTagNames: string[],
+  stageTagNames: string[],
+  leadsFinalTargetTag: string | null,
+  stageFinalTargetTag: string | null,
+) {
+  const { user } = useAuth();
+
+  // Fetch all prospects for the month
+  const { data: prospects = [], isLoading, refetch } = useQuery({
+    queryKey: ['application-snapshots', user?.id, monthYear],
+    queryFn: async () => {
+      if (!user) return [];
+
+      const [year, month] = monthYear.split('-').map(Number);
+      const monthStart = new Date(year, month - 1, 1);
+      const monthEnd = endOfMonth(monthStart);
+
+      const { data, error } = await supabase
+        .from('prospects')
+        .select('id, date_added, action_taken, funnel_stage')
+        .eq('user_id', user.id)
+        .is('deleted_at', null)
+        .gte('date_added', format(monthStart, 'yyyy-MM-dd'))
+        .lte('date_added', format(monthEnd, 'yyyy-MM-dd') + 'T23:59:59');
+
+      if (error) {
+        console.error('useApplicationSnapshots: error fetching prospects', error);
+        return [];
+      }
+      return data || [];
+    },
+    enabled: !!user && !!monthYear,
+    staleTime: 30_000,
+    refetchOnMount: 'always',
+  });
+
+  // Group prospects by date and compute SnapshotRow per day
+  const snapshots: SnapshotRow[] = useMemo(() => {
+    if (!prospects.length) return [];
+
+    // Group by date (YYYY-MM-DD)
+    const byDate: Record<string, typeof prospects> = {};
+    prospects.forEach((p) => {
+      if (!p.date_added) return;
+      const dateStr = p.date_added.substring(0, 10); // "YYYY-MM-DD"
+      if (!byDate[dateStr]) byDate[dateStr] = [];
+      byDate[dateStr].push(p);
+    });
+
+    // Build snapshot rows
+    return Object.entries(byDate)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([dateStr, dayProspects]): SnapshotRow => {
+        const totalLeads = dayProspects.length;
+
+        // Count response tags
+        const responseTags: Record<string, number> = {};
+        leadsTrackingTagNames.forEach((t) => { responseTags[t] = 0; });
+        let totalResponses = 0;
+
+        dayProspects.forEach((p) => {
+          if (p.action_taken) {
+            totalResponses++;
+            if (leadsTrackingTagNames.includes(p.action_taken)) {
+              responseTags[p.action_taken] = (responseTags[p.action_taken] || 0) + 1;
+            }
+          }
+        });
+
+        // Count stage tags
+        const stTags: Record<string, number> = {};
+        stageTagNames.forEach((t) => { stTags[t] = 0; });
+
+        dayProspects.forEach((p) => {
+          if (p.funnel_stage && stageTagNames.includes(p.funnel_stage)) {
+            stTags[p.funnel_stage] = (stTags[p.funnel_stage] || 0) + 1;
+          }
+        });
+
+        const finalTagCount = leadsFinalTargetTag ? (responseTags[leadsFinalTargetTag] || 0) : 0;
+        const funnelTagCount = stageFinalTargetTag ? (stTags[stageFinalTargetTag] || 0) : 0;
+
+        return {
+          date: dateStr,
+          total_leads: totalLeads,
+          total_responses: totalResponses,
+          response_tags: responseTags,
+          stage_tags: stTags,
+          final_tag: leadsFinalTargetTag,
+          final_tag_count: finalTagCount,
+          funnel_tag: stageFinalTargetTag,
+          funnel_tag_count: funnelTagCount,
+          funnel_start_date: null,
+          funnel_day: null,
+          source: 'APPLICATION',
+          upline_leader_id: null,
+        };
+      });
+  }, [prospects, leadsTrackingTagNames, stageTagNames, leadsFinalTargetTag, stageFinalTargetTag]);
+
+  return { snapshots, loading: isLoading, refetch };
+}
