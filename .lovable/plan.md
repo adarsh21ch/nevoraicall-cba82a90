@@ -1,71 +1,84 @@
 
 
-## Onboarding UX Improvements for First-Time Users
+## Fix: Application Source Data Not Appearing in TrackUp
 
-### Overview
-Improve the first-time user experience by adding a prominent empty-state onboarding card, WhatsApp file guidance in the import dialog, and mobile-friendly import button labeling.
+### Root Cause
 
----
+There are two separate issues preventing APPLICATION mode from working:
 
-### A) Empty State Onboarding Card
+1. **No source filter on reads**: `usePersonalSnapshotV2Read` fetches ALL rows from `personal_snapshot_v2` regardless of their `source` column. When a user switches to APPLICATION, they still see MANUAL data (or a mix of both).
 
-**Where:** `ProspectTable.tsx` -- the empty state section (lines 233-249)
+2. **No auto-write bridge**: When prospects are added/updated (imports, tag changes), `useDailyTrackingLog` writes to `daily_tracking_logs` -- a table that TrackUp never reads. Nobody writes APPLICATION-sourced rows into `personal_snapshot_v2`. So there is nothing to show.
 
-**What changes:**
-- When `prospects.length === 0` (no leads at all), replace the minimal "No leads yet" text with a prominent onboarding card
-- Card includes:
-  - Icon (FileSpreadsheet or Upload)
-  - Title: "Start by importing your leads"
-  - Description: "You don't have any leads yet. Import your leads to start calling and follow-ups."
-  - Primary button: "Import Leads" (opens ImportExcelDialog)
-  - Secondary link: "or add manually" (opens AddProspectDialog)
-- When `prospects.length > 0` but filtered results are empty, keep the existing "No leads match your filters" message
-- The onboarding card is self-dismissing -- once a lead exists, it never shows again
-
-**Implementation approach:**
-- Lift `ImportExcelDialog` and `AddProspectDialog` open states up so the empty state card can trigger them
-- Or use refs/callbacks passed down to trigger opening
+### The Fix (3 Parts)
 
 ---
 
-### B) WhatsApp Guidance in Import Dialog
+### Part 1: Filter snapshots by source preference
 
-**Where:** `ImportExcelDialog.tsx` -- the upload step (lines 360-380)
+**File:** `src/hooks/usePersonalSnapshotV2Read.ts`
 
-**What changes:**
-- Add an info/tip section above the file picker drop zone:
-  ```
-  "If your leads are on WhatsApp:
-   1. Open the Excel file in WhatsApp
-   2. Save it to your phone (Files / Downloads)
-   3. Then select it here to import"
-  ```
-- Styled as a subtle info card (light background, small text, phone icon)
-- Always visible during the upload step
+- Accept a new optional parameter: `sourceFilter?: 'MANUAL' | 'APPLICATION' | null`
+- When provided, add `.eq('source', sourceFilter)` to the Supabase query
+- Include `sourceFilter` in the query key so switching sources triggers a fresh fetch
+- Default: `null` (no filter, backward compatible)
+
+**File:** `src/pages/Tracking.tsx`
+
+- Import `useTrackingSourcePreferences`
+- Map `personalSource` to the DB source value: `'AUTO'` maps to `'APPLICATION'`, `'MANUAL'` maps to `'MANUAL'`
+- Pass this mapped value to `usePersonalSnapshotV2Read` as `sourceFilter`
+
+**File:** `src/components/profile/ProfileTrackUp.tsx`
+
+- Same change: read source preference and pass filter to the read hook
 
 ---
 
-### C) Mobile Import Button Fix
+### Part 2: Auto-write APPLICATION snapshots from prospects
 
-**Where:** `ImportExcelDialog.tsx` -- the trigger button (line 341-344)
+**File:** `src/hooks/useAutoTrackingSync.ts` (NEW)
 
-**Current:**
-```tsx
-<span className="hidden sm:inline">Import</span>
+A new hook that computes today's tracking numbers from the prospects table and writes them to `personal_snapshot_v2` with `source: 'APPLICATION'`.
+
+Logic:
+- Query today's prospects (same logic as `useDailyTrackingLog`)
+- Count leads, responses, and tag distributions
+- Call `usePersonalSnapshotV2Write.savePersonal()` with `source: 'APPLICATION'`
+- Debounced (1 second) to batch rapid updates
+- Only runs when `personalSource === 'AUTO'`
+
+**File:** `src/contexts/ProspectsContext.tsx`
+
+- After every prospect add/update/delete/import, call the auto-sync function
+- This replaces the current `triggerDailyLog()` call (which writes to the unused table) with a call that actually writes APPLICATION data to the snapshot table TrackUp reads from
+
+---
+
+### Part 3: Ensure ManualUpdateDrawer respects source
+
+**File:** `src/components/trackup-v2/ManualUpdateDrawer.tsx`
+
+- Already correctly disables manual inputs when `personalSource === 'AUTO'` (line 129)
+- Already writes with the correct source mapping (line 163)
+- No changes needed here
+
+---
+
+### Data Flow After Fix
+
+```text
+Source = MANUAL:
+  User opens ManualUpdateDrawer -> saves with source='MANUAL'
+  -> personal_snapshot_v2 (source=MANUAL)
+  -> usePersonalSnapshotV2Read(sourceFilter='MANUAL') -> TrackUp shows manual data
+
+Source = APPLICATION:
+  User adds/imports/tags prospects -> ProspectsContext triggers auto-sync
+  -> useAutoTrackingSync computes counts from prospects table
+  -> writes to personal_snapshot_v2 (source='APPLICATION') via edge function
+  -> usePersonalSnapshotV2Read(sourceFilter='APPLICATION') -> TrackUp shows app data
 ```
-This hides the "Import" text on mobile, showing only the icon.
-
-**Fix:**
-Remove `hidden sm:inline` so the label always shows:
-```tsx
-<span>Import</span>
-```
-
----
-
-### D) Share-to-Import Flow (E from requirements)
-
-Skipped -- OS-level "Share to app" requires native app capabilities not available in a PWA web app. No changes needed.
 
 ---
 
@@ -73,21 +86,15 @@ Skipped -- OS-level "Share to app" requires native app capabilities not availabl
 
 | File | Change |
 |------|--------|
-| `src/components/prospects/ProspectTable.tsx` | Enhanced empty state with onboarding card; add state/callback to open import dialog from empty state |
-| `src/components/prospects/ImportExcelDialog.tsx` | Add WhatsApp guidance text above file picker; always show "Import" label on mobile |
+| `src/hooks/usePersonalSnapshotV2Read.ts` | Add `sourceFilter` parameter and include in query |
+| `src/hooks/useAutoTrackingSync.ts` | NEW -- computes prospect-based tracking and writes APPLICATION snapshots |
+| `src/pages/Tracking.tsx` | Read source preference, pass filter to read hook |
+| `src/components/profile/ProfileTrackUp.tsx` | Read source preference, pass filter to read hook |
+| `src/contexts/ProspectsContext.tsx` | Call auto-sync after prospect mutations when source=AUTO |
 
----
-
-### Technical Details
-
-**ProspectTable.tsx changes:**
-- Add `importDialogOpen` / `setImportDialogOpen` state
-- Add `addDialogOpen` / `setAddDialogOpen` state
-- Pass `open`/`onOpenChange` props to `ImportExcelDialog` and `AddProspectDialog`
-- In the empty state (`prospects.length === 0`), render a styled card with buttons that set these states
-
-**ImportExcelDialog.tsx changes:**
-- Accept optional `externalOpen` / `onExternalOpenChange` props for controlled mode
-- Add info section in the upload step with WhatsApp guidance
-- Change line 343 from `hidden sm:inline` to always-visible text
-
+### What This Does NOT Change
+- No funnel logic changes
+- No response counting rule changes
+- No historical data modifications
+- No time-based rules
+- ManualUpdateDrawer behavior unchanged
