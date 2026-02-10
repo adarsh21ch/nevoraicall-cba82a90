@@ -504,7 +504,7 @@ async function executeTool(
         
         const memberIds = team.map(m => m.user_id);
         const { data } = await supabase
-          .from("personal_snapshot_v2")
+          .from("total_snapshot_v2")
           .select("user_id, total_leads, total_responses, response_tags")
           .in("user_id", memberIds)
           .gte("date", args.start_date)
@@ -552,7 +552,7 @@ async function executeTool(
         if (!member) return JSON.stringify({ error: `Member "${args.member_name}" not found in your team.` });
         
         const { data } = await supabase
-          .from("personal_snapshot_v2")
+          .from("total_snapshot_v2")
           .select("date, total_leads, total_responses, response_tags, stage_tags, final_tag_count")
           .eq("user_id", member.user_id)
           .gte("date", args.start_date)
@@ -579,7 +579,7 @@ async function executeTool(
         
         const memberIds = team.map(m => m.user_id);
         const { data } = await supabase
-          .from("personal_snapshot_v2")
+          .from("total_snapshot_v2")
           .select("user_id, total_leads, total_responses, response_tags")
           .in("user_id", memberIds)
           .gte("date", args.start_date)
