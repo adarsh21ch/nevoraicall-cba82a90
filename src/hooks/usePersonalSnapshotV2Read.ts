@@ -8,11 +8,12 @@ export function usePersonalSnapshotV2Read(
   monthYear: string,
   leadsTrackingTagNames: string[] = [],
   stageTagNames: string[] = [],
+  sourceFilter?: 'MANUAL' | 'APPLICATION' | null,
 ) {
   const { user } = useAuth();
 
   const { data: rawSnapshots = [], isLoading, refetch } = useQuery({
-    queryKey: ['personal-snapshot-v2', user?.id, monthYear],
+    queryKey: ['personal-snapshot-v2', user?.id, monthYear, sourceFilter ?? 'all'],
     queryFn: async (): Promise<SnapshotRow[]> => {
       if (!user) return [];
 
@@ -21,13 +22,19 @@ export function usePersonalSnapshotV2Read(
       const lastDay = new Date(year, month, 0).getDate();
       const endDate = `${monthYear}-${String(lastDay).padStart(2, '0')}`;
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('personal_snapshot_v2')
         .select('*')
         .eq('user_id', user.id)
         .gte('date', startDate)
         .lte('date', endDate)
         .order('date', { ascending: true });
+
+      if (sourceFilter) {
+        query = query.eq('source', sourceFilter);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('Error fetching personal snapshots:', error);
