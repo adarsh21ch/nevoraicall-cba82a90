@@ -1,38 +1,46 @@
 
+## Fix nevorai-ai: Three Critical Data Bugs
 
-## Fix nevorai-ai: Full Replacement with Tool-Calling Architecture
+### Bug 1: Label Parsing Broken
 
-### Problems Found (3 critical bugs)
+**Current code** (`parseLabels`, line 54-62):
+```js
+if (typeof raw === "object" && Array.isArray(raw.tracking)) return raw.tracking;
+```
 
-1. **Team discovery is broken** (line 113-116): Only queries `profiles.upline_leader_id = userId`. Most team members are linked via `upline_email` or `leaders_id_of_my_leader`, so they return 0 results.
+**Actual data format**:
+- `response_labels`: `{tracking: [{name: "Video Sent"}, {name: "Enrolment"}]}`
+- `stage_labels`: `{stages: [{name: "Day 1"}, {name: "Day 2"}, ...]}`
 
-2. **Auth mismatch**: The deployed function reads `Authorization` header (line 471), but the frontend sends `auth_token` in the JSON body. The function never sees the token.
+The function returns `[{name: "Video Sent"}, ...]` (objects) instead of `["Video Sent", ...]` (strings). And it never checks `raw.stages` for stage labels.
 
-3. **Response format mismatch**: The function returns `text/event-stream` (SSE, line 554), but the frontend calls `resp.json()`. This causes the `SyntaxError` you saw.
+**Fix**: Update `parseLabels` to:
+- Extract `.name` from object-style entries: `raw.tracking.map(t => t.name)`
+- Also check `raw.stages` for stage labels: `raw.stages.map(s => s.name)`
 
-Additionally: no label resolution (slot keys like `response_tag_1` are shown raw), no tool-calling loop, and the intent-detection pipeline is fragile.
+### Bug 2: Wrong Table for "My KPIs"
 
-### Fix
+The user's `personal_snapshot_v2` has ALL ZEROS. The dashboard "Total" view reads from `total_snapshot_v2` which has the real data (4718 leads, etc.).
 
-**Replace the entire `supabase/functions/nevorai-ai/index.ts`** with the tool-calling code you provided earlier in the conversation. This code correctly implements:
+**Fix**: Update `get_snapshot_kpis` to accept an optional `source` parameter (`"personal"` or `"total"`, defaulting to `"total"`), and query the appropriate table. Similarly update `get_funnel_stages`, `get_conversion_rates`, and `get_tracking_status` to also query `total_snapshot_v2` as fallback when personal data is empty.
 
-- Auth via `auth_token` in request body + `supabase.auth.getUser()`
-- Team discovery via dual filter: `upline_email = leader_email OR leaders_id_of_my_leader = leader_neverai_id`
-- Label resolution from root leader profile (`response_labels`, `stage_labels`)
-- Slot-key-to-label mapping (`response_tag_1` becomes the actual tag name)
-- 10 read-only tools with AI tool-calling loop (max 5 iterations)
-- JSON response: `{ response: string, scope: string }`
-- Rate limiting: 50 req/hour per user
+Update the tool definition to include the `source` parameter, and update the system prompt to tell the AI:
+- Use `source: "total"` by default (matches dashboard "Total" view)
+- Use `source: "personal"` only when the user explicitly asks for personal-only data
+
+### Bug 3: Enrollment Uses Wrong Column
+
+`final_tag_count` is 0 everywhere. The dashboard's "250 Enrolment" comes from summing the response tag that has `isStageTag: true` or is named "Enrolment" (i.e., `response_tag_2`).
+
+**Fix**: Instead of relying on `final_tag_count`, identify the enrollment tag dynamically from `response_labels.tracking` entries. Find the one where `isStageTag: true` or `isFinalTarget: true`, then sum its corresponding slot key value from `response_tags`. Fallback to `final_tag_count` if no such tag exists.
 
 ### Files Changed
 
-| File | Action |
-|------|--------|
-| `supabase/functions/nevorai-ai/index.ts` | Full replacement (563 lines old code replaced with ~500 lines tool-calling code) |
+| File | Changes |
+|------|---------|
+| `supabase/functions/nevorai-ai/index.ts` | Fix `parseLabels` to handle `{tracking: [{name}]}` and `{stages: [{name}]}` formats; add `source` param to snapshot tools to query `total_snapshot_v2` vs `personal_snapshot_v2`; fix enrollment calculation to sum from response tags instead of `final_tag_count`; update system prompt to instruct AI to use total by default |
 
 ### No Other Changes
-
-- Frontend (`AIAssistantChat.tsx`) is already correct -- sends `auth_token`, parses JSON
-- No database/RLS/migration changes
+- Frontend (`AIAssistantChat.tsx`) unchanged -- it already correctly handles the JSON response
+- No database or RLS changes needed
 - No other components affected
-
