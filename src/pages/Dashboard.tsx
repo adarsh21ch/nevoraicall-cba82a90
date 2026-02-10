@@ -16,6 +16,8 @@ import { TrialBanner } from '@/components/subscription/TrialBanner';
 import { Loader2, Phone, Layers, Flame } from 'lucide-react';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
 import { useStreak } from '@/hooks/useStreak';
+import { AIAssistantButton } from '@/components/ai/AIAssistantButton';
+import { AIAssistantChat } from '@/components/ai/AIAssistantChat';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Pull-to-refresh hook - fixed to not interfere with normal scrolling
@@ -102,6 +104,7 @@ export default function Dashboard() {
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
+  const [showAIChat, setShowAIChat] = useState(false);
 
   // Sheets
   const {
@@ -352,6 +355,10 @@ export default function Dashboard() {
           )}
         </div>
       </main>
+
+      {/* AI Assistant */}
+      <AIAssistantButton onClick={() => setShowAIChat(true)} />
+      <AIAssistantChat open={showAIChat} onOpenChange={setShowAIChat} />
 
       <BottomNav />
 

@@ -56,3 +56,6 @@ verify_jwt = false
 
 [functions.update-tracking]
 verify_jwt = false
+
+[functions.ai-assistant]
+verify_jwt = false

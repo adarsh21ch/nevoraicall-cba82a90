@@ -16,6 +16,8 @@ import { cn } from '@/lib/utils';
 import { getTagStyle } from '@/lib/tagColors';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
 import { Prospect } from '@/types/prospect';
+import { AIAssistantButton } from '@/components/ai/AIAssistantButton';
+import { AIAssistantChat } from '@/components/ai/AIAssistantChat';
 
 type LeadMode = 'leads' | 'funnel';
 
@@ -138,6 +140,7 @@ export default function ListUp() {
     return saved ? JSON.parse(saved) : [];
   });
   const [expandedProspectId, setExpandedProspectId] = useState<string | null>(null);
+  const [showAIChat, setShowAIChat] = useState(false);
 
   // Persist lead mode to sessionStorage
   useEffect(() => {
@@ -550,6 +553,10 @@ export default function ListUp() {
             </div>}
         </div>
       </main>
+
+      {/* AI Assistant */}
+      <AIAssistantButton onClick={() => setShowAIChat(true)} />
+      <AIAssistantChat open={showAIChat} onOpenChange={setShowAIChat} />
 
       <BottomNav />
     </div>;
