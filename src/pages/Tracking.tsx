@@ -24,6 +24,7 @@ import { useTotalSnapshotV2Read } from '@/hooks/useTotalSnapshotV2Read';
 import { useSnapshotV2ComputedData } from '@/hooks/useSnapshotV2ComputedData';
 import { useTrackingFormatContext } from '@/contexts/TrackingFormatContext';
 import { useTrackingSourcePreferences } from '@/hooks/useTrackingSourcePreferences';
+import { useApplicationSnapshots } from '@/hooks/useApplicationSnapshots';
 import { useFunnelConfig } from '@/hooks/useFunnelConfig';
 import { NEVORAI_WEBSITE_URL } from '@/config/siteUrl';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
@@ -52,15 +53,20 @@ export default function Tracking() {
     leadsFinalTargetTag, stageFinalTargetTag, directLeaderUserId,
   } = useTrackingFormatContext();
 
-  // Source preference (controls input method, not display filtering)
+  // Source preference
   const { personalSource } = useTrackingSourcePreferences();
 
   // Funnel config
   const { getEffectiveConfig } = useFunnelConfig();
   const effectiveConfig = getEffectiveConfig();
 
-  // Read snapshots for current month — no source filter; show all data regardless of source
-  const { snapshots: personalSnapshots } = usePersonalSnapshotV2Read(monthYear, leadsTrackingTagNames, stageTagNames);
+  // Read snapshots — when source is AUTO, compute from prospects table directly
+  const { snapshots: manualSnapshots } = usePersonalSnapshotV2Read(monthYear, leadsTrackingTagNames, stageTagNames);
+  const { snapshots: appSnapshots } = useApplicationSnapshots(
+    monthYear, leadsTrackingTagNames, stageTagNames, leadsFinalTargetTag, stageFinalTargetTag,
+  );
+  const personalSnapshots = personalSource === 'AUTO' ? appSnapshots : manualSnapshots;
+
   const { snapshots: totalSnapshots } = useTotalSnapshotV2Read(monthYear, leadsTrackingTagNames, stageTagNames);
 
   // Pick active snapshots based on data mode
