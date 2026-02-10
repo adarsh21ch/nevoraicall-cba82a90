@@ -8,7 +8,7 @@ import { useRazorpay } from '@/hooks/useRazorpay';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/useSubscription';
 import { usePersonalSnapshotV2Read } from '@/hooks/usePersonalSnapshotV2Read';
-
+import { useTrackingSourcePreferences } from '@/hooks/useTrackingSourcePreferences';
 import { useSnapshotV2ComputedData } from '@/hooks/useSnapshotV2ComputedData';
 import { useTrackingFormat } from '@/hooks/useTrackingFormat';
 import { useFunnelConfig } from '@/hooks/useFunnelConfig';
@@ -34,8 +34,11 @@ export function ProfileTrackUp({ isPro }: ProfileTrackUpProps) {
 
   // V2 data — tag names must be resolved before read hook
   const { leadsTrackingTags, stageTags, leadsTrackingTagNames, stageTagNames, stageFinalTargetTag } = useTrackingFormat();
+  const { personalSource } = useTrackingSourcePreferences();
+  const profileSourceFilter: 'MANUAL' | 'APPLICATION' | null =
+    personalSource === 'AUTO' ? 'APPLICATION' : personalSource === 'MANUAL' ? 'MANUAL' : null;
   const monthYear = format(new Date(), 'yyyy-MM');
-  const { snapshots: personalSnapshots } = usePersonalSnapshotV2Read(monthYear, leadsTrackingTagNames, stageTagNames);
+  const { snapshots: personalSnapshots } = usePersonalSnapshotV2Read(monthYear, leadsTrackingTagNames, stageTagNames, profileSourceFilter);
   const { getEffectiveConfig } = useFunnelConfig();
   const effectiveConfig = getEffectiveConfig();
 

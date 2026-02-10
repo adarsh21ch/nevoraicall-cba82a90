@@ -8,6 +8,7 @@ import { useEncryption } from '@/hooks/useEncryption';
 import { encrypt as clientEncrypt, hasEncryptionKey } from '@/lib/encryption';
 import { useDailyTrackingLog } from '@/hooks/useDailyTrackingLog';
 import { useTrackingFormat } from '@/hooks/useTrackingFormat';
+import { useAutoTrackingSync } from '@/hooks/useAutoTrackingSync';
 
 // Map database prospect to app prospect
 const mapDbProspect = (dbProspect: any): Prospect => ({
@@ -89,19 +90,23 @@ export function ProspectsProvider({ children }: { children: ReactNode }) {
   const { encryptFields, decryptBatch } = useEncryption();
   const { logDailyTracking } = useDailyTrackingLog();
   const { leadsTrackingTagNames, stageTagNames, leadsFinalTargetTag, stageFinalTargetTag } = useTrackingFormat();
+  const { triggerAutoSync } = useAutoTrackingSync();
   
   // Debounce ref to prevent multiple log writes in quick succession
   const logDebounceRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Function to trigger daily tracking log write (debounced)
+  // Function to trigger daily tracking log write (debounced) + auto-sync for APPLICATION source
   const triggerDailyLog = useCallback(() => {
     if (logDebounceRef.current) {
       clearTimeout(logDebounceRef.current);
     }
     logDebounceRef.current = setTimeout(() => {
       logDailyTracking(leadsTrackingTagNames, stageTagNames, leadsFinalTargetTag, stageFinalTargetTag);
-    }, 500); // 500ms debounce to batch rapid updates
-  }, [logDailyTracking, leadsTrackingTagNames, stageTagNames, leadsFinalTargetTag, stageFinalTargetTag]);
+    }, 500);
+    
+    // Also trigger auto-sync (it internally checks if source is AUTO)
+    triggerAutoSync();
+  }, [logDailyTracking, leadsTrackingTagNames, stageTagNames, leadsFinalTargetTag, stageFinalTargetTag, triggerAutoSync]);
 
   // Save to cache on change
   useEffect(() => {
