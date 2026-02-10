@@ -46,14 +46,16 @@ export function useFreeTrial() {
 
   return useMemo(() => {
     // Check if trial is enabled in admin config
-    // Trial is enabled if free_trial_days exists and is > 0
-    const trialDays = config.limits.free_trial_days ?? 0;
+    // Trial is enabled if free_trial_days exists, is > 0, AND is_enabled in admin
+    const trialDaysValue = config.limits.free_trial_days ?? 0;
+    const trialDaysEnabled = config.limits_enabled?.free_trial_days !== false;
+    const trialDays = trialDaysEnabled ? trialDaysValue : 0;
     const trialEnabled = trialDays > 0;
     
-    // Trial Only Mode is enabled when the key exists in config.limits
-    // The get_app_config RPC only returns keys where is_enabled = true
-    // So we check for presence of the key (meaning toggle is ON in admin)
-    const trialOnlyMode = 'trial_only_mode' in config.limits;
+    // Trial Only Mode: must be present in config AND enabled in admin
+    // After get_app_config returns ALL keys (including disabled), we must
+    // check limits_enabled to know if the toggle is actually ON
+    const trialOnlyMode = config.limits_enabled?.trial_only_mode === true;
 
     // Get user's trial start date - use trial_start_date if set, otherwise fall back to created_at
     // This allows admin to reset trials for existing users
