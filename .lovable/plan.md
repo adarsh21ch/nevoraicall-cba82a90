@@ -1,51 +1,59 @@
 
 
-## Fix: Total Tracking Automated Mode
+## Phase 2: Fix Application Tracking Logic (Cumulative + Personal Tags)
 
-### What's Wrong
-When Total Tracking is set to "Automated," it always reads from `total_snapshot_v2` (which has old manual data). It ignores your personal source preference, so your application-computed numbers don't appear in the total.
+### What's Wrong Now
 
-### The Fix (Safe, Minimal)
+The `useApplicationSnapshots` hook has 3 logic bugs:
 
-This uses the exact same pattern already working for Personal tracking -- just applied to the Total side.
+1. **Responses count** -- only counts leads with `action_taken` set. Leads that have personal tags but no response tag are missed.
+2. **Response stages are NOT cumulative** -- if a lead has Response 3, it only increments Response 3's count. It should increment Response 1, 2, AND 3 (backfill).
+3. **Funnel stages are NOT cumulative** -- same issue. A lead at Stage 3 should count in Stage 1, 2, and 3.
 
-**1. New Hook: `useApplicationTotalSnapshots.ts`**
+### What Changes
 
-Computes total data by merging:
-- Your personal data (respects your personal source: if APPLICATION, computes from prospects; if MANUAL, reads from personal_snapshot_v2)
-- Team members' data (from personal_snapshot_v2 where upline_leader_id = you)
-- Sums everything per date, returns the same SnapshotRow[] format
+Only ONE file: `src/hooks/useApplicationSnapshots.ts`
 
-**2. Tracking.tsx -- 1 conditional change**
+No changes to snapshots, automation, source logic, team aggregation, or any other file.
 
-Line 70 currently:
+### New Logic (per day, per lead)
+
+```text
+A) LEADS = count of all prospects for that day (unchanged)
+
+B) RESPONSES = count of leads that have ANY tag:
+   - action_taken is set, OR
+   - personal_tags array is non-empty
+   Count each lead once.
+
+C) RESPONSE STAGES (cumulative):
+   Tags are ordered: [Response1, Response2, Response3, ...]
+   If lead's action_taken = Response3 (index 2):
+     -> increment Response1, Response2, Response3
+
+D) FUNNEL STAGES (cumulative):
+   Tags are ordered: [Stage1, Stage2, Stage3, ...]
+   If lead's funnel_stage = Stage3 (index 2):
+     -> increment Stage1, Stage2, Stage3
+
+E) PERSONAL TAGS:
+   - Count toward Responses (base count)
+   - Do NOT affect response stage counts
+   - Do NOT affect funnel stage counts
 ```
-const { snapshots: totalSnapshots } = useTotalSnapshotV2Read(...)
-```
 
-Becomes:
-```
-// Both hooks always run (React rules), dashboard picks the right one
-const { snapshots: manualTotalSnapshots } = useTotalSnapshotV2Read(...)
-const { snapshots: autoTotalSnapshots } = useApplicationTotalSnapshots(...)
-const totalSnapshots = teamSource === 'AUTO' ? autoTotalSnapshots : manualTotalSnapshots
-```
+### Technical Details
 
-**3. ProfileTrackUp.tsx -- same small conditional**
-
-### Safety Guarantees
-
-- No existing hooks modified
-- No database or schema changes
-- Manual mode path completely untouched
-- Same SnapshotRow[] output format the dashboard already consumes
-- Pure read-time computation, no writes or side effects
+1. Add `personal_tags` to the Supabase query select
+2. Update `totalResponses` to count leads with `action_taken` OR non-empty `personal_tags`
+3. For response tag counting: find the index of the lead's `action_taken` in `leadsTrackingTagNames`, then increment ALL tags from index 0 up to that index
+4. For stage tag counting: find the index of the lead's `funnel_stage` in `stageTagNames`, then increment ALL tags from index 0 up to that index
+5. `final_tag_count` and `funnel_tag_count` will automatically be correct since they read from the already-cumulative tag objects
 
 ### Files Changed
 
 | File | Change |
 |------|--------|
-| `src/hooks/useApplicationTotalSnapshots.ts` | NEW -- merges personal + team data |
-| `src/pages/Tracking.tsx` | Conditional: use auto total when teamSource = AUTO |
-| `src/components/profile/ProfileTrackUp.tsx` | Same conditional |
+| `src/hooks/useApplicationSnapshots.ts` | Update query + counting logic (cumulative + personal tags) |
 
+No other files are touched. The `useApplicationTotalSnapshots` hook consumes the output of this hook, so it automatically gets correct data too.
