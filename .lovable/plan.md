@@ -1,39 +1,63 @@
 
 
-## Fix TrackUp Date-wise Table and Funnel-wise Table Issues
+## AI Assistant Integration for NevoraI
 
-### Problem 1: Date-wise table only shows dates with existing data
-The `DateWiseTable` currently only renders columns for dates that have snapshot rows in the database. If data exists only for Feb 8, only that one column appears. It should show **all days of the selected month** (1-28/29/30/31) with zeros for days without data.
+### What You Get
+A floating AI chat button in your app where users can ask questions like:
+- "How many leads did I add this month?"
+- "What's my response rate?"
+- "Show my team's performance"
+- "Tips to improve my enrollment"
 
-### Problem 2: "No funnel data available" despite KPI showing stage totals
-The KPI section correctly aggregates stage tag totals from snapshots. However, the `FunnelWiseTable` requires a `funnel_configs` entry with a `day_1_start` date to calculate funnel periods (F1, F2, etc.). If no funnel config exists (for the user or their leader), `funnelPeriods` is empty and the "no data" message shows -- even though stage data exists in snapshots.
+The AI reads the user's real data and gives accurate, personalized answers.
 
-### Solution
+### How It Works
 
-**Fix 1 -- Generate full month of dates in DateWiseTable**
+1. User taps the AI button (sparkle icon, bottom-right)
+2. A chat drawer slides up
+3. User types a question or taps a quick suggestion chip
+4. The backend fetches the user's actual data (prospects, tracking snapshots, team info)
+5. Sends it to Lovable AI along with the question
+6. Response streams back token-by-token into the chat
 
-Modify `useSnapshotV2ComputedData` to accept the `monthYear` string and generate `dailyMetrics` for **every day of the month**, filling missing dates with zero values. This ensures the table always shows all dates regardless of whether snapshot rows exist.
+### What Gets Built
 
-- Add `monthYear` parameter to the hook
-- Generate a complete date array for the month (e.g., Feb 2026 = 28 days)
-- Merge existing snapshot data onto the full date array
-- Days without data show zeros
+| File | What It Does |
+|------|-------------|
+| `supabase/functions/ai-assistant/index.ts` | Backend function that queries user data and calls AI |
+| `src/components/ai/AIAssistantButton.tsx` | Floating sparkle button |
+| `src/components/ai/AIAssistantChat.tsx` | Chat drawer with streaming messages and markdown |
+| `src/pages/Dashboard.tsx` | Add AI button |
+| `src/pages/Tracking.tsx` | Add AI button |
+| `src/pages/ListUp.tsx` | Add AI button |
 
-**Fix 2 -- Fallback for Funnel-wise when no funnel config exists**
+### Technical Details
 
-When `funnelStartDate` is null (no funnel config), instead of showing "No funnel data," fall back to showing stage data grouped by a sensible default (e.g., assume day 1 of the month as the start). Alternatively, show a flat stage summary table so the user still sees their stage tag data.
+**Edge Function (`ai-assistant`)**
+- Authenticates user via JWT
+- Queries their data from `prospects`, `personal_snapshot_v2`, `total_snapshot_v2`, and `profiles`
+- Builds a data summary context (lead counts, response rates, stage distribution, team members)
+- Sends to Lovable AI Gateway (`google/gemini-3-flash-preview`) with a domain-aware system prompt
+- Streams SSE response back
+- Handles 429 (rate limit) and 402 (credits) errors
 
-- In `useSnapshotV2ComputedData`, when `funnelStartDate` is null, default to day 1 of the viewing month
-- This way funnel periods are always computed when stage data exists
-- The "set up funnel start date" message only shows when there are truly zero snapshots
+**Frontend Chat Component**
+- Sheet/drawer that opens from bottom
+- Markdown rendering for AI responses (using simple inline parser)
+- Streaming token-by-token display
+- Quick suggestion chips: "My stats today", "Team performance", "Tips to improve"
+- Conversation history kept in memory (resets on close)
 
-### Files to Change
+**Floating Button Placement**
+- Positioned above the existing FloatingUpdateButton on Tracking page
+- On Dashboard and ListUp pages, placed at bottom-right above the bottom nav
+- Uses a sparkle/brain icon to differentiate from the "+" button
 
-1. **`src/hooks/useSnapshotV2ComputedData.ts`**
-   - Add `monthYear` parameter
-   - Generate all days of the month in `dailyMetrics` (fill gaps with zeros)
-   - Default `funnelStartDate` to 1st of the month when null
+**Security**
+- `verify_jwt = false` in config.toml, but JWT validated in code
+- Only queries data owned by the authenticated user
+- Team data only shown if user has team members (via `leaders_id_of_my_leader`)
 
-2. **`src/pages/Tracking.tsx`**
-   - Pass `monthYear` to `useSnapshotV2ComputedData`
+**For Website Integration**
+The same edge function can be called from your website project using the same backend URL and auth token. The chat component can be copied or a simplified version embedded.
 
