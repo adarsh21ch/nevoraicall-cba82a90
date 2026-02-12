@@ -3297,6 +3297,7 @@ export type Database = {
           notes: string | null
           personal_tags: Json | null
           phone: string
+          phone2: string | null
           priority: string | null
           profession: string | null
           prospect_status: string | null
@@ -3324,6 +3325,7 @@ export type Database = {
           notes?: string | null
           personal_tags?: Json | null
           phone: string
+          phone2?: string | null
           priority?: string | null
           profession?: string | null
           prospect_status?: string | null
@@ -3351,6 +3353,7 @@ export type Database = {
           notes?: string | null
           personal_tags?: Json | null
           phone?: string
+          phone2?: string | null
           priority?: string | null
           profession?: string | null
           prospect_status?: string | null

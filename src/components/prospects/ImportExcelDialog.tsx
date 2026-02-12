@@ -21,6 +21,7 @@ interface ImportExcelDialogProps {
 interface ColumnMapping {
   name: string | null;
   phone: string | null;
+  phone2: string | null;
   address: string | null;
   age_or_dob: string | null;
   gender: string | null;
@@ -30,7 +31,8 @@ interface ColumnMapping {
 
 const FIELD_LABELS: Record<keyof ColumnMapping, string> = {
   name: 'Name *',
-  phone: 'Phone *',
+  phone: 'Phone 1 *',
+  phone2: 'Phone 2',
   address: 'Address',
   age_or_dob: 'Age / DOB',
   gender: 'Gender',
@@ -41,6 +43,7 @@ const FIELD_LABELS: Record<keyof ColumnMapping, string> = {
 const FIELD_PLACEHOLDERS: Record<keyof ColumnMapping, string> = {
   name: 'Select column...',
   phone: 'Select column...',
+  phone2: 'Select column...',
   address: 'City and State',
   age_or_dob: 'Select column...',
   gender: 'Select column...',
@@ -58,6 +61,7 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
   const [mapping, setMapping] = useState<ColumnMapping>({
     name: null,
     phone: null,
+    phone2: null,
     address: null,
     age_or_dob: null,
     gender: null,
@@ -134,15 +138,16 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
     setColumns([]);
     setPreviewData([]);
     setFullData([]);
-    setMapping({
-      name: null,
-      phone: null,
-      address: null,
-      age_or_dob: null,
-      gender: null,
-      instagram: null,
-      profession: null,
-    });
+      setMapping({
+        name: null,
+        phone: null,
+        phone2: null,
+        address: null,
+        age_or_dob: null,
+        gender: null,
+        instagram: null,
+        profession: null,
+      });
     setError(null);
     setImportProgress(null);
     setPreviewColumnWidths({});
@@ -219,6 +224,7 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
       setMapping({
         name: null,
         phone: null,
+        phone2: null,
         address: null,
         age_or_dob: null,
         gender: null,
@@ -261,11 +267,14 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
         return;
       }
 
-      const prospect: Partial<Prospect> & { age_or_dob?: string; gender?: string; instagram?: string; profession?: string } = {
+      const prospect: Partial<Prospect> & { age_or_dob?: string; gender?: string; instagram?: string; profession?: string; phone2?: string } = {
         name: validation.name,
         phone: validation.phone,
       };
 
+      if (mapping.phone2 && row[mapping.phone2]) {
+        prospect.phone2 = sanitizeImportString(row[mapping.phone2], 20);
+      }
       if (mapping.address && row[mapping.address]) {
         prospect.address = sanitizeImportString(row[mapping.address], 200);
       }
