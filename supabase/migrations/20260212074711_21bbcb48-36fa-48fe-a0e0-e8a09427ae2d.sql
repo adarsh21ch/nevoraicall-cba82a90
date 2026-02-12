@@ -1,0 +1,1 @@
+ALTER TABLE public.prospects ADD COLUMN IF NOT EXISTS phone2 text DEFAULT NULL;

@@ -39,6 +39,7 @@ export interface Prospect {
   enrollment_status?: EnrollmentStatus | null;
   instagram?: string | null;
   profession?: string | null;
+  phone2?: string | null;
 
   // Personal tags (private to user, NOT for analytics)
   personal_tags?: string[] | null;
