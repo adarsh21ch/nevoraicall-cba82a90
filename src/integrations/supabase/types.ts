@@ -2364,6 +2364,7 @@ export type Database = {
           lead_form_config: Json | null
           lock_cta_until_complete: boolean | null
           owner_user_id: string
+          payment_confirmation_method: string
           payment_type: string | null
           price: number | null
           razorpay_payment_link: string | null
@@ -2403,6 +2404,7 @@ export type Database = {
           lead_form_config?: Json | null
           lock_cta_until_complete?: boolean | null
           owner_user_id: string
+          payment_confirmation_method?: string
           payment_type?: string | null
           price?: number | null
           razorpay_payment_link?: string | null
@@ -2442,6 +2444,7 @@ export type Database = {
           lead_form_config?: Json | null
           lock_cta_until_complete?: boolean | null
           owner_user_id?: string
+          payment_confirmation_method?: string
           payment_type?: string | null
           price?: number | null
           razorpay_payment_link?: string | null
