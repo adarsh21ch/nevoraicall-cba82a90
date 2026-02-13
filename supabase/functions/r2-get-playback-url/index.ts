@@ -81,6 +81,22 @@ Deno.serve(async (req) => {
             console.log(`Access granted: user ${userId} has funnel using asset ${asset_id}`);
           }
         }
+
+        // Check if user has shared access via video_assets_access
+        if (!hasAccess) {
+          const { data: accessRecord } = await serviceClient
+            .from('video_assets_access')
+            .select('id')
+            .eq('video_asset_id', asset_id)
+            .eq('user_id', userId)
+            .is('revoked_at', null)
+            .maybeSingle();
+
+          if (accessRecord) {
+            hasAccess = true;
+            console.log(`Access granted: user ${userId} has shared access to asset ${asset_id}`);
+          }
+        }
       }
     }
 
