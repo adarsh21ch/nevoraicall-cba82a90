@@ -73,15 +73,15 @@ export function UPIPaymentModal({
 
     try {
       // Get presigned URL for payment screenshot
-      const urlResponse = await fetch(`${APP_SUPABASE_URL}/functions/v1/upload-payment-screenshot`, {
+      const urlResponse = await fetch(`${APP_SUPABASE_URL}/functions/v1/r2-get-upload-url`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-lead-token': accessToken,
         },
         body: JSON.stringify({
-          lead_id: leadId,
-          access_token: accessToken,
           file_name: file.name,
+          file_size: file.size,
           content_type: file.type,
         }),
       });
