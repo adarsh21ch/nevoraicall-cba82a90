@@ -1,57 +1,53 @@
 
 
-## Fix: Payment Screenshot Upload 401 Error for Visitors
+## Fix: Make `submit-payment-proof` More Robust for nevorai.com
 
 ### Problem
 
-When a funnel visitor tries to upload a payment screenshot, the request hits the `r2-get-upload-url` function which requires either a valid JWT (logged-in user) or a lead token (visitor). The visitor has no JWT, and the lead token (stored as `accessToken`) is not being passed in the `x-lead-token` header -- so the function rejects with 401.
+The R2 upload works fine (the `r2-get-upload-url` function correctly authenticates visitors via `x-lead-token`). The error occurs in `submit-payment-proof` -- the nevorai.com frontend likely sends data in a slightly different format, causing either "Lead not found" or "Failed to record payment".
 
-### Solution
+### Root Cause
 
-Update `UPIPaymentModal.tsx` to call `r2-get-upload-url` (instead of the deprecated `upload-payment-screenshot`) and pass the visitor's access token via the `x-lead-token` header. The edge function already supports this auth path.
+The nevorai.com frontend may:
+- Send `access_token` for lead lookup instead of `lead_id`
+- Send `amount` as a string or float instead of integer
+- Send field names that don't match what the function expects
 
 ### Changes
 
-**File: `src/components/funnels/UPIPaymentModal.tsx`** (lines 74-92)
+**File: `supabase/functions/submit-payment-proof/index.ts`**
 
-Replace the `upload-payment-screenshot` call with a `r2-get-upload-url` call that includes the lead token header:
+1. **Add `access_token` as an alternative to `lead_id`** -- If `lead_id` is missing but `access_token` is provided, look up the lead by its access token (same way `r2-get-upload-url` does it)
 
-```typescript
-// Before:
-const urlResponse = await fetch(`${APP_SUPABASE_URL}/functions/v1/upload-payment-screenshot`, {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({
-    lead_id: leadId,
-    access_token: accessToken,
-    file_name: file.name,
-    content_type: file.type,
-  }),
-});
+2. **Also check `x-lead-token` header** -- The nevorai.com frontend might pass the token in the header (like it does for R2 uploads) instead of the body
 
-// After:
-const urlResponse = await fetch(`${APP_SUPABASE_URL}/functions/v1/r2-get-upload-url`, {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'x-lead-token': accessToken,
-  },
-  body: JSON.stringify({
-    file_name: file.name,
-    file_size: file.size,
-    content_type: file.type,
-  }),
-});
+3. **Cast `amount` to integer** -- Use `Math.round(Number(amount))` to handle float/string values from nevorai.com
+
+4. **Add detailed request logging** -- Log the full request body so we can diagnose any remaining issues
+
+### Technical Details
+
+```text
+Current flow:
+  nevorai.com -> submit-payment-proof(lead_id, ...) -> "Lead not found"
+
+Fixed flow:
+  nevorai.com -> submit-payment-proof(lead_id OR access_token OR x-lead-token header)
+             -> lookup lead by whichever identifier is provided
+             -> cast amount to integer
+             -> INSERT into funnel_payments
+             -> success
 ```
 
-Also update the response parsing (line 94) since `r2-get-upload-url` returns `upload_url` and `public_url` (same field names), this stays the same.
+### Specific Code Changes
 
-### Why This Works
+In `submit-payment-proof/index.ts`:
 
-- The `r2-get-upload-url` function already checks for `x-lead-token` header (line 33)
-- It validates the token against `funnel_leads.access_token` in the database
-- For lead auth, it restricts uploads to images only (JPEG, PNG, WebP, GIF) and max 10MB
-- It stores files under `payment-proofs/{leadId}/...` path
-- No edge function changes needed -- only the frontend call needs fixing
+- After parsing the request body (line 26), add `access_token` to the destructured fields
+- Add a new lookup path: if `lead_id` is missing, try `access_token` from body or `x-lead-token` header to find the lead
+- Wrap `amount` in `Math.round(Number(...))` before the INSERT
+- Add `console.log` of the incoming request body for debugging
+- Update the CORS headers to include `x-lead-token`
+
+No other files need changes -- the R2 upload flow already works correctly.
+
