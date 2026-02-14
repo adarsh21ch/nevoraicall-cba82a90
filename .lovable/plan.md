@@ -1,41 +1,34 @@
 
 
-## Fix: Service Role Key Bypass in r2-get-upload-url
+## Add Debug Logging to r2-get-upload-url
 
-### Problem
-The service role key comparison on line 42 isn't matching, causing 401 responses for trusted proxy calls. The likely cause is either:
-- `token` is `undefined` (no auth header) matching against something unexpected
-- Missing explicit truthiness check on `token`
+### What
+Add temporary console.log statements to the service role bypass check in `supabase/functions/r2-get-upload-url/index.ts` to diagnose why the 401 persists.
 
-### Solution
-Update the bypass condition on line 42 to add an explicit `token &&` guard, exactly as you specified:
+### Changes
 
-**File:** `supabase/functions/r2-get-upload-url/index.ts`
+**File:** `supabase/functions/r2-get-upload-url/index.ts` (around line 41)
 
-**Change (line 42):**
+Add two log lines right before the bypass condition:
+
 ```typescript
-// Before:
-if (token === serviceRoleKey) {
+const token = authHeader?.replace('Bearer ', '');
 
-// After:
+// Temporary debug logging
+console.log('[bypass] token length:', token?.length, 'serviceRoleKey length:', serviceRoleKey?.length);
+console.log('[bypass] match:', token === serviceRoleKey);
+
+// Allow service_role key (used by Lovable Cloud proxy)
 if (token && token === serviceRoleKey) {
-```
-
-Also remove the `!` non-null assertion on `serviceRoleKey` (line 30) so a missing env var doesn't cause a crash — instead it would just be `undefined` and the comparison would safely fail:
-
-```typescript
-// Before:
-const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-// After:
-const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 ```
 
 ### After Code Change
 - Redeploy the `r2-get-upload-url` edge function
+- Trigger a test request
+- Check the function logs to see if lengths match and whether the comparison returns true or false
 
-### Technical Details
-- The `token && token === serviceRoleKey` pattern ensures we never compare `undefined === undefined`
-- Removing the `!` assertion prevents runtime crashes if the env var is missing
-- No other files need changes — the bypass logic and ordering are already correct
+### Next Steps Based on Results
+- If lengths differ or match is false: the `APP_SUPABASE_SERVICE_ROLE_KEY` secret needs to be re-set with the correct value
+- If match is true but still 401: there's a logic flow issue after the bypass
+- Once diagnosed, remove the debug logs
 
