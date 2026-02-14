@@ -32,22 +32,36 @@ export function useVideoUpload(options?: UseVideoUploadOptions) {
         throw new Error('File too large. Maximum size is 500MB.');
       }
 
-      // Step 1: Get presigned upload URL
-      const { data: urlData, error: urlError } = await supabase.functions.invoke<UploadUrlResponse>(
-        'r2-get-upload-url',
+      // Step 1: Get presigned upload URL (direct fetch to bypass proxy key injection)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Not authenticated. Please log in again.');
+      }
+
+      const uploadUrlResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/r2-get-upload-url`,
         {
-          body: {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({
             file_name: file.name,
             file_size: file.size,
             content_type: file.type,
-          },
+          }),
         }
       );
 
-      if (urlError || !urlData) {
-        console.error('Failed to get upload URL:', urlError);
-        throw new Error('Failed to get upload URL');
+      if (!uploadUrlResponse.ok) {
+        const errBody = await uploadUrlResponse.json().catch(() => ({}));
+        console.error('Failed to get upload URL:', errBody);
+        throw new Error(errBody?.error || 'Failed to get upload URL');
       }
+
+      const urlData: UploadUrlResponse = await uploadUrlResponse.json();
 
       setCurrentAssetId(urlData.asset_id);
 
