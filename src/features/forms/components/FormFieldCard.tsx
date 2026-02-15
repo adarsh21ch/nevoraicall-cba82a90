@@ -4,8 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { GripVertical, Trash2, Plus, ChevronDown, ChevronUp } from 'lucide-react';
+import { GripVertical, Trash2, Plus, ChevronDown, ChevronUp, Copy } from 'lucide-react';
 import { ConditionalLogicEditor } from './ConditionalLogicEditor';
 import { generateFieldKey } from '../utils/formUtils';
 import type { NevoraFormField, FormFieldType, FieldOptions, FieldValidation } from '../types';
@@ -19,10 +18,10 @@ const FIELD_TYPES: { value: FormFieldType; label: string }[] = [
   { value: 'date', label: 'Date' },
   { value: 'time', label: 'Time' },
   { value: 'select', label: 'Dropdown' },
-  { value: 'radio', label: 'Radio Buttons' },
+  { value: 'radio', label: 'Radio' },
   { value: 'checkbox', label: 'Checkboxes' },
   { value: 'multiselect', label: 'Multi-Select' },
-  { value: 'linear_scale', label: 'Linear Scale' },
+  { value: 'linear_scale', label: 'Scale' },
   { value: 'file', label: 'File Upload' },
   { value: 'audio', label: 'Audio' },
 ];
@@ -35,10 +34,11 @@ interface Props {
   allFields: NevoraFormField[];
   onChange: (updated: NevoraFormField) => void;
   onDelete: () => void;
+  onDuplicate?: () => void;
 }
 
-export function FormFieldCard({ field, index, allFields, onChange, onDelete }: Props) {
-  const [expanded, setExpanded] = useState(true);
+export function FormFieldCard({ field, index, allFields, onChange, onDelete, onDuplicate }: Props) {
+  const [moreOpen, setMoreOpen] = useState(false);
   const opts = (field.options || {}) as FieldOptions;
   const hasChoices = CHOICE_TYPES.includes(field.field_type);
 
@@ -67,10 +67,10 @@ export function FormFieldCard({ field, index, allFields, onChange, onDelete }: P
   };
 
   return (
-    <Card className="p-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab shrink-0" />
-        <span className="text-xs font-medium text-muted-foreground shrink-0">#{index + 1}</span>
+    <div className="border border-border/60 rounded-xl p-4 bg-card space-y-3">
+      {/* Top row: drag handle, question input, type selector */}
+      <div className="flex items-center gap-3">
+        <GripVertical className="h-5 w-5 text-muted-foreground/40 cursor-grab shrink-0" />
         <Input
           value={field.label}
           onChange={e => {
@@ -79,123 +79,137 @@ export function FormFieldCard({ field, index, allFields, onChange, onDelete }: P
               field_key: generateFieldKey(e.target.value, index),
             });
           }}
-          placeholder="Question label"
-          className="flex-1 font-medium"
+          placeholder="Question"
+          className="flex-1 border-0 border-b-2 border-primary/40 rounded-none px-0 text-sm font-medium focus-visible:ring-0 focus-visible:border-primary bg-transparent"
         />
-        <Button variant="ghost" size="icon" onClick={() => setExpanded(!expanded)} className="shrink-0">
-          {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </Button>
-        <Button variant="ghost" size="icon" onClick={onDelete} className="shrink-0 text-destructive hover:text-destructive">
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        <Select
+          value={field.field_type}
+          onValueChange={(v: string) => {
+            const ft = v as FormFieldType;
+            const newField: Partial<NevoraFormField> = { field_type: ft };
+            if (CHOICE_TYPES.includes(ft) && !(opts.choices?.length)) {
+              newField.options = { choices: ['Option 1', 'Option 2'] };
+            }
+            if (ft === 'linear_scale') {
+              newField.options = { min: 1, max: 5, min_label: 'Low', max_label: 'High' };
+            }
+            updateField(newField);
+          }}
+        >
+          <SelectTrigger className="w-[130px] shrink-0 rounded-full border-border/50 h-9 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {FIELD_TYPES.map(t => (
+              <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      {expanded && (
-        <div className="space-y-3 pl-6">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs">Field Type</Label>
-              <Select
-                value={field.field_type}
-                onValueChange={(v: string) => {
-                  const ft = v as FormFieldType;
-                  const newField: Partial<NevoraFormField> = { field_type: ft };
-                  if (CHOICE_TYPES.includes(ft) && !(opts.choices?.length)) {
-                    newField.options = { choices: ['Option 1', 'Option 2'] };
-                  }
-                  if (ft === 'linear_scale') {
-                    newField.options = { min: 1, max: 5, min_label: 'Low', max_label: 'High' };
-                  }
-                  updateField(newField);
-                }}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {FIELD_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
+      {/* Choice options if applicable */}
+      {hasChoices && (
+        <div className="space-y-2 pl-8">
+          {(opts.choices || []).map((c, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <Input value={c} onChange={e => updateChoice(i, e.target.value)} className="text-sm h-8" />
+              <Button variant="ghost" size="icon" onClick={() => removeChoice(i)} className="shrink-0 h-7 w-7">
+                <Trash2 className="h-3 w-3 text-muted-foreground" />
+              </Button>
             </div>
-            <div className="flex items-end">
-              <div className="flex items-center gap-2">
-                <Switch checked={field.required} onCheckedChange={v => updateField({ required: v })} />
-                <Label className="text-xs">Required</Label>
-              </div>
-            </div>
-          </div>
+          ))}
+          <Button variant="ghost" size="sm" onClick={addChoice} className="text-xs text-primary">
+            <Plus className="h-3 w-3 mr-1" /> Add Option
+          </Button>
+        </div>
+      )}
 
+      {/* Linear scale options */}
+      {field.field_type === 'linear_scale' && (
+        <div className="grid grid-cols-2 gap-3 pl-8">
+          <div>
+            <Label className="text-xs text-muted-foreground">Min</Label>
+            <Input type="number" value={opts.min || 1} onChange={e => updateOptions({ min: parseInt(e.target.value) || 1 })} className="h-8 text-sm" />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Max</Label>
+            <Input type="number" value={opts.max || 5} onChange={e => updateOptions({ max: parseInt(e.target.value) || 5 })} className="h-8 text-sm" />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Min Label</Label>
+            <Input value={opts.min_label || ''} onChange={e => updateOptions({ min_label: e.target.value })} className="h-8 text-sm" />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Max Label</Label>
+            <Input value={opts.max_label || ''} onChange={e => updateOptions({ max_label: e.target.value })} className="h-8 text-sm" />
+          </div>
+        </div>
+      )}
+
+      {/* Bottom actions row */}
+      <div className="flex items-center justify-between pt-1 border-t border-border/30">
+        <div className="flex items-center gap-1">
+          {onDuplicate && (
+            <Button variant="ghost" size="icon" onClick={onDuplicate} className="h-8 w-8">
+              <Copy className="h-4 w-4 text-muted-foreground" />
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" onClick={onDelete} className="h-8 w-8">
+            <Trash2 className="h-4 w-4 text-muted-foreground" />
+          </Button>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setMoreOpen(!moreOpen)}
+            className="text-xs text-muted-foreground flex items-center gap-1 hover:text-foreground transition-colors"
+          >
+            {moreOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            More options
+          </button>
+          <div className="flex items-center gap-2 border-l border-border/30 pl-3">
+            <Label className="text-xs text-muted-foreground">Required</Label>
+            <Switch checked={field.required} onCheckedChange={v => updateField({ required: v })} className="scale-90" />
+          </div>
+        </div>
+      </div>
+
+      {/* Expanded options */}
+      {moreOpen && (
+        <div className="space-y-3 pl-8 pt-2 border-t border-border/30">
           <Input
             value={field.placeholder || ''}
             onChange={e => updateField({ placeholder: e.target.value })}
             placeholder="Placeholder text (optional)"
-            className="text-sm"
+            className="text-sm h-8"
           />
-
           <Input
             value={field.description || ''}
             onChange={e => updateField({ description: e.target.value })}
             placeholder="Helper text (optional)"
-            className="text-sm"
+            className="text-sm h-8"
           />
-
-          {hasChoices && (
-            <div className="space-y-2">
-              <Label className="text-xs font-medium">Options</Label>
-              {(opts.choices || []).map((c, i) => (
-                <div key={i} className="flex gap-2">
-                  <Input value={c} onChange={e => updateChoice(i, e.target.value)} className="text-sm" />
-                  <Button variant="ghost" size="icon" onClick={() => removeChoice(i)} className="shrink-0">
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              ))}
-              <Button variant="outline" size="sm" onClick={addChoice} className="w-full">
-                <Plus className="h-3 w-3 mr-1" /> Add Option
-              </Button>
-            </div>
-          )}
-
-          {field.field_type === 'linear_scale' && (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs">Min</Label>
-                <Input type="number" value={opts.min || 1} onChange={e => updateOptions({ min: parseInt(e.target.value) || 1 })} />
-              </div>
-              <div>
-                <Label className="text-xs">Max</Label>
-                <Input type="number" value={opts.max || 5} onChange={e => updateOptions({ max: parseInt(e.target.value) || 5 })} />
-              </div>
-              <div>
-                <Label className="text-xs">Min Label</Label>
-                <Input value={opts.min_label || ''} onChange={e => updateOptions({ min_label: e.target.value })} />
-              </div>
-              <div>
-                <Label className="text-xs">Max Label</Label>
-                <Input value={opts.max_label || ''} onChange={e => updateOptions({ max_label: e.target.value })} />
-              </div>
-            </div>
-          )}
-
           {field.field_type === 'number' && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs">Min Value</Label>
+                <Label className="text-xs text-muted-foreground">Min Value</Label>
                 <Input
                   type="number"
                   value={(field.validation as FieldValidation)?.min ?? ''}
                   onChange={e => updateField({ validation: { ...field.validation as FieldValidation, min: e.target.value ? parseFloat(e.target.value) : undefined } })}
+                  className="h-8 text-sm"
                 />
               </div>
               <div>
-                <Label className="text-xs">Max Value</Label>
+                <Label className="text-xs text-muted-foreground">Max Value</Label>
                 <Input
                   type="number"
                   value={(field.validation as FieldValidation)?.max ?? ''}
                   onChange={e => updateField({ validation: { ...field.validation as FieldValidation, max: e.target.value ? parseFloat(e.target.value) : undefined } })}
+                  className="h-8 text-sm"
                 />
               </div>
             </div>
           )}
-
           <ConditionalLogicEditor
             field={field}
             allFields={allFields}
@@ -203,6 +217,6 @@ export function FormFieldCard({ field, index, allFields, onChange, onDelete }: P
           />
         </div>
       )}
-    </Card>
+    </div>
   );
 }

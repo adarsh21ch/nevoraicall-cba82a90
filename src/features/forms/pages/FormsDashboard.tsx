@@ -38,28 +38,25 @@ export default function FormsDashboard() {
           <Button variant="ghost" size="icon" onClick={() => navigate('/profile')} className="shrink-0">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
-            <h1 className="text-lg font-bold">Nevorai Forms</h1>
-            <p className="text-xs text-muted-foreground">Create & manage your forms</p>
-          </div>
+          <h1 className="text-lg font-bold">Nevorai Forms</h1>
         </div>
       </header>
 
       <main className="scrollable-content">
-        <div className="container py-3 px-4 pb-20">
+        <div className="max-w-4xl mx-auto py-4 px-4 pb-20">
           <Tabs value={activeTab} onValueChange={v => { setActiveTab(v); if (v === 'my-forms') setEditingForm(null); }}>
-            <TabsList className="w-full">
-              <TabsTrigger value="my-forms" className="flex-1">My Forms</TabsTrigger>
-              <TabsTrigger value="create" className="flex-1">
+            <TabsList className="bg-muted/50 p-1 rounded-lg w-auto">
+              <TabsTrigger value="my-forms" className="rounded-md px-4 text-sm">My Forms</TabsTrigger>
+              <TabsTrigger value="create" className="rounded-md px-4 text-sm">
                 {editingForm ? 'Edit Form' : 'Create Form'}
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="my-forms" className="mt-3">
+            <TabsContent value="my-forms" className="mt-4">
               <FormsListTab onEdit={handleEdit} />
             </TabsContent>
 
-            <TabsContent value="create" className="mt-3">
+            <TabsContent value="create" className="mt-4">
               <CreateFormInline
                 key={editingForm?.id || 'new'}
                 editingForm={editingForm}
