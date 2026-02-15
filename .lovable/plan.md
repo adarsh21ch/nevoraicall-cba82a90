@@ -1,97 +1,184 @@
 
 
-## Redesign: Global Tracking Settings (Remove Source Confusion)
+## Nevorai Forms — Frontend Integration into Application
 
-### Problem
-Users are confused by the small gear/dropdown source switchers ("Manual" vs "Application") buried inside the Personal and Total column headers of the Update Tracking drawer. They don't understand why their calling data isn't showing and think it's a bug.
+This is a large frontend-only integration. No database changes, no new RPCs, no RLS modifications. Everything uses the existing shared backend tables and RPCs already available via the Supabase client.
 
-### What Changes
+### Overview
 
-#### 1. Remove Inline Source Dropdowns
-Remove the `SourceGear` popover components from the `ManualUpdateDrawer` column headers (Personal and Total). These are the confusing gear icons next to "Personal" and "Total" in the data entry grid.
+Build the complete Nevorai Forms module inside the app, accessible from **Profile > Nevorai Forms**. Users can create forms, view submissions, share forms, and export data -- all within the app.
 
-#### 2. Add Settings Icon to Tracking Page Header
-Add a Settings (gear) icon button in the top-right of the Tracking page header (next to the existing "Team Tracking" button). Tapping it opens a dialog/modal.
+---
 
-#### 3. New "Tracking Settings" Dialog
-A clean modal with two sections using radio buttons:
+### Entry Point
 
-**A) Personal Tracking Mode**
-- ( ) Manual Entry
-- ( ) Automatic (From Application)
-- Helper text: "Automatic mode updates your tracking from app activities like calling, follow-ups, and enrollments."
+Add a "Nevorai Forms" card/button on the **Profile page** (between "TrackUp Dashboard" and "Settings"), styled consistently with other profile cards. Navigates to `/forms`.
 
-**B) Total Tracking Mode**
-- ( ) Manual Entry
-- ( ) Automatic (Personal + Team Auto Calculation)
-- Helper text: "Automatic total tracking calculates your personal + team data automatically."
+---
 
-A "Save Settings" button saves to the existing `tracking_source_preferences` table (no database changes needed).
+### Routes to Add (in App.tsx)
 
-#### 4. Active Mode Status Strip
-Below the ModeSelectors (Personal/Total, Leads/Funnels pills), show a subtle status bar:
+| Route | Component | Auth Required |
+|---|---|---|
+| `/forms` | `FormsDashboard` | Yes |
+| `/forms/:formId/responses` | `FormResponsesPage` | Yes |
+| `/share/form/:token` | `PublicFormPage` | No |
 
+---
+
+### File Structure
+
+All new files go under `src/features/forms/`:
+
+```text
+src/features/forms/
+  types.ts                        -- TypeScript interfaces
+  utils/formUtils.ts              -- Validation, conditional logic, UTM extraction
+  hooks/useForms.ts               -- Central hook (CRUD, submissions, shares)
+  pages/
+    FormsDashboard.tsx            -- Two-tab layout: My Forms + Create Form
+    FormResponsesPage.tsx         -- Full-page spreadsheet view
+    PublicFormPage.tsx             -- Public form submission (no auth)
+  components/
+    CreateFormInline.tsx           -- Full builder with Questions/Settings tabs
+    FormFieldCard.tsx              -- Single field editor (label, type, options, validation, conditional logic)
+    ConditionalLogicEditor.tsx     -- Show/hide logic config
+    FormSettingsPanel.tsx          -- Access mode, UTM, max submissions, confirmation
+    LeadMappingConfig.tsx          -- Map fields to lead properties
+    FormFieldRenderer.tsx          -- Renders all 14 field types for public/preview
+    FormsListTab.tsx               -- List of forms with actions
+    FormCardMobile.tsx             -- Mobile card for single form
+    SubmissionsSpreadsheetView.tsx -- Excel-like table with sort, filter, XLSX export
+    ResponseSummaryView.tsx        -- Charts visualization
+    ResponseIndividualView.tsx     -- Browse individual submissions
+    FormSubmissionsPanel.tsx       -- Container with Summary/Individual/Spreadsheet tabs
+    ShareFormDialog.tsx            -- Copy link, WhatsApp share, embed
+    EmbedCodeDialog.tsx            -- Generate iframe snippet
 ```
-Personal: Manual  |  Total: Automatic
-```
-
-This always-visible strip tells the user what mode is active at a glance.
-
-#### 5. Disable Manual Inputs When Auto Mode Active
-This already works -- the `ManualUpdateDrawer` already disables inputs when source is AUTO. We just add a small "Auto Mode" badge next to disabled columns instead of the gear icon.
-
-#### 6. Profile TrackUp Section
-The `ProfileTrackUp` component already reads `personalSource` from the hook. No changes needed there -- it will respect the global setting automatically.
 
 ---
 
 ### Technical Details
 
-**No database changes required.** The `tracking_source_preferences` table and `useTrackingSourcePreferences` hook already handle persistence with `MANUAL` / `AUTO` values.
+#### 1. Types (`src/features/forms/types.ts`)
 
-**Files to create:**
-- `src/components/trackup-v2/TrackingSettingsDialog.tsx` -- New dialog with radio buttons for Personal and Total mode selection
+Define interfaces matching the database schema:
+- `NevoraForm` -- matches `nevorai_forms` table
+- `NevoraFormField` -- matches `nevorai_form_fields` (with typed `options`, `validation`, `conditional_logic`)
+- `NevoraFormWithFields` -- form + fields array
+- `NevoraFormSubmission` -- matches `nevorai_form_submissions`
+- `NevoraSubmissionAnswer` -- matches `nevorai_submission_answers`
+- `NevoraSubmissionAttachment` -- matches `nevorai_submission_attachments`
+- `NevoraFormShare` -- matches `nevorai_form_shares`
+- Field type union: `'short_text' | 'long_text' | 'email' | 'phone' | 'number' | 'date' | 'time' | 'select' | 'radio' | 'checkbox' | 'multiselect' | 'linear_scale' | 'file' | 'audio'`
 
-**Files to modify:**
+#### 2. Utility Functions (`src/features/forms/utils/formUtils.ts`)
 
-1. **`src/pages/Tracking.tsx`**
-   - Import `TrackingSettingsDialog` and `useTrackingSourcePreferences`
-   - Add `showSettings` state
-   - Add Settings icon button in header (next to "Team Tracking")
-   - Add active mode status strip below ModeSelectors
-   - Render `TrackingSettingsDialog`
+- `extractUTMParams()` -- parse URL search params for utm_source, utm_medium, utm_campaign, utm_content
+- `isFieldVisible(field, allAnswers)` -- evaluate conditional_logic.show_if against current answers
+- `validateField(field, value)` -- validate single field (required, email regex, phone length, min/max, pattern)
+- `validateAllFields(fields, answers, allAnswers)` -- batch validate, skip hidden fields
+- `generateFieldKey(label, index)` -- create unique field_key from label
 
-2. **`src/components/trackup-v2/ManualUpdateDrawer.tsx`**
-   - Remove the `SourceGear` sub-component entirely
-   - Remove the gear icons from Personal/Total column headers
-   - Replace with a simple "Auto" badge when that column is in auto mode
-   - Keep the existing `isPersonalDisabled` / `isTotalDisabled` logic (already works)
+#### 3. Central Hook (`src/features/forms/hooks/useForms.ts`)
 
-3. **`src/components/trackup-v2/ModeSelectors.tsx`**
-   - No changes to this file (Personal/Total and Leads/Funnels dropdowns stay -- these control which DATA to view, not the source mode)
+Uses the existing `supabase` client from `@/integrations/supabase/client`. Key methods:
 
-**Component structure for TrackingSettingsDialog:**
+- **fetchForms()** -- `SELECT * FROM nevorai_forms WHERE owner_user_id = user.id`
+- **fetchFormWithFields(formId)** -- form + ordered fields
+- **fetchFormByToken(token)** -- `supabase.rpc('nevorai_get_form_by_token', { p_token })`
+- **createForm(input)** -- INSERT form + fields + auto-create share token
+- **updateForm(formId, updates, fields?)** -- UPDATE form + upsert/delete fields
+- **duplicateForm(formId)** -- deep copy with new share token
+- **deleteForm(formId)** -- cascading delete (attachments, answers, submissions, shares, fields, form)
+- **fetchSubmissions(formId)** -- `supabase.rpc('nevorai_list_submissions', { p_form_id })`
+- **submitForm(token, answers, attachments, utmData)** -- `supabase.rpc('nevorai_submit_form', {...})`
+- **getShareToken(formId)** -- get or create from `nevorai_form_shares`
+- **getShareUrl(token)** -- returns `https://nevorai.com/share/form/{token}`
+- **getSubmissionCount(formId)** -- count via `head: true` on `nevorai_form_submissions`
+
+#### 4. FormFieldRenderer (14 field types)
+
+Renders the appropriate input component for each field type:
+- `short_text` -- Input
+- `long_text` -- Textarea
+- `email` -- Input type="email"
+- `phone` -- Input type="tel"
+- `number` -- Input type="number" with min/max
+- `date` -- Input type="date"
+- `time` -- Input type="time"
+- `select` -- Select dropdown from options.choices
+- `radio` -- RadioGroup from options.choices
+- `checkbox` -- Checkbox group from options.choices
+- `multiselect` -- Multi-checkbox from options.choices
+- `linear_scale` -- Radio buttons 1-N with min/max labels
+- `file` -- File input (upload to storage)
+- `audio` -- Audio recorder/upload
+
+#### 5. FormsDashboard Page
+
+Two-tab layout using shadcn Tabs:
+- **My Forms tab** -- FormsListTab showing all user's forms with actions (edit, duplicate, delete, view responses, share)
+- **Create Form tab** -- CreateFormInline builder
+
+#### 6. SubmissionsSpreadsheetView
+
+- Columns = form field labels + "Date & Time"
+- Rows = submissions with answers
+- Features: sort by column, dropdown filters on choice fields, multi-select filtering
+- XLSX export using existing `xlsx` package (already installed)
+
+#### 7. PublicFormPage (No Auth)
+
+- Fetches form via `nevorai_get_form_by_token` RPC
+- Shows "Form Closed" if `is_expired` is true
+- Renders fields via FormFieldRenderer
+- Validates on submit via `validateAllFields`
+- Submits via `nevorai_submit_form` RPC
+- Shows confirmation message on success
+
+---
+
+### Dependencies
+
+All required packages are already installed:
+- `xlsx` -- Excel export
+- `date-fns` -- date formatting
+- `sonner` -- toasts
+- `lucide-react` -- icons
+- All shadcn/ui components (Table, Input, Select, RadioGroup, Checkbox, Tabs, Dialog, etc.)
+
+No new packages needed.
+
+---
+
+### Profile Page Change
+
+Add a card button between "TrackUp Dashboard" and "Settings" in `src/pages/Profile.tsx`:
+
+```text
+[TrackUp Dashboard]
+[Nevorai Forms]     <-- NEW: FileText icon, blue gradient, navigates to /forms
+[Settings]
 ```
-TrackingSettingsDialog
-  - Dialog (from shadcn)
-  - Section: Personal Tracking Mode
-    - RadioGroup with two items: "Manual Entry" / "Automatic"
-    - Description text
-  - Section: Total Tracking Mode  
-    - RadioGroup with two items: "Manual Entry" / "Automatic"
-    - Description text
-  - Save Settings button
-    - Calls setPreferences() from useTrackingSourcePreferences
-    - Shows toast on success
-    - Closes dialog
-```
 
-**Active mode strip markup (in Tracking.tsx header):**
-```
-<div className="flex items-center gap-2 text-[10px] text-muted-foreground px-4 pb-2">
-  <span>Personal: {personalSource === 'AUTO' ? 'Automatic' : 'Manual'}</span>
-  <span>|</span>
-  <span>Total: {teamSource === 'AUTO' ? 'Automatic' : 'Manual'}</span>
-</div>
-```
+---
+
+### Implementation Order
+
+1. Create `src/features/forms/types.ts`
+2. Create `src/features/forms/utils/formUtils.ts`
+3. Create `src/features/forms/hooks/useForms.ts`
+4. Create `FormFieldRenderer` component
+5. Create `FormFieldCard` + `ConditionalLogicEditor`
+6. Create `FormSettingsPanel` + `LeadMappingConfig`
+7. Create `CreateFormInline`
+8. Create `FormsListTab` + `FormCardMobile`
+9. Create `FormsDashboard` page
+10. Create `SubmissionsSpreadsheetView` + `FormSubmissionsPanel`
+11. Create `FormResponsesPage`
+12. Create `ShareFormDialog` + `EmbedCodeDialog`
+13. Create `PublicFormPage`
+14. Add routes to `App.tsx`
+15. Add "Nevorai Forms" button to `Profile.tsx`
 
