@@ -1,66 +1,37 @@
 
 
-# Fix Link Preview (OG Tags) for Funnel & Form Share Links
+# Fix og-share Edge Function Deployment
 
 ## Problem
-
-When you share a funnel link on WhatsApp (or any social platform), the preview shows the generic "Nevorai - Sales Follow-Up & Team Tracking System" title and description instead of the actual funnel title, thumbnail, and description. This happens because the app is a single-page application (SPA) -- social media crawlers cannot execute JavaScript, so they only see the default meta tags from the HTML file.
+The `og-share` edge function deploys successfully but returns 404. This is likely because the Lovable Cloud edge runtime is not registering it properly. The function code and config are correct.
 
 ## Solution
 
-Create a backend function called `og-share` that serves a small HTML page with the correct title, description, and thumbnail for each funnel or form. When WhatsApp crawls the link, it gets the right preview. When a real user clicks the link, they are automatically redirected to the actual funnel/form page.
+The most reliable fix is to update the CORS headers to match exactly what the other working functions use (the extended header list), and redeploy. If that still fails, we will try an alternative approach: use the `npm:` import specifier instead of `esm.sh`.
 
-## How It Works
+## Changes
 
-1. User copies a share link (e.g., `https://nevorai.com/share/f/my-funnel-slug`)
-2. WhatsApp crawler visits the link and hits the `og-share` backend function
-3. The function fetches the funnel's title, description, and thumbnail from the database
-4. It returns an HTML page with the correct preview tags
-5. When a real user clicks the link, the page instantly redirects them to the actual funnel
+### 1. Update `supabase/functions/og-share/index.ts`
+- Update CORS `Access-Control-Allow-Headers` to match the full set used by all other working functions in this project:
+  ```
+  authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version
+  ```
+- This ensures consistency with all other deployed functions and eliminates any CORS mismatch as a cause.
 
-## What Changes
+### 2. Redeploy and Test
+- Deploy the function and wait for it to register.
+- Test with a real funnel slug from the database to verify the HTML response includes the correct OG tags.
 
-### 1. New backend function: `og-share`
-- Accepts query parameters: `type` (funnel or form) and `slug`/`token`
-- Fetches the relevant data from the database
-- Returns HTML with correct Open Graph meta tags (title, description, image)
-- Includes an automatic redirect for real users
-- Falls back to default NevorAI branding if data is missing
+### 3. If Still 404 — Fallback Plan
+If the function still returns 404 after the update, we will:
+- Delete and recreate the function with a slightly different name (e.g., `ogshare` without the hyphen) as hyphens in function names can sometimes cause routing issues in certain edge runtimes.
+- Update `src/types/funnels.ts` and `src/config/siteUrl.ts` to use the new function name.
 
-### 2. Update share URL format
-- **`src/types/funnels.ts`** -- Update `getFunnelPublicUrl()` to generate the new share URL format pointing to the backend function
-- **`src/config/siteUrl.ts`** -- Update `getFormShareUrl()` similarly for forms
+## Files to Modify
+- `supabase/functions/og-share/index.ts` — Update CORS headers
 
-### 3. Update `index.html`
-- Update the default OG image URL from the Lovable placeholder to the actual NevorAI brand image/logo
-
-## Technical Details
-
-### Edge Function: `supabase/functions/og-share/index.ts`
-
-The function will:
-- Parse `type` and `slug`/`token` from query params
-- Query the database for the funnel/form record
-- Generate HTML with these OG meta tags:
-  - `og:title` -- Funnel/form title
-  - `og:description` -- Funnel/form description or default text
-  - `og:image` -- Thumbnail URL or default brand image
-  - `og:url` -- The canonical share URL
-- Include a `<meta http-equiv="refresh">` and JS redirect to the actual SPA page (`/f/:slug` for funnels, `/share/form/:token` for forms)
-
-### Share URL Format
-
-Current: `https://app.nevorai.com/f/my-funnel-slug` (no OG tags, just SPA)
-
-New: Points to the edge function URL which serves proper OG HTML, then redirects the user to the SPA page.
-
-The `getFunnelPublicUrl` and `getFormShareUrl` functions will be updated to generate these new URLs.
-
-### Files to Create
-- `supabase/functions/og-share/index.ts`
-
-### Files to Modify
-- `src/types/funnels.ts` -- Update `getFunnelPublicUrl()`
-- `src/config/siteUrl.ts` -- Update `getFormShareUrl()`
-- `index.html` -- Replace placeholder OG image with NevorAI brand image
-
+## Files Potentially Modified (fallback only)
+- Rename function folder to `supabase/functions/ogshare/index.ts`
+- `supabase/config.toml` — Update function config name
+- `src/types/funnels.ts` — Update URL to new function name
+- `src/config/siteUrl.ts` — Update URL to new function name
