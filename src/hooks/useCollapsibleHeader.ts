@@ -5,13 +5,17 @@ const SCROLL_THRESHOLD = 30; // Minimum scroll before toggling
 export function useCollapsibleHeader() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const lastScrollY = useRef(0);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [scrollContainer, setScrollContainer] = useState<HTMLDivElement | null>(null);
+
+  // Callback ref to capture the container element
+  const scrollContainerRef = useCallback((node: HTMLDivElement | null) => {
+    setScrollContainer(node);
+  }, []);
 
   const handleScroll = useCallback(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
+    if (!scrollContainer) return;
 
-    const currentScrollY = container.scrollTop;
+    const currentScrollY = scrollContainer.scrollTop;
     const diff = currentScrollY - lastScrollY.current;
 
     // Only toggle if scroll threshold exceeded
@@ -26,16 +30,15 @@ export function useCollapsibleHeader() {
     }
 
     lastScrollY.current = currentScrollY;
-  }, []);
+  }, [scrollContainer]);
 
   // Attach scroll listener to the container
   useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
+    if (!scrollContainer) return;
 
-    container.addEventListener('scroll', handleScroll, { passive: true });
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, [handleScroll]);
+    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+    return () => scrollContainer.removeEventListener('scroll', handleScroll);
+  }, [scrollContainer, handleScroll]);
 
   const expandHeader = useCallback(() => {
     setIsCollapsed(false);
