@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -57,9 +57,9 @@ Deno.serve(async (req: Request) => {
 
   try {
     const url = new URL(req.url);
-    const type = url.searchParams.get("type"); // "funnel" or "form"
-    const slug = url.searchParams.get("slug"); // funnel slug
-    const token = url.searchParams.get("token"); // form share token
+    const type = url.searchParams.get("type");
+    const slug = url.searchParams.get("slug");
+    const token = url.searchParams.get("token");
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -85,7 +85,6 @@ Deno.serve(async (req: Request) => {
       redirectUrl = `${APP_URL}/f/${slug}`;
       canonicalUrl = redirectUrl;
     } else if (type === "form" && token) {
-      // Look up the form via the share token
       const { data: share } = await supabase
         .from("nevora_form_shares")
         .select("form_id")
@@ -107,7 +106,6 @@ Deno.serve(async (req: Request) => {
       redirectUrl = `${APP_URL}/share/form/${token}`;
       canonicalUrl = `https://nevorai.com/f/${token}`;
     } else {
-      // Fallback — redirect to app home
       redirectUrl = APP_URL;
     }
 
@@ -122,8 +120,7 @@ Deno.serve(async (req: Request) => {
       },
     });
   } catch (err) {
-    console.error("og-share error:", err);
-    // On error, redirect to app home
+    console.error("ogshare error:", err);
     const fallback = buildHtml(
       DEFAULT_TITLE,
       DEFAULT_DESC,
