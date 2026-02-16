@@ -250,7 +250,7 @@ export function ManualUpdateDrawer({
               className={cn(
                 'flex-1 py-1.5 rounded-md text-xs font-semibold transition-colors',
                 category === 'leads'
-                  ? 'bg-foreground text-background shadow-sm'
+                   ? 'bg-accent text-accent-foreground shadow-sm'
                   : 'text-muted-foreground'
               )}
             >
@@ -261,7 +261,7 @@ export function ManualUpdateDrawer({
               className={cn(
                 'flex-1 py-1.5 rounded-md text-xs font-semibold transition-colors',
                 category === 'funnel'
-                  ? 'bg-foreground text-background shadow-sm'
+                  ? 'bg-accent text-accent-foreground shadow-sm'
                   : 'text-muted-foreground'
               )}
             >
