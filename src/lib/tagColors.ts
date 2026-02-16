@@ -123,10 +123,9 @@ export function getTagStyle(tagValue: string, tagType: 'response' | 'stage' | 'q
   
   // Default colored style for non-filter tags
   return {
-    backgroundColor: `${bgColor}22`,
+    backgroundColor: `${bgColor}15`,
     color: bgColor,
-    borderColor: `${bgColor}66`,
-    fontWeight: 600,
+    borderColor: `${bgColor}40`,
   };
 }
 
