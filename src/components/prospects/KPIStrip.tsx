@@ -3,6 +3,7 @@ import { Prospect } from '@/types/prospect';
 import { useTrackingFormatContext } from '@/contexts/TrackingFormatContext';
 import { Star, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getTagColor } from '@/lib/tagColors';
 
 interface KPIStripProps {
   prospects: Prospect[];
@@ -57,42 +58,43 @@ export function KPIStrip({ prospects, isCalling, kpiTotal, kpiTagCounts }: KPISt
   }, [prospects, isCalling, leadsTrackingTagNames, stageTagNames, leadsStageTag, kpiTotal, kpiTagCounts]);
 
   return (
-    <div className="flex items-center gap-3 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+    <div className="flex items-center gap-2 overflow-x-auto pb-0.5 -mx-1 px-1 scrollbar-hide">
       {/* Total Leads */}
-      <div className="flex items-center gap-1.5 shrink-0 bg-muted/50 rounded-full px-2.5 py-1">
-        <Users className="h-3 w-3 text-muted-foreground" />
-        <span className="text-xs font-medium">{kpis.total}</span>
+      <div className="flex items-center gap-1.5 shrink-0 rounded-full px-2.5 py-1 bg-primary/10">
+        <Users className="h-3 w-3 text-primary" />
+        <span className="text-xs font-semibold text-primary">{kpis.total}</span>
       </div>
 
-
-      {/* Tracking Tag Counts */}
+      {/* Tracking Tag Counts - each with its own distinct color */}
       {kpis.trackingTags.map(tag => {
         const count = kpis.tagCounts[tag] || 0;
         if (count === 0) return null;
         
         const isFunnelTag = tag === leadsStageTag;
+        const tagColor = getTagColor(tag, isCalling ? 'response' : 'stage');
         
         return (
           <div 
             key={tag}
-            className={cn(
-              "flex items-center gap-1.5 shrink-0 rounded-full px-2.5 py-1",
-              isFunnelTag 
-                ? "bg-yellow-500/10" 
-                : "bg-primary/5"
-            )}
+            className="flex items-center gap-1.5 shrink-0 rounded-full px-2.5 py-1"
+            style={{ backgroundColor: `${tagColor}18` }}
           >
-            {isFunnelTag && <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />}
-            <span className={cn(
-              "text-xs font-medium truncate max-w-[60px]",
-              isFunnelTag ? "text-yellow-600 dark:text-yellow-400" : "text-muted-foreground"
-            )}>
+            {/* Color dot indicator */}
+            <span 
+              className="h-2 w-2 rounded-full shrink-0"
+              style={{ backgroundColor: tagColor }}
+            />
+            {isFunnelTag && <Star className="h-2.5 w-2.5 text-yellow-500 fill-yellow-500 shrink-0" />}
+            <span 
+              className="text-xs font-medium truncate max-w-[60px]"
+              style={{ color: tagColor }}
+            >
               {tag}
             </span>
-            <span className={cn(
-              "text-xs font-semibold",
-              isFunnelTag ? "text-yellow-600 dark:text-yellow-400" : ""
-            )}>
+            <span 
+              className="text-xs font-bold"
+              style={{ color: tagColor }}
+            >
               {count}
             </span>
           </div>

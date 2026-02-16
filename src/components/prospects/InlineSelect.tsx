@@ -145,20 +145,20 @@ export const InlineSelect = memo(function InlineSelect<T extends string>({
   };
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center w-full h-full">
       <Select
         value={value ?? ''}
         onValueChange={handleValueChange}
       >
         <SelectTrigger 
           className={cn(
-            'h-9 sm:h-8 text-xs border-0 bg-transparent hover:bg-muted/50 focus:ring-1 focus:ring-border/30 focus:bg-transparent min-w-[70px]',
+            'h-full w-full text-xs border-0 bg-transparent hover:bg-muted/50 focus:ring-1 focus:ring-border/30 focus:bg-transparent min-w-[70px] rounded-none',
             className
           )}
           hideChevron
         >
-          <SelectValue placeholder={placeholder}>
-            {value && renderValue ? renderValue(value) : value || placeholder}
+          <SelectValue placeholder={<span className="text-muted-foreground/50 text-xs">Select...</span>}>
+            {value && renderValue ? renderValue(value) : value || <span className="text-muted-foreground/50 text-xs">Select...</span>}
           </SelectValue>
         </SelectTrigger>
         <SelectContent 

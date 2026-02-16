@@ -121,11 +121,11 @@ export function getTagStyle(tagValue: string, tagType: 'response' | 'stage' | 'q
     };
   }
   
-  // Default colored style for non-filter tags
+  // Default colored style for non-filter tags - stronger tint for better differentiation
   return {
-    backgroundColor: `${bgColor}15`,
+    backgroundColor: `${bgColor}22`,
     color: bgColor,
-    borderColor: `${bgColor}40`,
+    borderColor: `${bgColor}50`,
   };
 }
 
