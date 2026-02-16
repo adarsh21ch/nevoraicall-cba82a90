@@ -300,7 +300,7 @@ export default function Dashboard() {
       <main ref={(node) => {
         // Merge pullRef and scrollContainerRef
         (pullRef as any).current = node;
-        (scrollContainerRef as any).current = node;
+        scrollContainerRef(node as HTMLDivElement);
       }} className="flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden" style={{
       touchAction: 'pan-x pan-y'
     }}>
