@@ -8,6 +8,7 @@ import { CallIconButton } from '@/components/ui/ActionIcons';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTrackingFormatContext } from '@/contexts/TrackingFormatContext';
+import { getTagColor } from '@/lib/tagColors';
 
 interface DragHandleProps {
   ref: (node: HTMLElement | null) => void;
@@ -163,8 +164,10 @@ export const ProspectRow = memo(function ProspectRow({
     return prospect.funnel_stage || null;
   };
 
-  // Row background color
+  // Row background color and left accent
   const bgColor = isEven ? "bg-card" : "bg-muted";
+  const activeTag = isCalling ? getActionDisplayValue() : getStageDisplayValue();
+  const accentColor = activeTag ? getTagColor(activeTag, isCalling ? 'response' : 'stage') : null;
 
   const renderCell = (columnId: string) => {
     const cellClass = cn(
@@ -298,7 +301,10 @@ export const ProspectRow = memo(function ProspectRow({
     <>
       <tr 
         ref={rowRef}
-        style={rowStyle}
+        style={{
+          ...rowStyle,
+          ...(accentColor ? { borderLeft: `3px solid ${accentColor}` } : { borderLeft: '3px solid transparent' }),
+        }}
         {...(dragHandleProps?.attributes || {})}
         {...rowDragListeners}
         className={cn(
