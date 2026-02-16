@@ -289,7 +289,7 @@ export default function Dashboard() {
         </div>
 
         {/* Search Bar - scrolls with content */}
-        <div className="px-4 pt-2">
+        <div className="px-4 pt-2 pb-1">
           <SearchBar 
             value={searchQuery} 
             onChange={setSearchQuery} 
