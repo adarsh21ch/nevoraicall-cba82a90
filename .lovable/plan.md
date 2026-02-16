@@ -1,65 +1,63 @@
 
 
-# Sticky Table Header on Scroll
+# Switch All Selected Tabs/Toggles from Black to Blue
+
+## Recommendation
+
+**Blue is the better choice.** Here's why:
+
+- Your brand identity is built around blue and light-blue tones
+- The Leads/Funnel toggle already uses blue (`bg-primary`) and looks great
+- Black selected states feel generic -- blue creates a cohesive, premium SaaS feel
+- Every major SaaS app (Notion, Linear, etc.) uses their brand color for active states, not plain black
 
 ## What Changes
 
-When you scroll down through your leads list, the KPI strip, filter bar, and action buttons will scroll up and disappear -- giving you maximum screen space for calling. But the column headers (**#**, **Name**, **Response/Stage**) will stay pinned right below the Leads/Funnel toggle, so you always know which column is which.
+Every tab, toggle, and sheet selector across the app will switch from black (`bg-foreground text-background`) to blue (`bg-accent text-accent-foreground`) for their selected/active state.
 
-When you scroll back up, the KPI strip and filters smoothly reappear.
+### Affected Components
 
-## How It Works
+1. **`src/components/ui/tabs.tsx`** (global TabsTrigger) -- this one change affects ALL pages using the Tabs component:
+   - Calling page: Leads / Funnel toggle
+   - To-Do page: Daily Tasks / To-Do List toggle
+   - Follow-Up page: Leads / Funnel toggle
+   - TrackUp page: Personal / Team and Leads / Funnel toggles
 
-The current layout has a separate scroll container inside `ProspectTable`. The fix restructures the scroll so that the KPI strip, filters, and table are all in the **same scrollable area** (the Dashboard's `<main>`), while the table header uses CSS `sticky` positioning to pin itself below the fixed header.
+2. **`src/components/prospects/SheetTabs.tsx`** -- the "All", "16 Feb", "10 Feb" sheet tabs at the bottom:
+   - Change `bg-foreground text-background` to `bg-accent text-accent-foreground`
+
+3. **`src/components/ui/BottomViewToggle.tsx`** -- the floating bottom toggle:
+   - Change `bg-foreground text-background` to `bg-accent text-accent-foreground`
+
+4. **`src/components/trackup-v2/ModeSelectors.tsx`** -- TrackUp mode selectors:
+   - Change `bg-foreground text-background` to `bg-accent text-accent-foreground`
+
+5. **`src/components/trackup-v2/ManualUpdateDrawer.tsx`** -- Leads/Funnel category toggle inside the manual update drawer:
+   - Change `bg-foreground text-background` to `bg-accent text-accent-foreground`
+
+### What Stays the Same
+
+- Buttons (`bg-primary`) -- these are action buttons, not tab selectors
+- Calendar selected day -- already uses `bg-primary` correctly
+- Profile level dropdown -- this is a different UI pattern, not a tab
+- Badge and other UI primitives -- not tab-related
 
 ## Technical Details
 
-### File: `src/components/prospects/ProspectTable.tsx`
+### The Key Change (tabs.tsx)
 
-**TableContent changes (lines 194-299):**
-- Remove the inner `overflow-y-auto` scroll wrapper from `TableContent`
-- The `<thead>` already has `sticky top-0` -- change it to use a CSS variable or a prop-based `top` value so it sticks just below the fixed header (Leads/Funnel toggle height)
-- Add a new prop `stickyHeaderTop` (number in px) to `TableContent` so the parent can tell it exactly where to pin the header
-
-**ProspectTable return (lines 988-1043):**
-- Remove `overflow-hidden` and `flex-1 flex flex-col min-h-0` from the table wrapper since scrolling is now handled by the parent `<main>`
-- The KPI strip, action bar, and table all flow naturally in the document, scrolling with the page
-
-### File: `src/pages/Dashboard.tsx`
-
-**Main scroll area (lines ~280-340):**
-- The `<main>` element is already `overflow-y-auto` -- this becomes the single scroll container
-- Calculate the fixed header height (logo row + tab row = approximately 110px when search is collapsed, ~154px when expanded)
-- Pass `stickyHeaderTop` value to `ProspectTable` matching the fixed header height so the table header pins correctly
-
-### File: `src/hooks/useCollapsibleHeader.ts`
-
-- No changes needed -- it already tracks scroll direction on the main container
-
-### Summary of Behavior
-
-```text
-Fixed Header (always visible):
-  [Logo]  Calling  [Bell icon]
-  [Leads | Funnel toggle]
-  [Search bar - collapses on scroll down]
-
-Scrollable Content:
-  [KPI Strip]        <-- scrolls away
-  [Filters + Actions] <-- scrolls away
-  ─────────────────────────────────
-  # | Name | Response  <-- STICKS below fixed header
-  ─────────────────────────────────
-  1 | John | Interested
-  2 | Jane | Call Back
-  ...
+The `TabsTrigger` default active style changes from:
+```
+data-[state=active]:bg-foreground data-[state=active]:text-background
+```
+to:
+```
+data-[state=active]:bg-accent data-[state=active]:text-accent-foreground
 ```
 
-### Key Implementation Points
+This single change cascades to every page using the `Tabs` component (Calling, Follow-Up, To-Do, TrackUp).
 
-1. `TableContent` thead gets `style={{ top: stickyHeaderTop }}` with `position: sticky` and `z-index: 20`
-2. Remove the inner scroll div in `TableContent` -- let the parent handle scrolling
-3. The table wrapper in `ProspectTable` loses its `overflow-hidden` constraint
-4. SheetTabs at the bottom remain sticky via `position: sticky; bottom: 0`
-5. The sentinel for infinite scroll continues to work since it's in the same scroll flow
+### Other Files
+
+Each of the 4 remaining files just needs a simple find-and-replace of `bg-foreground text-background` with `bg-accent text-accent-foreground` in their active/selected state classes.
 
