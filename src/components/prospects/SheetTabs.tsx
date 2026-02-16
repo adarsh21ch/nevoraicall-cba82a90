@@ -149,7 +149,7 @@ export function SheetTabs({
             className={cn(
               "px-3 py-2 text-xs font-medium transition-colors rounded-sm",
               selectedSheetId === null 
-                ? "bg-foreground text-background" 
+                ? "bg-accent text-accent-foreground" 
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
             )}
           >
@@ -177,7 +177,7 @@ export function SheetTabs({
                     className={cn(
                       "px-3 py-2 text-xs font-medium transition-colors rounded-sm",
                       selectedSheetId === sheet.id 
-                        ? "bg-foreground text-background" 
+                        ? "bg-accent text-accent-foreground" 
                         : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
                     )}
                   >
