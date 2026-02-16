@@ -297,7 +297,7 @@ function TableContent({
       </div>
       
       {/* Bottom sticky sheet tabs (Excel-style) - always visible */}
-      <div className="flex-shrink-0 bg-card border-t border-border/50 shadow-[0_-2px_8px_rgba(0,0,0,0.1)]">
+      <div className="sticky bottom-0 z-20 flex-shrink-0 bg-card border-t border-border/50 shadow-[0_-2px_8px_rgba(0,0,0,0.1)]">
         <SheetTabs sheets={sheets} selectedSheetId={selectedSheetId} onSelectSheet={onSelectSheet} onAddSheet={onAddSheet} onUpdateSheet={handleUpdateSheetWithUndo} onDeleteSheet={onDeleteSheet} onEnterSelectMode={handleEnterSelectMode} onDeleteAllInSheet={handleDeleteAllInSheet} onExportSheet={onExportSheet} onExportAll={onExportAll} />
       </div>
     </div>;
