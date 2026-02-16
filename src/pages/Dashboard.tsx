@@ -276,8 +276,15 @@ export default function Dashboard() {
           <TopTabBar options={toggleOptions} value={mainTab} onChange={handleTabChange} />
         </div>
 
-        {/* Search Bar - fixed below tabs */}
-        <div className="px-4 py-2">
+      </header>
+
+      <main ref={pullRef} className="flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden" style={{
+      touchAction: 'pan-x pan-y'
+    }}>
+        <PullToRefreshIndicator isRefreshing={isRefreshing} pullDistance={pullDistance} showIndicator={showIndicator} />
+
+        {/* Search Bar - scrolls with content, tight below header */}
+        <div className="px-4 pt-2">
           <SearchBar 
             value={searchQuery} 
             onChange={setSearchQuery} 
@@ -285,13 +292,6 @@ export default function Dashboard() {
             className="h-8" 
           />
         </div>
-        
-      </header>
-
-      <main ref={pullRef} className="flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden" style={{
-      touchAction: 'pan-x pan-y'
-    }}>
-        <PullToRefreshIndicator isRefreshing={isRefreshing} pullDistance={pullDistance} showIndicator={showIndicator} />
         
         {/* Trial Banner */}
         <div className="px-4 pt-2">
