@@ -31,14 +31,14 @@ export function SheetTabs({
   onEnterSelectMode,
   onDeleteAllInSheet,
   onExportSheet,
-  onExportAll,
+  onExportAll
 }: SheetTabsProps) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [newSheetName, setNewSheetName] = useState('');
   const [editingSheet, setEditingSheet] = useState<Sheet | null>(null);
-  const [deleteAllConfirmSheet, setDeleteAllConfirmSheet] = useState<{ id: string | null; name: string } | null>(null);
-  
+  const [deleteAllConfirmSheet, setDeleteAllConfirmSheet] = useState<{id: string | null;name: string;} | null>(null);
+
   // Refs for auto-scrolling to selected sheet
   const sheetRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -101,43 +101,43 @@ export function SheetTabs({
   };
 
   // Render menu for "All" tab
-  const renderAllTabMenu = () => (
-    <DropdownMenu>
+  const renderAllTabMenu = () =>
+  <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          className={cn(
-            "px-1 py-2 text-muted-foreground hover:text-foreground",
-            selectedSheetId === null && "text-foreground"
-          )}
-        >
+        className={cn(
+          "px-1 py-2 text-muted-foreground hover:text-foreground",
+          selectedSheetId === null && "text-foreground"
+        )}>
+
           <MoreVertical className="h-3 w-3" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="bg-popover border-border z-50">
-        {onExportAll && (
-          <>
+        {onExportAll &&
+      <>
             <DropdownMenuItem onClick={onExportAll}>
               <Download className="h-3.5 w-3.5 mr-2" />
               Download all sheets
             </DropdownMenuItem>
             <DropdownMenuSeparator />
           </>
-        )}
+      }
         <DropdownMenuItem onClick={() => handleSelectAndDelete(null)}>
           <CheckSquare className="h-3.5 w-3.5 mr-2" />
           Select & Delete
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onClick={() => handleDeleteAllInSheet(null, 'All')}
-          className="text-destructive focus:text-destructive"
-        >
+        onClick={() => handleDeleteAllInSheet(null, 'All')}
+        className="text-destructive focus:text-destructive">
+
           <Trash className="h-3.5 w-3.5 mr-2" />
           Delete all rows
         </DropdownMenuItem>
       </DropdownMenuContent>
-    </DropdownMenu>
-  );
+    </DropdownMenu>;
+
 
   return (
     <>
@@ -148,11 +148,11 @@ export function SheetTabs({
             onClick={() => onSelectSheet(null)}
             className={cn(
               "px-3 py-2 text-xs font-medium transition-colors rounded-sm",
-              selectedSheetId === null 
-                ? "bg-accent text-accent-foreground" 
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
-            )}
-          >
+              selectedSheetId === null ?
+              "bg-accent text-accent-foreground" :
+              "text-muted-foreground hover:text-foreground hover:bg-muted/80"
+            )}>
+
             <FileSpreadsheet className="h-3.5 w-3.5 inline mr-1.5" />
             All
           </button>
@@ -160,50 +160,50 @@ export function SheetTabs({
         </div>
 
         {/* Scrollable sheet tabs area */}
-        {sheets.length > 0 && (
-          <ScrollArea className="flex-1 whitespace-nowrap" ref={scrollAreaRef}>
+        {sheets.length > 0 &&
+        <ScrollArea className="flex-1 whitespace-nowrap" ref={scrollAreaRef}>
             <div className="flex items-center">
-              {sheets.map((sheet) => (
-                <div 
-                  key={sheet.id} 
-                  className="flex items-center border-r border-border/50"
-                  ref={(el) => {
-                    if (el) sheetRefs.current.set(sheet.id, el);
-                    else sheetRefs.current.delete(sheet.id);
-                  }}
-                >
+              {sheets.map((sheet) =>
+            <div
+              key={sheet.id}
+              className="flex items-center border-r border-border/50"
+              ref={(el) => {
+                if (el) sheetRefs.current.set(sheet.id, el);else
+                sheetRefs.current.delete(sheet.id);
+              }}>
+
                   <button
-                    onClick={() => onSelectSheet(sheet.id)}
-                    className={cn(
-                      "px-3 py-2 text-xs font-medium transition-colors rounded-sm",
-                      selectedSheetId === sheet.id 
-                        ? "bg-accent text-accent-foreground" 
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
-                    )}
-                  >
+                onClick={() => onSelectSheet(sheet.id)}
+                className={cn("px-3 text-xs font-medium transition-colors rounded-sm py-[12px]",
+
+                selectedSheetId === sheet.id ?
+                "bg-accent text-accent-foreground" :
+                "text-muted-foreground hover:text-foreground hover:bg-muted/80"
+                )}>
+
                     {sheet.name}
                   </button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button
-                        className={cn(
-                          "px-1 py-2 text-muted-foreground hover:text-foreground",
-                          selectedSheetId === sheet.id && "text-foreground"
-                        )}
-                      >
+                    className={cn(
+                      "px-1 py-2 text-muted-foreground hover:text-foreground",
+                      selectedSheetId === sheet.id && "text-foreground"
+                    )}>
+
                         <MoreVertical className="h-3 w-3" />
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="bg-popover border-border z-50">
-                      {onExportSheet && (
-                        <>
+                      {onExportSheet &&
+                  <>
                           <DropdownMenuItem onClick={() => onExportSheet(sheet.id)}>
                             <Download className="h-3.5 w-3.5 mr-2" />
                             Download this sheet
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                         </>
-                      )}
+                  }
                       <DropdownMenuItem onClick={() => openEditDialog(sheet)}>
                         <Pencil className="h-3.5 w-3.5 mr-2" />
                         Rename
@@ -214,27 +214,27 @@ export function SheetTabs({
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
-                        onClick={() => handleDeleteAllInSheet(sheet.id, sheet.name)}
-                        className="text-destructive focus:text-destructive"
-                      >
+                    onClick={() => handleDeleteAllInSheet(sheet.id, sheet.name)}
+                    className="text-destructive focus:text-destructive">
+
                         <Trash className="h-3.5 w-3.5 mr-2" />
                         Delete all rows
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => handleDeleteSheet(sheet)}
-                        className="text-destructive focus:text-destructive"
-                      >
+                    onClick={() => handleDeleteSheet(sheet)}
+                    className="text-destructive focus:text-destructive">
+
                         <Trash2 className="h-3.5 w-3.5 mr-2" />
                         Delete sheet
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-              ))}
+            )}
             </div>
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
-        )}
+        }
 
         {/* Fixed Add Sheet button */}
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
@@ -254,8 +254,8 @@ export function SheetTabs({
                 placeholder="e.g., 5 Dec leads"
                 value={newSheetName}
                 onChange={(e) => setNewSheetName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddSheet()}
-              />
+                onKeyDown={(e) => e.key === 'Enter' && handleAddSheet()} />
+
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsAddOpen(false)}>
@@ -278,8 +278,8 @@ export function SheetTabs({
                 placeholder="Sheet name"
                 value={newSheetName}
                 onChange={(e) => setNewSheetName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleEditSheet()}
-              />
+                onKeyDown={(e) => e.key === 'Enter' && handleEditSheet()} />
+
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsEditOpen(false)}>
@@ -310,6 +310,6 @@ export function SheetTabs({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
-  );
+    </>);
+
 }
