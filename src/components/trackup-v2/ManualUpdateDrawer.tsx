@@ -117,13 +117,16 @@ export function ManualUpdateDrawer({
 
   const tagNames = category === 'leads' ? responseTagNames : stageTagNames;
 
-  const hasData = useMemo(() => {
-    const allVals = { ...personalValues, ...totalValues };
-    return Object.values(allVals).some((v) => v !== '' && v !== undefined);
-  }, [personalValues, totalValues]);
-
   const isPersonalDisabled = prefsLoading || personalSource === 'AUTO';
   const isTotalDisabled = prefsLoading || teamSource === 'AUTO';
+
+  const hasData = useMemo(() => {
+    const checkPersonal = !isPersonalDisabled;
+    const checkTotal = !isTotalDisabled;
+    const pHasData = checkPersonal && Object.values(personalValues).some((v) => v !== '' && v !== undefined);
+    const tHasData = checkTotal && Object.values(totalValues).some((v) => v !== '' && v !== undefined);
+    return pHasData || tHasData;
+  }, [personalValues, totalValues, isPersonalDisabled, isTotalDisabled]);
 
   const handleSave = async () => {
     const pLeads = parseInt(personalValues['leads'] || '0', 10) || 0;
@@ -155,46 +158,56 @@ export function ManualUpdateDrawer({
     const finalCount = pStageTags[finalTagName || ''] ?? 0;
     const tFinalCount = tStageTags[finalTagName || ''] ?? 0;
 
-    // Map source preferences to write hook params
-    const pSource = personalSource === 'AUTO' ? 'APPLICATION' : 'MANUAL';
-    const tSource = teamSource === 'AUTO' ? 'TEAM_MEMBERS' : 'MANUAL';
+    // Only save modes that are in MANUAL mode
+    const savePromises: Promise<boolean>[] = [];
 
-    await Promise.all([
-      savePersonal({
-        date: dateStr,
-        source: pSource as 'MANUAL' | 'APPLICATION',
-        totalLeads: pLeads,
-        totalResponses: pResponses,
-        responseTags: pResponseTags,
-        stageTags: pStageTags,
-        finalTag: finalTagName,
-        finalTagCount: finalCount,
-        funnelTag: null,
-        funnelTagCount: 0,
-        funnelStartDate: null,
-        funnelDay: null,
-        uplineLeaderId,
-        responseTagNames,
-        stageTagNames,
-      }),
-      saveTotal({
-        date: dateStr,
-        source: tSource as 'MANUAL' | 'TEAM_MEMBERS',
-        totalLeads: tLeads,
-        totalResponses: tResponses,
-        responseTags: tResponseTags,
-        stageTags: tStageTags,
-        finalTag: finalTagName,
-        finalTagCount: tFinalCount,
-        funnelTag: null,
-        funnelTagCount: 0,
-        funnelStartDate: null,
-        funnelDay: null,
-        uplineLeaderId,
-        responseTagNames,
-        stageTagNames,
-      }),
-    ]);
+    if (!isPersonalDisabled) {
+      savePromises.push(
+        savePersonal({
+          date: dateStr,
+          source: 'MANUAL',
+          totalLeads: pLeads,
+          totalResponses: pResponses,
+          responseTags: pResponseTags,
+          stageTags: pStageTags,
+          finalTag: finalTagName,
+          finalTagCount: finalCount,
+          funnelTag: null,
+          funnelTagCount: 0,
+          funnelStartDate: null,
+          funnelDay: null,
+          uplineLeaderId,
+          responseTagNames,
+          stageTagNames,
+        })
+      );
+    }
+
+    if (!isTotalDisabled) {
+      savePromises.push(
+        saveTotal({
+          date: dateStr,
+          source: 'MANUAL',
+          totalLeads: tLeads,
+          totalResponses: tResponses,
+          responseTags: tResponseTags,
+          stageTags: tStageTags,
+          finalTag: finalTagName,
+          finalTagCount: tFinalCount,
+          funnelTag: null,
+          funnelTagCount: 0,
+          funnelStartDate: null,
+          funnelDay: null,
+          uplineLeaderId,
+          responseTagNames,
+          stageTagNames,
+        })
+      );
+    }
+
+    if (savePromises.length === 0) return;
+
+    await Promise.all(savePromises);
 
     // Wait for cache to refresh before closing so the user sees updated data immediately
     await Promise.all([
