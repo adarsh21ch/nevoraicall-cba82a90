@@ -6,7 +6,7 @@ import { useProspectsQuery } from '@/hooks/useProspectsQuery';
 import { useSheets } from '@/hooks/useSheets';
 import { useTrackingFormatContext } from '@/contexts/TrackingFormatContext';
 import { BottomNav } from '@/components/layout/BottomNav';
-import { HeaderBellIcon } from '@/components/layout/HeaderBellIcon';
+
 import { ProspectTable } from '@/components/prospects/ProspectTable';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { TopTabBar } from '@/components/ui/TopTabBar';
@@ -262,7 +262,6 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <HeaderBellIcon />
           </div>
         </div>
         
