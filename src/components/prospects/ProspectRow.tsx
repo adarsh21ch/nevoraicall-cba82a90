@@ -165,14 +165,14 @@ export const ProspectRow = memo(function ProspectRow({
   };
 
   // Row background color and left accent
-  const bgColor = "bg-card";
+  const bgColor = isEven ? "bg-card" : "bg-muted";
   const activeTag = isCalling ? getActionDisplayValue() : getStageDisplayValue();
   const accentColor = activeTag ? getTagColor(activeTag, isCalling ? 'response' : 'stage') : null;
 
   const renderCell = (columnId: string) => {
     const cellClass = cn(
       "px-2 py-2.5 whitespace-nowrap",
-      isLastContacted ? "bg-accent/5" : "bg-card",
+      isLastContacted ? "bg-primary/10" : (isEven ? "bg-card" : "bg-muted"),
       isMobileTable && "text-xs px-1.5 py-2"
     );
     
@@ -323,8 +323,8 @@ export const ProspectRow = memo(function ProspectRow({
         className={cn(
           "group transition-colors duration-100 border-b border-border/30", 
           bgColor,
-          "hover:bg-muted/40", 
-          isExpanded && "bg-muted/30 hover:bg-muted/30",
+          "hover:bg-muted/80", 
+          isExpanded && "bg-primary/5 hover:bg-primary/5",
           dragHandleProps?.isDragging && "shadow-lg cursor-grabbing touch-none",
           !dragHandleProps?.isDragging && "cursor-grab"
         )}
