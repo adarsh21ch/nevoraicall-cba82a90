@@ -240,21 +240,23 @@ export default function Dashboard() {
           <div className="flex items-center gap-3">
             <img src={nevoraLogo} alt="NevorAI Logo" className="h-10 w-10 rounded-xl object-cover shadow-md" />
             <div>
-              <h1 className="text-xl font-bold tracking-tight">
-                {showRecentActivity ? 'Recent Activity' : 'Calling'}
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold tracking-tight">
+                  {showRecentActivity ? 'Recent Activity' : 'Calling'}
+                </h1>
+                {streakEnabled && !showRecentActivity && (
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-orange-500/10">
+                    <Flame className="h-4 w-4 text-orange-500" />
+                    <span className="text-sm font-bold text-orange-600">{currentStreak}</span>
+                  </div>
+                )}
+              </div>
               <p className="text-xs text-muted-foreground font-medium">
                 {showRecentActivity ? "Today's Updates" : 'Manage your prospects'}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-1">
-            {streakEnabled && !showRecentActivity && (
-              <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-orange-500/10">
-                <Flame className="h-4 w-4 text-orange-500" />
-                <span className="text-sm font-bold text-orange-600">{currentStreak}</span>
-              </div>
-            )}
             <Button variant="ghost" size="icon" onClick={() => setShowRecentActivity(!showRecentActivity)} className={cn("h-10 w-10 rounded-full", showRecentActivity && "bg-primary/10 text-primary")}>
               <Clock className="h-[22px] w-[22px]" />
             </Button>
