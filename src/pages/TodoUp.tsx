@@ -6,7 +6,7 @@ import { useGlobalTodos } from '@/contexts/TodosContext';
 import { useUserDailyTasks } from '@/hooks/useUserDailyTasks';
 import { useSwipeTabs } from '@/hooks/useSwipeTabs';
 import { BottomNav } from '@/components/layout/BottomNav';
-import { HeaderBellIcon } from '@/components/layout/HeaderBellIcon';
+
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { CalendarStrip } from '@/components/calendar/CalendarStrip';
 import { useCalendarStrip } from '@/hooks/useCalendarStrip';
@@ -258,7 +258,7 @@ export default function TodoUp() {
             <Button variant="ghost" size="icon" onClick={toggleRecentActivity} className={cn("h-9 w-9 rounded-full", isRecentActivity && "bg-primary/10 text-primary")}>
               <Clock className="h-5 w-5" />
             </Button>
-            <HeaderBellIcon />
+            
           </div>
         </div>
 

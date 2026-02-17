@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProspectsQuery } from '@/hooks/useProspectsQuery';
 import { BottomNav } from '@/components/layout/BottomNav';
-import { HeaderBellIcon } from '@/components/layout/HeaderBellIcon';
+
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { TopTabBar } from '@/components/ui/TopTabBar';
 import { TrialBanner } from '@/components/subscription/TrialBanner';
@@ -359,7 +359,7 @@ export default function ListUp() {
                 <X className="h-3 w-3" />
                 Clear
               </Button>}
-            <HeaderBellIcon />
+            
           </div>
         </div>
         
