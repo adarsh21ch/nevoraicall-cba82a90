@@ -1,61 +1,57 @@
 
 
-# Separate Achievers Club Users from Nevorai Users in Admin KPIs
+# Fix: PWA Stuck on Loading Screen
 
 ## Problem
-Currently, the admin dashboard KPIs (Total Users: 6,429, Free Users: 6,392, etc.) include **both** Nevorai and Achievers Club users. The database shows 4,108 Nevorai users and 2,264 Achievers Club users, inflating the numbers. You need accurate Nevorai-only metrics.
+Some users who installed the app as a PWA (Add to Home Screen) see the logo and a loading spinner that never goes away. The app never loads past this state.
 
-## What Changes
+## Root Cause (2 issues found)
 
-The following KPIs and lists will be updated to only count **Nevorai users** (users with `product = 'nevorai'` in the `user_products` table):
+### 1. Service Worker Caches Supabase API Calls
+The current `sw.js` uses a **cache-first** strategy for ALL non-navigation requests:
+```js
+// Current problematic code
+event.respondWith(
+  caches.match(event.request).then(response => response || fetch(event.request))
+);
+```
+This means if a Supabase auth/API response ever gets cached, the app will keep getting stale responses instead of hitting the network. Expired tokens, stale sessions -- all served from cache.
 
-| KPI / Feature | Current (all users) | After fix (Nevorai only) |
-|---|---|---|
-| Total Users | ~6,429 | ~4,108 |
-| Free Users | ~6,392 | Recalculated |
-| Conversion Rate | 0.82% | Recalculated |
-| Subscription Pie Chart | Includes AC users | Nevorai only |
-| Free Users list (drawer) | All free users | Nevorai only |
-| Cohort Analysis | All signups | Nevorai only |
-| Churn Risk Alerts | All users | Nevorai only |
-| Trial Analytics | All users | Nevorai only |
+### 2. No Auth Loading Timeout
+If the Supabase auth check (`getSession()`) hangs due to network issues (common on mobile/PWA), the `loading` state stays `true` forever, and the user sees an infinite spinner with no way out.
 
-**Already correct** (no changes needed): DAU, WAU, Today Active, Lead Importers, Active Callers, Total Leads -- these already filter by `app = 'neverai'` via `user_app_access`.
+---
+
+## Fix Plan
+
+### Step 1: Update `public/sw.js` -- Exclude API calls from caching
+- Add explicit bypass for Supabase API URLs (`supabase.co`) so they always go to the network
+- Only cache static assets (images, fonts, icons) with cache-first
+- Bump cache version to `v4` to clear old stale caches
+
+### Step 2: Add auth loading timeout in `src/contexts/AuthContext.tsx`
+- Add a 10-second safety timeout: if auth loading hasn't resolved in 10 seconds, force `loading = false`
+- This ensures users can still reach the login page even on slow/offline connections
+- The timeout is cleared if auth resolves normally
+
+### Step 3: Add offline fallback in `src/pages/Auth.tsx`
+- Show a "Tap to retry" message if the auth page loads but can't connect to the server, instead of an infinite spinner
+
+---
 
 ## Technical Details
 
-### 1. Update Database Functions (SQL Migrations)
+**sw.js changes:**
+- Bypass all `supabase.co` requests (never cache API calls)
+- Bypass all `supabase.co/auth` and `supabase.co/rest` URLs
+- Keep navigation as network-first (already correct)
+- Keep static assets as cache-first but only for known static file types
 
-**a) `admin_get_conversion_analytics`** -- Add `JOIN user_products` filter:
-```sql
-FROM profiles p
-JOIN user_products up ON up.user_id = p.user_id AND up.product = 'nevorai'
-LEFT JOIN user_subscriptions us ON us.user_id = p.user_id
-```
+**AuthContext.tsx changes:**
+- Add `useEffect` with a `setTimeout` of 10 seconds
+- If `loading` is still `true` after 10 seconds, force it to `false` and log a warning
+- Clear the timeout on cleanup or when loading naturally resolves
 
-**b) `admin_get_free_users_paginated`** -- Add `JOIN user_products` filter so the free users list and count exclude Achievers Club-only users.
-
-**c) `admin_get_signup_cohort_analytics`** -- Add `JOIN user_products` filter in the cohorts CTE.
-
-**d) `admin_get_churn_risk_users`** -- Add `JOIN user_products` filter in the user_risk CTE.
-
-**e) `admin_get_trial_analytics`** -- Add `JOIN user_products` filter to all CTEs.
-
-### 2. Update Frontend Hook (`useAdminAnalytics.ts`)
-
-**a) Total signups query** -- Change from counting all `profiles` to counting only profiles that have a `user_products` entry with `product = 'nevorai'`:
-```ts
-supabase.rpc('admin_get_nevorai_user_count')
-```
-(Or use a simple filtered query joining profiles with user_products.)
-
-**b) Subscription breakdown query** -- Filter `user_subscriptions` to only include users who are in `user_products` with `product = 'nevorai'`.
-
-### 3. New RPC Function
-
-Create `admin_get_nevorai_user_count` to return the count of Nevorai-only users for the Total Users KPI, replacing the unfiltered `profiles` count.
-
-## Files to Modify
-- **SQL Migration**: Update 6 RPC functions to filter by `user_products.product = 'nevorai'`
-- **`src/hooks/useAdminAnalytics.ts`**: Update `totalSignups` and `subscriptionBreakdown` queries to filter by Nevorai product
+**Auth.tsx changes:**
+- Minor: when `authLoading` finishes but there's no connectivity, show a retry button instead of just the form
 
