@@ -5,6 +5,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { tagNamesToSlotKeys } from '@/lib/snapshotSlotUtils';
 
+const WEBSITE_EDGE_URL = 'https://xjnzxxmpidrqjtlvslui.supabase.co/functions/v1/update-tracking';
+const WEBSITE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhqbnp4eG1waWRycWp0bHZzbHVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0NzQzNTEsImV4cCI6MjA4MTA1MDM1MX0.37yYhOMcWZh_bKK6Kya15cdPC1NVE9gf6itpWPJO7r4';
+
 interface SavePersonalParams {
   date: string;
   source: 'MANUAL' | 'APPLICATION';
@@ -33,6 +36,13 @@ export function usePersonalSnapshotV2Write() {
 
     setSaving(true);
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const appToken = sessionData.session?.access_token;
+      if (!appToken) {
+        toast.error('Please log in first');
+        return false;
+      }
+
       // Convert tag names to slot keys if tag name arrays are provided
       const responseTags = params.responseTagNames
         ? tagNamesToSlotKeys(params.responseTagNames, params.responseTags, 'response_tag')
@@ -41,9 +51,16 @@ export function usePersonalSnapshotV2Write() {
         ? tagNamesToSlotKeys(params.stageTagNames, params.stageTags, 'stage_tag')
         : params.stageTags;
 
-      const { data, error } = await supabase.functions.invoke('update-tracking', {
-        body: {
+      const response = await fetch(WEBSITE_EDGE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${WEBSITE_ANON_KEY}`,
+          'apikey': WEBSITE_ANON_KEY,
+        },
+        body: JSON.stringify({
           action: 'save_personal',
+          app_access_token: appToken,
           date: params.date,
           source: params.source,
           total_leads: params.totalLeads,
@@ -57,11 +74,12 @@ export function usePersonalSnapshotV2Write() {
           funnel_start_date: params.funnelStartDate,
           funnel_day: params.funnelDay,
           upline_leader_id: params.uplineLeaderId,
-        },
+        }),
       });
 
-      if (error) {
-        console.error('Error saving personal snapshot:', error);
+      if (!response.ok) {
+        const errBody = await response.text();
+        console.error('Error saving personal snapshot:', errBody);
         toast.error('Failed to save personal tracking');
         return false;
       }
