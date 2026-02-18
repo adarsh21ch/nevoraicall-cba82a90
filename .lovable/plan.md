@@ -1,149 +1,41 @@
 
 
-# Restructure Upgrade UI: Two Tier Cards (Pro + Premium)
+# Add "Not Included" Section to Pro Card
 
-## Overview
+## What Changes
 
-Replace the current "flat list of plan cards" in both `UpgradeDrawer` and `FunnelsUpgradeDrawer` with a **two-card layout** grouped by tier. Each card (Pro / Premium) shows feature highlights at the top, duration options as selectable radio-style buttons inside, and a single "Upgrade Now" CTA.
+Add a short list of features that are **not available** in the Pro tier, shown with an X icon and dimmed styling below the Pro features list. This nudges users toward Premium by making it clear what they miss.
 
-No database, webhook, or subscription logic changes.
+## Exact Change
 
----
+**File: `src/components/subscription/TierCard.tsx`**
 
-## Current State
+1. Import `X` icon from `lucide-react`
+2. Add a new constant `PRO_EXCLUDED_FEATURES`:
+   - Nevorai Funnels
+   - Funnel Video Insights
+   - Advanced Analytics
+   - Leader Tools
+3. After the Pro features list (the green checkmark items), render the excluded features with a red/muted X icon and strikethrough or dimmed text styling
+4. Only show excluded list when `isPremium === false`
 
-- **UpgradeDrawer** (main app): Shows all plans as individual selectable cards (Pro Monthly, Pro 4 Months, Premium Monthly)
-- **FunnelsUpgradeDrawer**: Separate drawer filtering for `funnels_` / `combined_` plan keys (now deleted) -- effectively broken
-- **UpgradeModal**: Used for lead-limit prompts, shows primary + secondary plan cards
+## Visual Result
 
-### Active Plans in Database
+**Pro Card will look like:**
+- [check] Full Application Access (Calling + Follow-up)
+- [check] TrackUp Dashboard (Advanced Tracking)
+- [check] Higher Limits and Productivity Tools
+- [check] Faster Workflow and Automation
+- [x] Nevorai Funnels (dimmed, with X)
+- [x] Funnel Video Insights (dimmed, with X)
+- [x] Advanced Analytics (dimmed, with X)
+- [x] Leader Tools (dimmed, with X)
 
-| plan_key | tier | price | duration | billing |
-|---|---|---|---|---|
-| monthly | pro | 99 | 30 days | recurring |
-| pro_4_months | pro | 299 | 120 days | one_time |
-| premium_recurring | premium | 499 | 30 days | recurring |
+**Premium Card stays the same** (all checkmarks, no changes).
 
----
+## Technical Details
 
-## New UI Structure
-
-```text
-+------------------------------------------+
-| Unlock Pro Features                      |
-| Choose a plan that works for you         |
-+------------------------------------------+
-|                                          |
-| +--------------------------------------+ |
-| | PRO                                  | |
-| | Full Application Access              | |
-| | TrackUp Dashboard                    | |
-| | Higher limits                        | |
-| | Productivity tools                   | |
-| |                                      | |
-| | ( ) 1 Month - Rs.99/mo  [recurring]  | |
-| | (x) 4 Months - Rs.74/mo [Best Value] | |
-| +--------------------------------------+ |
-|                                          |
-| +======================================+ |
-| | PREMIUM  [Recommended for Leaders]   | |
-| | Everything in Pro                    | |
-| | Nevorai Funnels                      | |
-| | Funnel Insights                      | |
-| | Advanced analytics                   | |
-| | Leader tools                         | |
-| |                                      | |
-| | (x) 1 Month - Rs.499/mo [recurring]  | |
-| +======================================+ |
-|                                          |
-| [  Upgrade Now - Get Pro 4 Months Rs.299 ]|
-| Secure payment via Razorpay              |
-+------------------------------------------+
-```
-
----
-
-## Implementation Details
-
-### 1. Rewrite `UpgradeDrawer.tsx` PlanContent
-
-**Group plans by tier:**
-- Fetch plans via `usePaymentLinks()` (no change to data layer)
-- Group: `proPlans = plans.filter(p => p.tier === 'pro')`, `premiumPlans = plans.filter(p => p.tier === 'premium')`
-- Ignore `basic` tier plans
-
-**Tier Card component (`TierCard`):**
-- Props: `tierName`, `plans[]`, `features[]`, `isPremium`, `selectedPlanKey`, `onSelectPlan`
-- Header: tier name + feature highlights (hardcoded per tier or from first plan's features)
-- Body: radio-style duration options for each plan in that tier
-  - Shows: duration label, price, per-month calculation for multi-month, badge text
-  - Clicking selects that plan_key
-- Premium card gets: amber/gold border highlight, "Recommended for Leaders" badge, slightly different button color emphasis
-
-**Selection state:**
-- Single `selectedPlanKey` state across both cards
-- Selecting a duration in either card deselects the other
-- Bottom CTA button dynamically shows selected plan name + price
-
-**Keep existing:**
-- Coupon code section (unchanged)
-- Payment handler logic (unchanged -- `handleUpgrade` with `initiatePayment` / `initiateSubscription`)
-- Mobile Drawer vs Desktop Sheet pattern (unchanged)
-- Trigger button variants (unchanged)
-
-### 2. Update `FunnelsUpgradeDrawer.tsx`
-
-Replace the entire content to reuse the same tier-card pattern:
-- Remove dependency on `useFunnelSubscription` (use `useSubscription` instead)
-- Show the same two tier cards (Pro + Premium)
-- Premium card is pre-selected by default (since this is the funnel upgrade context)
-- Keep the same Drawer/Sheet mobile/desktop pattern
-
-### 3. Update `UpgradeModal.tsx`
-
-Apply the same two-tier-card layout inside the modal dialog:
-- Group plans by tier
-- Show Pro and Premium as two cards with duration selectors
-- Keep existing lead-limit messaging and CTA logic
-
-### 4. Feature Highlights (Hardcoded per Tier)
-
-**Pro:**
-- Full Application Access (Calling + Follow-up)
-- TrackUp Dashboard (Advanced Tracking)
-- Higher Limits and Productivity Tools
-- Faster Workflow and Automation
-
-**Premium:**
-- Everything in Pro
-- Nevorai Funnels
-- Funnel Videos Insights
-- Advanced Analytics
-- Leader Tools
-- Premium Support
-
-### 5. Visual Differentiation
-
-- **Pro card**: Standard border (`border-border`), primary color accents
-- **Premium card**: Gold/amber border (`border-amber-500/50`), subtle gradient background, "Recommended for Leaders" badge at top-right, amber-tinted CTA when selected
-
----
-
-## Files to Modify
-
-| File | Change |
-|---|---|
-| `src/components/subscription/UpgradeDrawer.tsx` | Rewrite PlanContent to use TierCard grouping with duration selectors |
-| `src/components/subscription/UpgradeModal.tsx` | Same tier-card layout inside the modal |
-| `src/components/funnels/FunnelsUpgradeDrawer.tsx` | Replace with unified tier cards, remove `useFunnelSubscription` dependency |
-
-## Files NOT Modified
-
-- `usePaymentLinks.ts` -- data layer stays the same
-- `useSubscription.ts` -- no changes
-- `useRazorpay.ts` -- no changes
-- `useAdminConfig.ts` -- no changes
-- Database schema -- no changes
-- Edge functions -- no changes
-- Webhook logic -- no changes
+- Add `X` to the lucide-react import (line 1)
+- Add `PRO_EXCLUDED_FEATURES` array after `PRO_FEATURES` (after line 10)
+- After the features `.map()` block (after line 79), conditionally render excluded features when `!isPremium` using the `X` icon with `text-muted-foreground/50` styling and `line-through` on the text
 
