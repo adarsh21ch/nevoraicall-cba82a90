@@ -103,17 +103,25 @@ export function FeatureFlagsManager() {
     );
   }
 
-  // Group flags by category
-  const grouped = flags.reduce((acc: Record<string, typeof flags>, flag: any) => {
-    const cat = flag.category || 'general';
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(flag);
-    return acc;
-  }, {} as Record<string, typeof flags>);
+  // Group flags by module first, then category
+  const MODULE_ORDER = ['application', 'trackup', 'funnels'];
+  const MODULE_LABELS: Record<string, { label: string; color: string }> = {
+    application: { label: '📱 Application', color: 'border-primary/30 bg-primary/5' },
+    trackup: { label: '📊 TrackUp', color: 'border-accent/30 bg-accent/5' },
+    funnels: { label: '🎬 Funnels', color: 'border-secondary/30 bg-secondary/5' },
+  };
 
-  const sortedCategories = CATEGORY_ORDER.filter(c => grouped[c]?.length > 0);
-  // Add any categories not in the predefined order
-  Object.keys(grouped).forEach(c => { if (!sortedCategories.includes(c)) sortedCategories.push(c); });
+  const groupedByModule = flags.reduce((acc: Record<string, Record<string, typeof flags>>, flag: any) => {
+    const mod = flag.module || 'application';
+    const cat = flag.category || 'general';
+    if (!acc[mod]) acc[mod] = {};
+    if (!acc[mod][cat]) acc[mod][cat] = [];
+    acc[mod][cat].push(flag);
+    return acc;
+  }, {} as Record<string, Record<string, typeof flags>>);
+
+  const sortedModules = MODULE_ORDER.filter(m => groupedByModule[m] && Object.keys(groupedByModule[m]).length > 0);
+  Object.keys(groupedByModule).forEach(m => { if (!sortedModules.includes(m)) sortedModules.push(m); });
 
   return (
     <div className="space-y-6">
@@ -143,116 +151,99 @@ export function FeatureFlagsManager() {
         </Card>
       )}
 
-      {sortedCategories.map(category => (
-        <div key={category} className="space-y-2">
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            {CATEGORY_LABELS[category] || category}
-          </h3>
-          <div className="grid gap-2">
-            {grouped[category].map((flag: any) => (
-              <Card key={flag.id} className={`p-3 ${!flag.is_enabled ? 'opacity-50' : ''}`}>
-                <div className="space-y-2">
-                  {/* Header row */}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium text-sm">{flag.feature_name}</span>
-                    <Badge variant="outline" className="text-[10px] font-mono">{flag.feature_key}</Badge>
-                    {flag.module && flag.module !== 'application' && (
-                      <Badge variant="secondary" className="text-[10px]">{flag.module}</Badge>
-                    )}
-                    {!flag.is_enabled && <Badge variant="destructive" className="text-[10px]">Off</Badge>}
-                  </div>
-                  {flag.description && <p className="text-xs text-muted-foreground">{flag.description}</p>}
+      {sortedModules.map(mod => {
+        const moduleInfo = MODULE_LABELS[mod] || { label: mod, color: 'border-border bg-muted/5' };
+        const categoriesInModule = groupedByModule[mod];
+        const sortedCats = CATEGORY_ORDER.filter(c => categoriesInModule[c]?.length > 0);
+        Object.keys(categoriesInModule).forEach(c => { if (!sortedCats.includes(c)) sortedCats.push(c); });
 
-                  {/* Tier & Module row */}
-                  <div className="flex flex-wrap items-center gap-3">
-                    {/* Master enable toggle */}
-                    <div className="flex items-center gap-1.5">
-                      <Power className="h-3 w-3 text-muted-foreground" />
-                      <Switch checked={flag.is_enabled} onCheckedChange={v => handleToggle(flag.id, 'is_enabled', v, flag)} />
-                    </div>
-                    <div className="h-4 w-px bg-border" />
+        return (
+          <div key={mod} className={`rounded-lg border-2 ${moduleInfo.color} p-4 space-y-4`}>
+            <h3 className="text-base font-bold tracking-wide">{moduleInfo.label}</h3>
 
-                    {/* Required Tier selector */}
-                    <div className={`flex items-center gap-1.5 ${!flag.is_enabled ? 'opacity-40 pointer-events-none' : ''}`}>
-                      <Crown className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-[10px] text-muted-foreground">Tier:</span>
-                      <select
-                        value={flag.required_tier || 'basic'}
-                        onChange={e => handleFieldChange(flag.id, 'required_tier', e.target.value, flag)}
-                        className="h-6 text-[11px] border rounded px-1 bg-background"
-                      >
-                        <option value="basic">Basic</option>
-                        <option value="pro">Pro</option>
-                        <option value="premium">Premium</option>
-                      </select>
-                    </div>
-                    <div className="h-4 w-px bg-border" />
+            {sortedCats.map(category => (
+              <div key={category} className="space-y-2">
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                  {CATEGORY_LABELS[category] || category}
+                </h4>
+                <div className="grid gap-2">
+                  {categoriesInModule[category].map((flag: any) => (
+                    <Card key={flag.id} className={`p-3 ${!flag.is_enabled ? 'opacity-50' : ''}`}>
+                      <div className="space-y-2">
+                        {/* Header row */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-sm">{flag.feature_name}</span>
+                          <Badge variant="outline" className="text-[10px] font-mono">{flag.feature_key}</Badge>
+                          {!flag.is_enabled && <Badge variant="destructive" className="text-[10px]">Off</Badge>}
+                        </div>
+                        {flag.description && <p className="text-xs text-muted-foreground">{flag.description}</p>}
 
-                    {/* Module selector */}
-                    <div className={`flex items-center gap-1.5 ${!flag.is_enabled ? 'opacity-40 pointer-events-none' : ''}`}>
-                      <Sparkles className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-[10px] text-muted-foreground">Module:</span>
-                      <select
-                        value={flag.module || 'application'}
-                        onChange={e => handleFieldChange(flag.id, 'module', e.target.value, flag)}
-                        className="h-6 text-[11px] border rounded px-1 bg-background"
-                      >
-                        <option value="application">Application</option>
-                        <option value="trackup">TrackUp</option>
-                        <option value="funnels">Funnels</option>
-                      </select>
-                    </div>
-                  </div>
+                        {/* Tier & Module row */}
+                        <div className="flex flex-wrap items-center gap-3">
+                          <div className="flex items-center gap-1.5">
+                            <Power className="h-3 w-3 text-muted-foreground" />
+                            <Switch checked={flag.is_enabled} onCheckedChange={v => handleToggle(flag.id, 'is_enabled', v, flag)} />
+                          </div>
+                          <div className="h-4 w-px bg-border" />
+                          <div className={`flex items-center gap-1.5 ${!flag.is_enabled ? 'opacity-40 pointer-events-none' : ''}`}>
+                            <Crown className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-[10px] text-muted-foreground">Tier:</span>
+                            <select
+                              value={flag.required_tier || 'basic'}
+                              onChange={e => handleFieldChange(flag.id, 'required_tier', e.target.value, flag)}
+                              className="h-6 text-[11px] border rounded px-1 bg-background"
+                            >
+                              <option value="basic">Basic</option>
+                              <option value="pro">Pro</option>
+                              <option value="premium">Premium</option>
+                            </select>
+                          </div>
+                          <div className="h-4 w-px bg-border" />
+                          <div className={`flex items-center gap-1.5 ${!flag.is_enabled ? 'opacity-40 pointer-events-none' : ''}`}>
+                            <Sparkles className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-[10px] text-muted-foreground">Module:</span>
+                            <select
+                              value={flag.module || 'application'}
+                              onChange={e => handleFieldChange(flag.id, 'module', e.target.value, flag)}
+                              className="h-6 text-[11px] border rounded px-1 bg-background"
+                            >
+                              <option value="application">Application</option>
+                              <option value="trackup">TrackUp</option>
+                              <option value="funnels">Funnels</option>
+                            </select>
+                          </div>
+                        </div>
 
-                  {/* Numeric limits row (only show if any limit is set or feature is a limit-type) */}
-                  {flag.is_enabled && (
-                    <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-border/50">
-                      <Hash className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-[11px] text-muted-foreground">Limits:</span>
-                      <div className="flex items-center gap-1">
-                        <span className="text-[10px] text-muted-foreground">Free</span>
-                        <Input
-                          type="number"
-                          className="h-6 w-16 text-xs px-1"
-                          placeholder="∞"
-                          value={flag.free_limit ?? ''}
-                          onBlur={e => handleLimitChange(flag.id, 'free_limit', e.target.value, flag)}
-                          onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                          onChange={() => {}} // controlled by onBlur
-                        />
+                        {/* Numeric limits row */}
+                        {flag.is_enabled && (
+                          <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-border/50">
+                            <Hash className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-[11px] text-muted-foreground">Limits:</span>
+                            {(['free_limit', 'pro_limit', 'trial_limit'] as const).map(field => (
+                              <div key={field} className="flex items-center gap-1">
+                                <span className="text-[10px] text-muted-foreground capitalize">{field.replace('_limit', '')}</span>
+                                <Input
+                                  type="number"
+                                  className="h-6 w-16 text-xs px-1"
+                                  placeholder="∞"
+                                  value={flag[field] ?? ''}
+                                  onBlur={e => handleLimitChange(flag.id, field, e.target.value, flag)}
+                                  onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                                  onChange={() => {}}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-[10px] text-muted-foreground">Pro</span>
-                        <Input
-                          type="number"
-                          className="h-6 w-16 text-xs px-1"
-                          placeholder="∞"
-                          value={flag.pro_limit ?? ''}
-                          onBlur={e => handleLimitChange(flag.id, 'pro_limit', e.target.value, flag)}
-                          onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                          onChange={() => {}}
-                        />
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-[10px] text-muted-foreground">Trial</span>
-                        <Input
-                          type="number"
-                          className="h-6 w-16 text-xs px-1"
-                          placeholder="∞"
-                          value={flag.trial_limit ?? ''}
-                          onBlur={e => handleLimitChange(flag.id, 'trial_limit', e.target.value, flag)}
-                          onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                          onChange={() => {}}
-                        />
-                      </div>
-                    </div>
-                  )}
+                    </Card>
+                  ))}
                 </div>
-              </Card>
+              </div>
             ))}
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       {flags.length === 0 && (
         <Card className="p-8 text-center">
