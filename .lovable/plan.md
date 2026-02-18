@@ -1,208 +1,145 @@
 
 
-# Recurring Subscription Architecture for Razorpay
+# Phase 1: Safe 3-Tier Subscription Migration
 
-## Overview
-
-Add support for Razorpay recurring subscriptions alongside existing one-time payments. This introduces a `billing_type` field to plans, a new edge function for creating Razorpay subscriptions, webhook handlers for subscription lifecycle events, and a `razorpay_subscription_id` column on `user_subscriptions`.
+This is a **phased, additive-only migration** from the current 2-tier (Free/Pro) system to a 3-tier (Basic/Pro/Premium) system. No existing columns, enums, or logic will be removed.
 
 ---
 
-## STEP 1: Database Schema Changes
+## Database Changes (Migration SQL)
 
-### Table: `admin_subscription_plans`
-Add two new columns:
-
-| Column | Type | Default | Purpose |
-|---|---|---|---|
-| `billing_type` | `text` | `'one_time'` | Either `one_time` or `recurring` |
-| `razorpay_plan_id` | `text` | `NULL` | Razorpay Plan ID for recurring plans (e.g., `plan_XXXXX`) |
-
-Add a CHECK constraint: `billing_type IN ('one_time', 'recurring')`
-
-### Table: `user_subscriptions`
-Add one new column:
-
-| Column | Type | Default | Purpose |
-|---|---|---|---|
-| `razorpay_subscription_id` | `text` | `NULL` | Tracks the active Razorpay subscription for cancellation/management |
-
-### Table: `user_funnel_subscriptions`
-Add the same column for consistency:
-
-| Column | Type | Default | Purpose |
-|---|---|---|---|
-| `razorpay_subscription_id` | `text` | `NULL` | Tracks the active Razorpay subscription |
-
-All existing data remains untouched -- `billing_type` defaults to `'one_time'` so current plans continue working.
-
----
-
-## STEP 2: Admin Panel -- PlansManager UI Changes
-
-### File: `src/components/admin/PlansManager.tsx`
-
-Update the `PlanEditForm` to add:
-
-1. **Billing Type dropdown** with two options: "One Time" and "Recurring"
-2. **Conditional fields:**
-   - If `billing_type = 'one_time'`: Show "Payment Link" field (existing behavior)
-   - If `billing_type = 'recurring'`: Show "Razorpay Plan ID" field instead
-3. **Validation:**
-   - One-time plans require `payment_link`
-   - Recurring plans require `razorpay_plan_id`
-   - `duration_days` remains required for both (used for expiry calculation on renewal)
-
-Update the `PlanCard` to show a "Recurring" badge when `billing_type = 'recurring'`.
-
-### File: `src/hooks/useAdminConfig.ts`
-
-Add `billing_type` and `razorpay_plan_id` to the `SubscriptionPlan` interface.
-
----
-
-## STEP 3: New Edge Function -- `create-razorpay-subscription`
-
-### File: `supabase/functions/create-razorpay-subscription/index.ts`
-
-This function creates a Razorpay Subscription (not an Order) when the user selects a recurring plan.
-
-**Flow:**
-1. Receive `user_id`, `user_email`, `plan_type` from client
-2. Fetch plan from `admin_subscription_plans` -- verify `billing_type = 'recurring'` and `razorpay_plan_id` exists
-3. Call Razorpay API `POST /v1/subscriptions` with:
-   - `plan_id`: from database
-   - `total_count`: 12 (or configurable -- max billing cycles)
-   - `notes`: `{ user_id, user_email, plan_scope, duration_days }`
-4. Return `subscription_id`, `short_url` (Razorpay hosted checkout URL), and `key_id` to client
-
-**Config:** `verify_jwt = false` in `supabase/config.toml` (auth validated in code).
-
----
-
-## STEP 4: Upgrade Razorpay Webhook
-
-### File: `supabase/functions/razorpay-webhook/index.ts`
-
-Keep the existing `payment.captured` handler for one-time payments. Add handlers for:
-
-### `subscription.activated`
-- Extract `subscription_id`, `plan_id` from payload
-- Look up `duration_days` and `plan_scope` from `admin_subscription_plans` using the `razorpay_plan_id`
-- Find user via `notes.user_email` in the subscription entity
-- Upsert into `user_subscriptions` (or `user_funnel_subscriptions` based on scope):
-  - `plan = 'pro'`, `status = 'active'`
-  - `expires_at = now() + duration_days`
-  - `razorpay_subscription_id = subscription_id`
-- Log to `payments_log`
-
-### `subscription.charged`
-- This fires on each renewal payment
-- Find user by `razorpay_subscription_id` in `user_subscriptions`
-- Extend `expires_at` by `duration_days` (from the plan config)
-- Log to `payments_log`
-
-### `subscription.cancelled`
-- Find user by `razorpay_subscription_id`
-- Set `status = 'cancelled'` (keep `expires_at` so access continues until expiry)
-- Log to `payments_log`
-
-### `subscription.completed`
-- Find user by `razorpay_subscription_id`
-- Set `status = 'expired'`
-- Log to `payments_log`
-
-**Key safeguards:**
-- Idempotency: Check if subscription row already exists before creating
-- Duration lookup: Always from `admin_subscription_plans` via `razorpay_plan_id` match
-- Backward compatible: `payment.captured` flow unchanged for one-time plans
-
----
-
-## STEP 5: Upgrade User Payment Flow
-
-### File: `src/hooks/useRazorpay.ts`
-
-Add a new method `initiateSubscription` alongside existing `initiatePayment`:
-
-1. Call `create-razorpay-subscription` edge function
-2. Receive `subscription_id` and checkout options
-3. Open Razorpay checkout with `subscription_id` instead of `order_id`
-4. On success callback, redirect to `/payment-success?type=subscription&subscription_id=...`
-5. Do NOT grant Pro access here -- wait for webhook `subscription.activated`
-
-### File: `src/components/subscription/UpgradeDrawer.tsx`
-
-Update `handleUpgrade`:
-
-```text
-if plan.billing_type === 'recurring':
-  call initiateSubscription(planKey)
-else:
-  call initiatePayment(planKey)   // existing flow
+### 1. Add `premium` to `user_plan` enum
+```sql
+ALTER TYPE user_plan ADD VALUE IF NOT EXISTS 'premium';
 ```
+Existing `free` and `pro` values remain untouched.
 
-### File: `src/components/subscription/UpgradeCard.tsx`
+### 2. Add `tier` column to `user_subscriptions`
+- `tier TEXT DEFAULT 'basic' CHECK (tier IN ('basic','pro','premium'))`
+- Backfill: rows with `plan = 'pro'` and `status = 'active'` and not expired get `tier = 'pro'`; all others get `tier = 'basic'`
 
-Same conditional logic for billing type.
+### 3. Add `tier` column to `user_funnel_subscriptions`
+- Same as above
 
-### File: `src/pages/PaymentSuccess.tsx`
+### 4. Add `tier` column to `admin_subscription_plans`
+- `tier TEXT NOT NULL DEFAULT 'pro' CHECK (tier IN ('basic','pro','premium'))`
+- All existing plans automatically default to `'pro'`
 
-Add handling for subscription-based payments:
-- If `type=subscription` in query params, show "Subscription initiated -- waiting for activation" state
-- Poll or use realtime listener on `user_subscriptions` to detect when webhook activates the subscription
-- Then show success screen
+### 5. Add `required_tier` and `module` to `admin_feature_flags`
+- `required_tier TEXT NOT NULL DEFAULT 'basic' CHECK (required_tier IN ('basic','pro','premium'))`
+- `module TEXT NOT NULL DEFAULT 'application' CHECK (module IN ('application','trackup','funnels'))`
+- Backfill: where `free_access = true` set `required_tier = 'basic'`; where `free_access = false` set `required_tier = 'pro'`
+- Old columns (`free_access`, `pro_access`, `trial_access`, `free_limit`, `pro_limit`, `trial_limit`) are **kept** -- not removed
+
+### 6. Add tier columns to `admin_usage_limits`
+- `module TEXT NOT NULL DEFAULT 'application'`
+- `basic_value INTEGER`
+- `pro_value INTEGER`
+- `premium_value INTEGER`
+- Backfill: copy `config_value` to `basic_value`
+
+### 7. Update `get_app_config` RPC
+Add the new fields to each JSON section:
+- Plans: include `tier`, `billing_type`, `razorpay_plan_id`
+- Features: include `required_tier`, `module`
+- Limits: include `module`, `basic_value`, `pro_value`, `premium_value`
 
 ---
 
-## STEP 6: Type Updates
+## Core Permission System Updates
 
-### File: `src/hooks/usePaymentLinks.ts`
+### `src/hooks/useAdminConfig.ts`
+- Add `tier`, `required_tier`, `module` to `SubscriptionPlan` and `FeatureFlag` interfaces
+- Add `billing_type` and `razorpay_plan_id` to plan JSON parsing in `get_app_config` result
+- Update `SAFE_DEFAULTS` with new fields
 
-Add `billing_type` and `razorpay_plan_id` to `PlanConfig` interface.
+### `src/hooks/useSubscription.ts`
+- Read `tier` column from subscription data
+- Export `userTier: 'basic' | 'pro' | 'premium'`
+- Compute: `isPro = tier >= pro`, `isPremium = tier === 'premium'`, `isPaid = tier !== 'basic'`
+- Keep existing `plan` and `isPro` exports for backward compat
 
-### File: `src/hooks/useSubscription.ts`
+### `src/hooks/useFunnelSubscription.ts`
+- Same tier export pattern
 
-Add `razorpay_subscription_id` to the `Subscription` interface.
+### `src/hooks/useFeatureAccess.ts`
+- Add tier-based access check alongside existing logic
+- If `feature.required_tier` exists, use tier comparison: `userTier >= required_tier`
+- If `required_tier` is missing (old data), fall back to existing `free_access`/`pro_access` logic
+- This ensures zero breakage during transition
+
+### `src/contexts/PermissionsContext.tsx`
+- Add `userTier` to context value
+- Add `isPremium` to context
+- Use tier-based check when `required_tier` is present on feature
+- Fall back to old boolean logic otherwise
 
 ---
 
-## Files to Create/Modify
+## Admin Panel UI Updates
 
-| File | Action |
+### `src/components/admin/PlansManager.tsx`
+- Add **Tier** dropdown (Basic / Pro / Premium) to the plan edit form
+- Show tier badge on each plan card
+- Validate: Basic tier plans must have `price_inr = 0`
+- Group plans by tier in the list
+
+### `src/components/admin/FeatureFlagsManager.tsx`
+- Add **Required Tier** selector (Basic / Pro / Premium) alongside existing toggles
+- Add **Module** dropdown (Application / TrackUp / Funnels)
+- Keep existing Free/Pro toggles visible but add deprecation hint
+- When `required_tier` is changed, auto-sync the old boolean columns for backward compat
+
+### `src/components/admin/UsageLimitsManager.tsx`
+- Add 3 value inputs per limit row: Basic / Pro / Premium
+- Add module selector per limit
+- Keep existing single `config_value` field synced with `basic_value`
+
+---
+
+## Webhook & Payment Updates
+
+### `supabase/functions/razorpay-webhook/index.ts`
+- In `lookupPlanByRazorpayId`, also return `tier` from `admin_subscription_plans`
+- In `payment.captured` and `subscription.activated`: read `tier` from plan, store it in subscription upsert
+- If `tier` is not found (old plans), default to `'pro'` for backward compat
+- In `subscription.completed`: set `tier = 'basic'` (downgrade)
+
+### `supabase/functions/create-razorpay-order/index.ts`
+- Include `tier` in order notes
+
+### `supabase/functions/create-razorpay-subscription/index.ts`
+- Include `tier` in subscription notes
+
+---
+
+## Files to Modify
+
+| File | Change |
 |---|---|
-| **Migration SQL** | Add columns to 3 tables |
-| `supabase/functions/create-razorpay-subscription/index.ts` | **New** -- creates Razorpay subscription |
-| `supabase/config.toml` | Add entry for new edge function |
-| `supabase/functions/razorpay-webhook/index.ts` | Add subscription event handlers |
-| `src/hooks/useAdminConfig.ts` | Add `billing_type`, `razorpay_plan_id` to types |
-| `src/hooks/usePaymentLinks.ts` | Add new fields to `PlanConfig` |
-| `src/hooks/useSubscription.ts` | Add `razorpay_subscription_id` to interface |
-| `src/hooks/useRazorpay.ts` | Add `initiateSubscription` method |
-| `src/components/admin/PlansManager.tsx` | Add billing type UI + conditional fields |
-| `src/components/subscription/UpgradeDrawer.tsx` | Route to correct payment flow |
-| `src/components/subscription/UpgradeCard.tsx` | Route to correct payment flow |
-| `src/pages/PaymentSuccess.tsx` | Handle subscription-type payments |
+| **Migration SQL** | Add columns to 5 tables, backfill data, update `get_app_config` RPC |
+| `src/hooks/useAdminConfig.ts` | Add tier/module types, update SAFE_DEFAULTS |
+| `src/hooks/useSubscription.ts` | Add `userTier`, `isPremium`, keep `isPro` |
+| `src/hooks/useFunnelSubscription.ts` | Add `tier` export |
+| `src/hooks/useFeatureAccess.ts` | Dual-mode: tier-based + fallback to boolean |
+| `src/contexts/PermissionsContext.tsx` | Add `userTier`, `isPremium`, tier-based check |
+| `src/components/admin/PlansManager.tsx` | Add Tier dropdown + badge |
+| `src/components/admin/FeatureFlagsManager.tsx` | Add Required Tier + Module selectors |
+| `src/components/admin/UsageLimitsManager.tsx` | Add 3 tier value inputs + module |
+| `supabase/functions/razorpay-webhook/index.ts` | Read/store tier |
+| `supabase/functions/create-razorpay-order/index.ts` | Pass tier in notes |
+| `supabase/functions/create-razorpay-subscription/index.ts` | Pass tier in notes |
 
 ---
 
-## Backward Compatibility
+## Backward Compatibility Guarantees
 
-- All existing plans default to `billing_type = 'one_time'` -- zero disruption
-- Existing `payment.captured` webhook logic is untouched
-- Existing Pro users with active subscriptions are unaffected
-- The `useSubscription` hook continues to work -- `razorpay_subscription_id` is simply nullable
-- No secrets need to be added -- the existing `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET` are reused
-
----
-
-## Razorpay Webhook Configuration Reminder
-
-After deployment, you must add these events to your Razorpay Dashboard webhook settings (Settings > Webhooks):
-- `subscription.activated`
-- `subscription.charged`
-- `subscription.cancelled`
-- `subscription.completed`
-
-The existing `payment.captured` event stays enabled.
+- `user_plan` enum: `free` and `pro` values untouched, `premium` added
+- `free_access` / `pro_access` / `trial_access` columns: **kept** in `admin_feature_flags`
+- Existing `config_value` column: **kept** in `admin_usage_limits`
+- `plan` column in `user_subscriptions`: **kept** as-is, `tier` is a new parallel column
+- All existing Pro users: `tier` backfilled to `'pro'`, no access change
+- All existing Free users: `tier` backfilled to `'basic'`, no access change
+- Webhook `payment.captured`: existing logic unchanged, `tier` defaults to `'pro'` if missing
+- `isPro` and `isPaid` exports: kept as computed values from `tier`
 
