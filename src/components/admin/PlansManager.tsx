@@ -220,9 +220,14 @@ export function PlansManager() {
                   toast.success('Plan updated');
                 }
                 setSheetOpen(false);
-              } catch (err) {
+              } catch (err: any) {
                 console.error('Plan save error:', err);
-                toast.error('Failed to save plan');
+                const msg = err?.message || '';
+                if (msg.includes('duplicate key') || msg.includes('unique constraint') || msg.includes('plan_key')) {
+                  toast.error('A plan with this key already exists. Use a unique plan key.');
+                } else {
+                  toast.error('Failed to save plan');
+                }
               }
             }}
             onCancel={() => setSheetOpen(false)}
@@ -329,6 +334,7 @@ function PlanEditForm({
   onSave: (data: Partial<SubscriptionPlan>) => Promise<void>;
   onCancel: () => void;
 }) {
+  const isEditing = !!plan;
   const [formData, setFormData] = useState({
     plan_key: plan?.plan_key || '',
     plan_name: plan?.plan_name || '',
@@ -435,9 +441,11 @@ function PlanEditForm({
             value={formData.tier}
             onChange={(e) => {
               const tier = e.target.value as SubscriptionTier;
+              const autoKey = !isEditing ? `${tier}_${formData.billing_type}` : formData.plan_key;
               setFormData(prev => ({
                 ...prev,
                 tier,
+                plan_key: isEditing ? prev.plan_key : autoKey,
                 price_inr: tier === 'basic' ? 0 : prev.price_inr,
               }));
             }}
@@ -453,7 +461,11 @@ function PlanEditForm({
           <select
             id="billing_type"
             value={formData.billing_type}
-            onChange={(e) => setFormData(prev => ({ ...prev, billing_type: e.target.value as 'one_time' | 'recurring' }))}
+            onChange={(e) => {
+              const billing_type = e.target.value as 'one_time' | 'recurring';
+              const autoKey = !isEditing ? `${formData.tier}_${billing_type}` : formData.plan_key;
+              setFormData(prev => ({ ...prev, billing_type, plan_key: isEditing ? prev.plan_key : autoKey }));
+            }}
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <option value="one_time">One Time</option>
