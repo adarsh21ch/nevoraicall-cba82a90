@@ -1,90 +1,44 @@
 
 
-# Add "Funnels" Tab to Admin Panel with Feature Controls and New Feature Flags
+# Fix: "Failed to save plan" Error in Plans Manager
 
-## Overview
+## Root Cause
 
-Add a dedicated "Funnels" tab to the Admin Panel that combines:
-1. **KPI Stats** -- Total Creators, Funnels, Videos, Leads, Pro Users
-2. **Funnel Feature Controls** -- Filtered view of funnel-category feature flags (same UI as the existing Features tab but showing only `category = 'funnels'` flags)
-3. **Subscribers Management** -- List of Funnels Pro users with grant/revoke
-4. **New Feature Flags** -- Additional funnel gates for more granular control
+The `PlanEditForm` in `PlansManager.tsx` sends form data to `updatePlan()`, which calls `.update(updates)` on the `admin_subscription_plans` table. The error is thrown but silently caught, showing only a generic "Failed to save plan" toast without logging the actual database error.
 
-## New Feature Flags to Add
+After analyzing the code and database schema, there are two issues to fix:
 
-These will be inserted into `admin_feature_flags` with `category = 'funnels'`:
+1. **No error logging** -- The `catch` block on line ~195 shows `toast.error('Failed to save plan')` but never logs the actual error, making debugging impossible.
 
-| Feature Key | Name | Description | Free Limit | Pro Limit |
-|---|---|---|---|---|
-| `funnel_max_leads` | Max Leads Per Funnel | Maximum leads a funnel can capture | 50 | unlimited |
-| `funnel_qr_code` | QR Code Upload | Upload custom QR codes for payments | false (Pro Only) | true |
-| `funnel_whatsapp_auto` | WhatsApp Auto Message | Auto-send WhatsApp message on lead capture | false (Pro Only) | true |
-| `funnel_lead_export` | Export Funnel Leads | Export leads data from funnels | false (Pro Only) | true |
+2. **Potential type mismatch** -- The form sends all fields including `plan_key` in the update payload. While this shouldn't cause a unique constraint violation (it's updating the same row), it adds unnecessary fields to the update. More importantly, the `features` field needs to be properly serialized for the `jsonb` column.
 
-## Database Changes
+## Fix Plan
 
-Insert new feature flag rows via the data insert tool (no schema changes needed -- the `admin_feature_flags` table already exists).
+### 1. Add error logging to the save handler
 
-## Frontend Changes
+In `PlansManager.tsx`, add `console.error` in the catch block so we (and you) can see the actual database error:
 
-### 1. New Component: `AdminFunnelsTab.tsx`
-
-Main tab component with sections:
-- **Stats Grid** -- 6 KPI cards (Total Creators, Total Funnels, Total Videos, Total Leads, Funnels Pro Users, Combined Pro Users)
-- **Feature Controls** -- Reuses the same card layout as `FeatureFlagsManager` but filtered to only show flags with `category = 'funnels'`. Includes the "Add Feature" button scoped to the funnels category.
-- **Subscribers** -- Table of `user_funnel_subscriptions` rows with user info, plan status, expiry, and grant/revoke actions.
-
-### 2. New Component: `FunnelsStatsGrid.tsx`
-
-Fetches aggregated stats using client-side queries:
-- `SELECT count(DISTINCT owner_user_id) FROM funnels` -- Total Creators
-- `SELECT count(*) FROM funnels` -- Total Funnels
-- `SELECT count(*) FROM video_assets` -- Total Videos
-- `SELECT count(*) FROM funnel_leads` -- Total Leads
-- `SELECT count(*) FROM user_funnel_subscriptions WHERE plan = 'pro'` -- Pro Users
-
-### 3. New Component: `FunnelsFeaturesControl.tsx`
-
-A focused version of FeatureFlagsManager that:
-- Only shows flags where `category = 'funnels'`
-- Uses the exact same toggle/limit UI (Power toggle, Free/Pro Only segmented control, Trial toggle, numeric limits)
-- Supports adding new funnel-specific features
-- Reuses the `useAdminFeatureFlags` hook with a category filter applied in the component
-
-### 4. New Component: `FunnelsSubscribersTable.tsx`
-
-Shows all users from `user_funnel_subscriptions` joined with `profiles`:
-- Display name, email, plan, status, expiry, admin override badge
-- "Grant Pro" / "Revoke Pro" action buttons
-- Filter: All / Active / Expired / Admin Override
-
-### 5. Modify: `Admin.tsx`
-
-Add a "Funnels" tab trigger (with Video icon) between "Features" and "Support":
-```
-Users | Analytics | Plans | Offers | Limits | Features | Funnels | Support | Audit Log
+```typescript
+} catch (err) {
+  console.error('Plan save error:', err);
+  toast.error('Failed to save plan');
+}
 ```
 
-## Files Summary
+### 2. Ensure proper data formatting
 
-| File | Action |
+Ensure the update payload only sends changed/valid fields and that `features` is properly formatted for the `jsonb` column. Also cast `price_inr`, `duration_days`, and `sort_order` to ensure they're valid integers (not `NaN` from empty inputs).
+
+### 3. Add a `payment_link` field to the update
+
+Looking at the network logs, the existing "Funnels Pro" plan has `payment_link: null`. The edit form shows the user entering a payment link. The update should properly include this field.
+
+## Files to Modify
+
+| File | Change |
 |---|---|
-| Database insert (new feature flags) | Insert 4 new rows into `admin_feature_flags` |
-| `src/components/admin/AdminFunnelsTab.tsx` | Create -- main tab with sub-sections |
-| `src/components/admin/FunnelsStatsGrid.tsx` | Create -- KPI cards |
-| `src/components/admin/FunnelsFeaturesControl.tsx` | Create -- funnel-only feature flags manager |
-| `src/components/admin/FunnelsSubscribersTable.tsx` | Create -- subscribers list with actions |
-| `src/pages/Admin.tsx` | Modify -- add Funnels tab trigger and content |
+| `src/components/admin/PlansManager.tsx` | Add console.error in catch block; ensure proper data types in form submission |
 
-## Component Structure
+## Technical Details
 
-```text
-Admin.tsx
-  Tabs
-    ...existing tabs...
-    TabsContent value="funnels"
-      AdminFunnelsTab
-        +-- FunnelsStatsGrid (6 KPI cards)
-        +-- FunnelsFeaturesControl (filtered feature flags with toggles/limits)
-        +-- FunnelsSubscribersTable (user list with grant/revoke)
-```
+The fix adds proper error logging and ensures numeric fields are validated before submission. This will either fix the save or reveal the exact database error in the console for further debugging.
