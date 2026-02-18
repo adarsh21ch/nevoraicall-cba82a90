@@ -1,84 +1,208 @@
 
 
-# Fix: Admin Panel Changes Not Syncing to Website Funnels
+# Recurring Subscription Architecture for Razorpay
 
-## Problem Diagnosis
+## Overview
 
-There are three separate issues preventing the admin panel changes from affecting the website funnels:
+Add support for Razorpay recurring subscriptions alongside existing one-time payments. This introduces a `billing_type` field to plans, a new edge function for creating Razorpay subscriptions, webhook handlers for subscription lifecycle events, and a `razorpay_subscription_id` column on `user_subscriptions`.
 
-### Issue 1: No Users Have Funnels Pro Status
-The `user_funnel_subscriptions` table is **completely empty**. Even though you created a "Funnels Pro" plan in `admin_subscription_plans` and configured feature flags, no user has actually been assigned Pro status. The feature gate (`useFunnelFeatureAccess`) checks this table to determine if a user is Pro or Free.
+---
 
-### Issue 2: No Payment Flow Connected
-The "Funnels Pro" plan exists in `admin_subscription_plans` with a Razorpay link, but the payment webhook (`razorpay-webhook` edge function) needs to handle `plan_scope = 'funnels'` to insert rows into `user_funnel_subscriptions` when payment is confirmed.
+## STEP 1: Database Schema Changes
 
-### Issue 3: Website is a Separate Frontend
-The website (nevorai.com) shares the same database but is a **separate codebase**. It must have its own implementation of the `useFunnelSubscription` and `useFunnelFeatureAccess` hooks. If those hooks don't exist on the website side, the website won't enforce any of the feature gates you configure in the admin panel.
+### Table: `admin_subscription_plans`
+Add two new columns:
+
+| Column | Type | Default | Purpose |
+|---|---|---|---|
+| `billing_type` | `text` | `'one_time'` | Either `one_time` or `recurring` |
+| `razorpay_plan_id` | `text` | `NULL` | Razorpay Plan ID for recurring plans (e.g., `plan_XXXXX`) |
+
+Add a CHECK constraint: `billing_type IN ('one_time', 'recurring')`
+
+### Table: `user_subscriptions`
+Add one new column:
+
+| Column | Type | Default | Purpose |
+|---|---|---|---|
+| `razorpay_subscription_id` | `text` | `NULL` | Tracks the active Razorpay subscription for cancellation/management |
+
+### Table: `user_funnel_subscriptions`
+Add the same column for consistency:
+
+| Column | Type | Default | Purpose |
+|---|---|---|---|
+| `razorpay_subscription_id` | `text` | `NULL` | Tracks the active Razorpay subscription |
+
+All existing data remains untouched -- `billing_type` defaults to `'one_time'` so current plans continue working.
+
+---
+
+## STEP 2: Admin Panel -- PlansManager UI Changes
+
+### File: `src/components/admin/PlansManager.tsx`
+
+Update the `PlanEditForm` to add:
+
+1. **Billing Type dropdown** with two options: "One Time" and "Recurring"
+2. **Conditional fields:**
+   - If `billing_type = 'one_time'`: Show "Payment Link" field (existing behavior)
+   - If `billing_type = 'recurring'`: Show "Razorpay Plan ID" field instead
+3. **Validation:**
+   - One-time plans require `payment_link`
+   - Recurring plans require `razorpay_plan_id`
+   - `duration_days` remains required for both (used for expiry calculation on renewal)
+
+Update the `PlanCard` to show a "Recurring" badge when `billing_type = 'recurring'`.
+
+### File: `src/hooks/useAdminConfig.ts`
+
+Add `billing_type` and `razorpay_plan_id` to the `SubscriptionPlan` interface.
+
+---
+
+## STEP 3: New Edge Function -- `create-razorpay-subscription`
+
+### File: `supabase/functions/create-razorpay-subscription/index.ts`
+
+This function creates a Razorpay Subscription (not an Order) when the user selects a recurring plan.
+
+**Flow:**
+1. Receive `user_id`, `user_email`, `plan_type` from client
+2. Fetch plan from `admin_subscription_plans` -- verify `billing_type = 'recurring'` and `razorpay_plan_id` exists
+3. Call Razorpay API `POST /v1/subscriptions` with:
+   - `plan_id`: from database
+   - `total_count`: 12 (or configurable -- max billing cycles)
+   - `notes`: `{ user_id, user_email, plan_scope, duration_days }`
+4. Return `subscription_id`, `short_url` (Razorpay hosted checkout URL), and `key_id` to client
+
+**Config:** `verify_jwt = false` in `supabase/config.toml` (auth validated in code).
+
+---
+
+## STEP 4: Upgrade Razorpay Webhook
+
+### File: `supabase/functions/razorpay-webhook/index.ts`
+
+Keep the existing `payment.captured` handler for one-time payments. Add handlers for:
+
+### `subscription.activated`
+- Extract `subscription_id`, `plan_id` from payload
+- Look up `duration_days` and `plan_scope` from `admin_subscription_plans` using the `razorpay_plan_id`
+- Find user via `notes.user_email` in the subscription entity
+- Upsert into `user_subscriptions` (or `user_funnel_subscriptions` based on scope):
+  - `plan = 'pro'`, `status = 'active'`
+  - `expires_at = now() + duration_days`
+  - `razorpay_subscription_id = subscription_id`
+- Log to `payments_log`
+
+### `subscription.charged`
+- This fires on each renewal payment
+- Find user by `razorpay_subscription_id` in `user_subscriptions`
+- Extend `expires_at` by `duration_days` (from the plan config)
+- Log to `payments_log`
+
+### `subscription.cancelled`
+- Find user by `razorpay_subscription_id`
+- Set `status = 'cancelled'` (keep `expires_at` so access continues until expiry)
+- Log to `payments_log`
+
+### `subscription.completed`
+- Find user by `razorpay_subscription_id`
+- Set `status = 'expired'`
+- Log to `payments_log`
+
+**Key safeguards:**
+- Idempotency: Check if subscription row already exists before creating
+- Duration lookup: Always from `admin_subscription_plans` via `razorpay_plan_id` match
+- Backward compatible: `payment.captured` flow unchanged for one-time plans
+
+---
+
+## STEP 5: Upgrade User Payment Flow
+
+### File: `src/hooks/useRazorpay.ts`
+
+Add a new method `initiateSubscription` alongside existing `initiatePayment`:
+
+1. Call `create-razorpay-subscription` edge function
+2. Receive `subscription_id` and checkout options
+3. Open Razorpay checkout with `subscription_id` instead of `order_id`
+4. On success callback, redirect to `/payment-success?type=subscription&subscription_id=...`
+5. Do NOT grant Pro access here -- wait for webhook `subscription.activated`
+
+### File: `src/components/subscription/UpgradeDrawer.tsx`
+
+Update `handleUpgrade`:
 
 ```text
-Admin Panel                      Database                        Website / App
-+-----------------------+        +-------------------------+     +---------------------+
-| Toggle free/pro flags | -----> | admin_feature_flags     | <-- | useFunnelFeature-   |
-| in Funnels tab        |        | (data IS saved OK)      |     | Access() reads this |
-+-----------------------+        +-------------------------+     +---------------------+
-
-+-----------------------+        +-------------------------+     +---------------------+
-| Grant Pro button in   | -----> | user_funnel_subscriptions| <-- | useFunnelSubscription|
-| Subscribers table     |        | (currently EMPTY)       |     | () reads this       |
-+-----------------------+        +-------------------------+     +---------------------+
-
-+-----------------------+        +-------------------------+
-| Create "Funnels Pro"  | -----> | admin_subscription_plans|
-| plan with price       |        | (plan exists, ₹499)     |
-+-----------------------+        +-------------------------+
+if plan.billing_type === 'recurring':
+  call initiateSubscription(planKey)
+else:
+  call initiatePayment(planKey)   // existing flow
 ```
 
-## What Needs to Happen
+### File: `src/components/subscription/UpgradeCard.tsx`
 
-### Step 1: Seed a Funnel Subscription for Testing
-Insert a test row into `user_funnel_subscriptions` for your admin user so you can verify the feature gates actually work when a user has Pro status.
+Same conditional logic for billing type.
 
-### Step 2: Fix the FunnelsSubscribersTable "Grant Pro" Flow
-Currently the "Grant Pro" button in the admin panel does `.update()` on `user_funnel_subscriptions` -- but if the user doesn't already have a row in that table, the update affects zero rows. It should use **upsert** (insert-or-update) instead.
+### File: `src/pages/PaymentSuccess.tsx`
 
-### Step 3: Ensure the Website Has Matching Hooks
-The website (nevorai.com) must implement the same `useFunnelSubscription` and `useFunnelFeatureAccess` hooks that this app has. Since the website is a separate project, these hooks need to be copied/integrated there. This is outside the scope of this app's codebase -- it requires changes on the website project.
+Add handling for subscription-based payments:
+- If `type=subscription` in query params, show "Subscription initiated -- waiting for activation" state
+- Poll or use realtime listener on `user_subscriptions` to detect when webhook activates the subscription
+- Then show success screen
 
-## Technical Changes (This App)
+---
 
-### File: `src/components/admin/FunnelsSubscribersTable.tsx`
+## STEP 6: Type Updates
 
-**Change the "Grant Pro" handler** from `.update()` to `.upsert()` so it works even when the user doesn't have an existing row:
+### File: `src/hooks/usePaymentLinks.ts`
 
-```typescript
-const handleGrant = async (sub: any) => {
-  try {
-    const { error } = await supabase
-      .from('user_funnel_subscriptions')
-      .upsert({
-        user_id: sub.user_id,
-        status: 'active',
-        plan: 'pro',
-        is_admin_override: true,
-      }, { onConflict: 'user_id' });
-    if (error) throw error;
-    // ... rest of audit logging
-  }
-};
-```
+Add `billing_type` and `razorpay_plan_id` to `PlanConfig` interface.
 
-**Add an "Add User" button** that lets admins grant Funnels Pro to any user (not just those already in the table), since the table starts empty.
+### File: `src/hooks/useSubscription.ts`
 
-### File: `src/components/admin/FunnelsSubscribersTable.tsx`
+Add `razorpay_subscription_id` to the `Subscription` interface.
 
-**Fix the query** to also show users who DON'T have a funnel subscription yet (from `profiles` table) so the admin can grant Pro to anyone, not just existing subscribers.
+---
 
-## Summary
+## Files to Create/Modify
 
-| What | Status | Fix |
-|---|---|---|
-| Feature flags saved to DB | Working | No change needed |
-| User funnel subscriptions | Empty table, Grant button uses update (fails on no rows) | Switch to upsert, add "Add User" |
-| Website reading flags | Requires separate website code changes | Outside this app's scope |
-| Payment webhook for funnels | Needs `plan_scope = 'funnels'` handling | Check/update edge function |
+| File | Action |
+|---|---|
+| **Migration SQL** | Add columns to 3 tables |
+| `supabase/functions/create-razorpay-subscription/index.ts` | **New** -- creates Razorpay subscription |
+| `supabase/config.toml` | Add entry for new edge function |
+| `supabase/functions/razorpay-webhook/index.ts` | Add subscription event handlers |
+| `src/hooks/useAdminConfig.ts` | Add `billing_type`, `razorpay_plan_id` to types |
+| `src/hooks/usePaymentLinks.ts` | Add new fields to `PlanConfig` |
+| `src/hooks/useSubscription.ts` | Add `razorpay_subscription_id` to interface |
+| `src/hooks/useRazorpay.ts` | Add `initiateSubscription` method |
+| `src/components/admin/PlansManager.tsx` | Add billing type UI + conditional fields |
+| `src/components/subscription/UpgradeDrawer.tsx` | Route to correct payment flow |
+| `src/components/subscription/UpgradeCard.tsx` | Route to correct payment flow |
+| `src/pages/PaymentSuccess.tsx` | Handle subscription-type payments |
+
+---
+
+## Backward Compatibility
+
+- All existing plans default to `billing_type = 'one_time'` -- zero disruption
+- Existing `payment.captured` webhook logic is untouched
+- Existing Pro users with active subscriptions are unaffected
+- The `useSubscription` hook continues to work -- `razorpay_subscription_id` is simply nullable
+- No secrets need to be added -- the existing `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET` are reused
+
+---
+
+## Razorpay Webhook Configuration Reminder
+
+After deployment, you must add these events to your Razorpay Dashboard webhook settings (Settings > Webhooks):
+- `subscription.activated`
+- `subscription.charged`
+- `subscription.cancelled`
+- `subscription.completed`
+
+The existing `payment.captured` event stays enabled.
 
