@@ -1,4 +1,4 @@
-import { Crown, Check, Star, Gem } from 'lucide-react';
+import { Crown, Check, Star, Gem, X } from 'lucide-react';
 import { PlanConfig } from '@/hooks/usePaymentLinks';
 import { Badge } from '@/components/ui/badge';
 
@@ -7,6 +7,13 @@ const PRO_FEATURES = [
   'TrackUp Dashboard (Advanced Tracking)',
   'Higher Limits & Productivity Tools',
   'Faster Workflow & Automation',
+];
+
+const PRO_EXCLUDED_FEATURES = [
+  'Nevorai Funnels',
+  'Funnel Video Insights',
+  'Advanced Analytics',
+  'Leader Tools',
 ];
 
 const PREMIUM_FEATURES = [
@@ -75,6 +82,12 @@ export function TierCard({ tierName, plans, isPremium = false, selectedPlanKey, 
             <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Check className={`h-3 w-3 shrink-0 ${isPremium ? 'text-amber-500' : 'text-primary'}`} />
               <span>{feature}</span>
+            </div>
+          ))}
+          {!isPremium && PRO_EXCLUDED_FEATURES.map((feature, i) => (
+            <div key={`ex-${i}`} className="flex items-center gap-1.5 text-xs text-muted-foreground/50">
+              <X className="h-3 w-3 shrink-0 text-destructive/50" />
+              <span className="line-through">{feature}</span>
             </div>
           ))}
         </div>
