@@ -12,7 +12,7 @@ import { usePersonalSnapshotV2Write } from '@/hooks/usePersonalSnapshotV2Write';
 import { useTrackingFormat } from '@/hooks/useTrackingFormat';
 import { useTrackingSourcePreferences } from '@/hooks/useTrackingSourcePreferences';
 import { useFunnelConfig } from '@/hooks/useFunnelConfig';
-import { format, startOfDay, endOfDay } from 'date-fns';
+import { getTodayIST, getISTDayBoundsUTC } from '@/lib/dateUtils';
 
 export function useAutoTrackingSync() {
   const { user } = useAuth();
@@ -31,10 +31,8 @@ export function useAutoTrackingSync() {
   const syncNow = useCallback(async () => {
     if (!user) return;
 
-    const today = new Date();
-    const todayStr = format(today, 'yyyy-MM-dd');
-    const dayStart = startOfDay(today).toISOString();
-    const dayEnd = endOfDay(today).toISOString();
+    const todayStr = getTodayIST();
+    const { start: dayStart, end: dayEnd } = getISTDayBoundsUTC(todayStr);
 
     try {
       // Fetch today's prospects

@@ -12,7 +12,7 @@ import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
-import { format, startOfDay, endOfDay } from 'date-fns';
+import { getTodayIST, getISTDayBoundsUTC } from '@/lib/dateUtils';
 
 interface DailyTrackingCounts {
   leadsCount: number;
@@ -51,10 +51,8 @@ export function useDailyTrackingLog() {
   ) => {
     if (!user) return;
 
-    const today = new Date();
-    const todayStr = format(today, 'yyyy-MM-dd');
-    const dayStart = startOfDay(today).toISOString();
-    const dayEnd = endOfDay(today).toISOString();
+    const todayStr = getTodayIST();
+    const { start: dayStart, end: dayEnd } = getISTDayBoundsUTC(todayStr);
 
     try {
       // Fetch today's prospects for this user

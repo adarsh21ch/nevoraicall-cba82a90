@@ -12,8 +12,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTrackingFormat } from '@/hooks/useTrackingFormat';
-import { format, getDaysInMonth, parse, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
+import { format, getDaysInMonth, parse, addMonths, subMonths } from 'date-fns';
 import { useState } from 'react';
+import { getISTMonthBoundsUTC, getISTDayOfMonth, getISTMonthStr } from '@/lib/dateUtils';
 
 // 5-second confirmation window
 const FIVE_SECONDS_MS = 5 * 1000;
@@ -52,7 +53,7 @@ export function useLeadsTrackingStats(): TrackingStatsResult {
   const { user } = useAuth();
   const { leadsTrackingTagNames, loading: formatLoading } = useTrackingFormat();
   const queryClient = useQueryClient();
-  const [monthYear, setMonthYear] = useState(() => format(new Date(), 'yyyy-MM'));
+  const [monthYear, setMonthYear] = useState(() => getISTMonthStr(new Date()));
 
   const daysInMonth = useMemo(() => {
     const date = parse(monthYear, 'yyyy-MM', new Date());
@@ -60,10 +61,9 @@ export function useLeadsTrackingStats(): TrackingStatsResult {
   }, [monthYear]);
 
   const daysRemaining = useMemo(() => {
-    const now = new Date();
-    const currentMonthYear = format(now, 'yyyy-MM');
+    const currentMonthYear = getISTMonthStr(new Date());
     if (monthYear !== currentMonthYear) return 0;
-    return daysInMonth - now.getDate();
+    return daysInMonth - getISTDayOfMonth(new Date().toISOString());
   }, [monthYear, daysInMonth]);
 
   // Use react-query for proper cache invalidation
@@ -73,16 +73,16 @@ export function useLeadsTrackingStats(): TrackingStatsResult {
       if (!user) return { dailyMetrics: [], totals: { leads: 0, responses: 0, tagCounts: {} } };
 
       const monthDate = parse(monthYear, 'yyyy-MM', new Date());
-      const monthStart = startOfMonth(monthDate);
-      const monthEnd = endOfMonth(monthDate);
+      const { start: monthStartUTC, end: monthEndUTC } = getISTMonthBoundsUTC(monthYear);
 
-      // Fetch ALL prospects in month (no soft-delete column - hard delete only)
+      // Fetch ALL prospects in month, exclude soft-deleted
       const { data: prospects, error } = await supabase
         .from('prospects')
         .select('id, date_added, action_taken, action_taken_at')
         .eq('user_id', user.id)
-        .gte('date_added', monthStart.toISOString())
-        .lte('date_added', monthEnd.toISOString());
+        .is('deleted_at', null)
+        .gte('date_added', monthStartUTC)
+        .lte('date_added', monthEndUTC);
 
       if (error) {
         console.error('Error fetching prospects for leads tracking:', error);
@@ -109,10 +109,9 @@ export function useLeadsTrackingStats(): TrackingStatsResult {
         });
       }
 
-      // Aggregate by day
+      // Aggregate by day (IST-aware)
       (prospects || []).forEach((p) => {
-        const addedDate = new Date(p.date_added);
-        const dayIndex = addedDate.getDate() - 1;
+        const dayIndex = getISTDayOfMonth(p.date_added) - 1;
         
         if (dayIndex >= 0 && dayIndex < metrics.length) {
           // Count as lead
@@ -195,7 +194,7 @@ export function useFunnelTrackingStats(): TrackingStatsResult {
   const { user } = useAuth();
   const { stageTagNames, loading: formatLoading } = useTrackingFormat();
   const queryClient = useQueryClient();
-  const [monthYear, setMonthYear] = useState(() => format(new Date(), 'yyyy-MM'));
+  const [monthYear, setMonthYear] = useState(() => getISTMonthStr(new Date()));
 
   const daysInMonth = useMemo(() => {
     const date = parse(monthYear, 'yyyy-MM', new Date());
@@ -203,10 +202,9 @@ export function useFunnelTrackingStats(): TrackingStatsResult {
   }, [monthYear]);
 
   const daysRemaining = useMemo(() => {
-    const now = new Date();
-    const currentMonthYear = format(now, 'yyyy-MM');
+    const currentMonthYear = getISTMonthStr(new Date());
     if (monthYear !== currentMonthYear) return 0;
-    return daysInMonth - now.getDate();
+    return daysInMonth - getISTDayOfMonth(new Date().toISOString());
   }, [monthYear, daysInMonth]);
 
   // Use react-query for proper cache invalidation
@@ -216,16 +214,16 @@ export function useFunnelTrackingStats(): TrackingStatsResult {
       if (!user) return { dailyMetrics: [], totals: { leads: 0, responses: 0, tagCounts: {} } };
 
       const monthDate = parse(monthYear, 'yyyy-MM', new Date());
-      const monthStart = startOfMonth(monthDate);
-      const monthEnd = endOfMonth(monthDate);
+      const { start: monthStartUTC, end: monthEndUTC } = getISTMonthBoundsUTC(monthYear);
 
-      // Fetch ALL prospects in month (hard delete - no deleted_at column)
+      // Fetch ALL prospects in month, exclude soft-deleted
       const { data: prospects, error } = await supabase
         .from('prospects')
         .select('id, date_added, funnel_stage, funnel_stage_at')
         .eq('user_id', user.id)
-        .gte('date_added', monthStart.toISOString())
-        .lte('date_added', monthEnd.toISOString());
+        .is('deleted_at', null)
+        .gte('date_added', monthStartUTC)
+        .lte('date_added', monthEndUTC);
 
       if (error) {
         console.error('Error fetching prospects for funnel tracking:', error);
@@ -258,10 +256,9 @@ export function useFunnelTrackingStats(): TrackingStatsResult {
         });
       }
 
-      // Aggregate by day with CUMULATIVE counting
+      // Aggregate by day with CUMULATIVE counting (IST-aware)
       (prospects || []).forEach((p) => {
-        const addedDate = new Date(p.date_added);
-        const dayIndex = addedDate.getDate() - 1;
+        const dayIndex = getISTDayOfMonth(p.date_added) - 1;
         
         if (dayIndex >= 0 && dayIndex < metrics.length) {
           // Count as lead (total entered funnel)
