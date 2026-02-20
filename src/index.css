@@ -68,6 +68,10 @@ html {
     --stage-minimum: 142 76% 36%;
     --stage-levelup: 168 84% 39%;
 
+    /* Personal tags section */
+    --personal-tag: 168 76% 36%;
+    --personal-tag-bg: 168 76% 95%;
+    --personal-tag-foreground: 168 60% 20%;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -115,6 +119,11 @@ html {
     --priority-high-bg: 0 84% 15%;
     --priority-medium-bg: 38 92% 15%;
     --priority-low-bg: 142 76% 15%;
+
+    /* Personal tags section (dark) */
+    --personal-tag: 168 76% 50%;
+    --personal-tag-bg: 168 50% 15%;
+    --personal-tag-foreground: 168 60% 85%;
 
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
