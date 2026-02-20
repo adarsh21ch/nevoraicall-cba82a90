@@ -16,7 +16,7 @@ import { MonthlyTotalsTable } from '@/components/trackup-v2/MonthlyTotalsTable';
 import { ManualUpdateDrawer } from '@/components/trackup-v2/ManualUpdateDrawer';
 import { FloatingUpdateButton } from '@/components/trackup-v2/FloatingUpdateButton';
 import { TrackingSettingsDialog } from '@/components/trackup-v2/TrackingSettingsDialog';
-import { PersonalTagsDistribution } from '@/components/trackup-v2/PersonalTagsDistribution';
+import { usePersonalTagMetrics } from '@/hooks/usePersonalTagMetrics';
 import {
   Tooltip,
   TooltipContent,
@@ -44,6 +44,7 @@ export default function Tracking() {
   
 
   const monthYear = format(currentMonth, 'yyyy-MM');
+  const personalTagData = usePersonalTagMetrics(monthYear);
   const monthLabel = format(currentMonth, 'MMMM yyyy');
 
   // Tracking modes (Personal/Total, Leads/Funnel, view mode)
@@ -211,6 +212,7 @@ export default function Tracking() {
                 responseTagNames={responseTagNames}
                 stageTagNames={computedStageNames}
                 finalTagName={finalTagName}
+                personalTagData={personalTagData}
               />
             )}
             {viewMode === 'date-wise' && (
@@ -218,6 +220,7 @@ export default function Tracking() {
                 dailyMetrics={dailyMetrics}
                 responseTagNames={responseTagNames}
                 finalTagName={finalTagName}
+                personalTagData={personalTagData}
               />
             )}
             {viewMode === 'funnel-wise' && (
@@ -225,6 +228,7 @@ export default function Tracking() {
                 funnelPeriods={funnelPeriods}
                 stageTagNames={computedStageNames}
                 finalTagName={finalTagName}
+                personalTagData={personalTagData}
               />
             )}
             {viewMode === 'monthly-totals' && (
@@ -234,12 +238,11 @@ export default function Tracking() {
                 stageTagNames={computedStageNames}
                 finalTagName={finalTagName}
                 monthLabel={monthLabel}
+                personalTagData={personalTagData}
               />
             )}
           </div>
 
-          {/* Personal Tags Distribution */}
-          <PersonalTagsDistribution monthYear={monthYear} monthLabel={monthLabel} />
         </div>
       </main>
 
