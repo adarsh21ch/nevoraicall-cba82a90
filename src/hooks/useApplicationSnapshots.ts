@@ -9,8 +9,9 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
+import { format, endOfMonth } from 'date-fns';
 import type { SnapshotRow } from '@/lib/snapshotSlotUtils';
+import { getISTMonthBoundsUTC, getISTDateFromISO } from '@/lib/dateUtils';
 
 export function useApplicationSnapshots(
   monthYear: string,
@@ -27,17 +28,15 @@ export function useApplicationSnapshots(
     queryFn: async () => {
       if (!user) return [];
 
-      const [year, month] = monthYear.split('-').map(Number);
-      const monthStart = new Date(year, month - 1, 1);
-      const monthEnd = endOfMonth(monthStart);
+      const { start: monthStartUTC, end: monthEndUTC } = getISTMonthBoundsUTC(monthYear);
 
       const { data, error } = await supabase
         .from('prospects')
         .select('id, date_added, action_taken, funnel_stage, personal_tags')
         .eq('user_id', user.id)
         .is('deleted_at', null)
-        .gte('date_added', format(monthStart, 'yyyy-MM-dd'))
-        .lte('date_added', format(monthEnd, 'yyyy-MM-dd') + 'T23:59:59');
+        .gte('date_added', monthStartUTC)
+        .lte('date_added', monthEndUTC);
 
       if (error) {
         console.error('useApplicationSnapshots: error fetching prospects', error);
@@ -54,11 +53,11 @@ export function useApplicationSnapshots(
   const snapshots: SnapshotRow[] = useMemo(() => {
     if (!prospects.length) return [];
 
-    // Group by date (YYYY-MM-DD)
+    // Group by date (YYYY-MM-DD in IST)
     const byDate: Record<string, typeof prospects> = {};
     prospects.forEach((p) => {
       if (!p.date_added) return;
-      const dateStr = p.date_added.substring(0, 10); // "YYYY-MM-DD"
+      const dateStr = getISTDateFromISO(p.date_added); // IST-aware date
       if (!byDate[dateStr]) byDate[dateStr] = [];
       byDate[dateStr].push(p);
     });
