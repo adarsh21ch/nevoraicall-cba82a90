@@ -25,7 +25,9 @@ import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { User, LogOut, ChevronRight, ChevronDown, Phone, Building2, MapPin, Loader2, FileText, Shield, Receipt, Mail, Settings, ExternalLink, BarChart3, Crown, Gift, Trash2, Sparkles, Lock } from 'lucide-react';
+import { User, LogOut, ChevronRight, ChevronDown, Phone, Building2, MapPin, Loader2, FileText, Shield, Receipt, Mail, Settings, ExternalLink, BarChart3, Crown, Gift, Trash2, Sparkles, Lock, Share2 } from 'lucide-react';
+import { SharedLeadsDrawer } from '@/components/profile/SharedLeadsDrawer';
+import { useSharedLeads } from '@/hooks/useSharedLeads';
 import { AIAssistantChat } from '@/components/ai/AIAssistantChat';
 import { useFeatureAccess } from '@/hooks/useFeatureAccess';
 import { toast } from 'sonner';
@@ -124,7 +126,9 @@ export default function Profile() {
   } = useFreeTrial();
   const [editOpen, setEditOpen] = useState(false);
   const [showAIChat, setShowAIChat] = useState(false);
+  const [sharedLeadsOpen, setSharedLeadsOpen] = useState(false);
   const { canAccess: canAccessAI } = useFeatureAccess('ai_assistant');
+  const { pendingCount } = useSharedLeads();
 
   // Handle TrackUp Dashboard - direct link to nevorai.com
   const handleOpenTrackUp = () => {
@@ -418,7 +422,33 @@ export default function Profile() {
             <ChevronRight className="h-5 w-5 text-muted-foreground" />
           </button>
 
-          {/* AI Assistant - visible to all, locked for basic */}
+          {/* Shared Leads */}
+          <button onClick={() => setSharedLeadsOpen(true)} className={cn(
+            "w-full relative overflow-hidden rounded-xl p-4",
+            "bg-gradient-to-r backdrop-blur-sm",
+            "border border-orange-500/30 shadow-sm",
+            "flex items-center justify-between",
+            "transition-all duration-300 hover:shadow-md hover:scale-[1.01]",
+            "from-orange-500/20 to-orange-500/5"
+          )}>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-orange-500/10">
+                <Share2 className="h-5 w-5 text-orange-500" />
+              </div>
+              <div className="text-left">
+                <span className="font-medium block">Shared Leads</span>
+                <span className="text-xs text-muted-foreground">View & import leads from your team</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {pendingCount > 0 && (
+                <span className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full text-[10px] font-bold bg-orange-500 text-white">
+                  {pendingCount}
+                </span>
+              )}
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            </div>
+          </button>
           <button onClick={() => {
             if (canAccessAI) {
               setShowAIChat(true);
@@ -578,6 +608,8 @@ export default function Profile() {
       <EditProfileDialog open={editOpen} onOpenChange={setEditOpen} profile={profile} onSave={updateProfile} updating={updating} />
 
       <AIAssistantChat open={showAIChat} onOpenChange={setShowAIChat} />
+
+      <SharedLeadsDrawer open={sharedLeadsOpen} onOpenChange={setSharedLeadsOpen} />
 
       <BottomNav />
     </div>;

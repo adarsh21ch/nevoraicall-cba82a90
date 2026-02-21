@@ -16,7 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Users, Undo2, Redo2, X, Trash2, Edit, Star, FileSpreadsheet, Upload } from 'lucide-react';
+import { Users, Undo2, Redo2, X, Trash2, Edit, Star, FileSpreadsheet, Upload, Share2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -31,6 +31,7 @@ import { useTrackingFormatContext } from '@/contexts/TrackingFormatContext';
 import { useActivityLog } from '@/hooks/useActivityLog';
 import { usePersistedFilters, Filters } from '@/hooks/usePersistedFilters';
 import { usePermissions } from '@/contexts/PermissionsContext';
+import { ShareLeadsDrawer } from './ShareLeadsDrawer';
 interface ProspectTableProps {
   prospects: Prospect[];
   loading: boolean;
@@ -364,6 +365,9 @@ export function ProspectTable({
   // Tag management dialogs
   const [responseTagsDialogOpen, setResponseTagsDialogOpen] = useState(false);
   const [stageTagsDialogOpen, setStageTagsDialogOpen] = useState(false);
+
+  // Share leads state
+  const [shareDrawerOpen, setShareDrawerOpen] = useState(false);
 
   // Infinite scroll sentinel ref
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -716,6 +720,11 @@ export function ProspectTable({
     setSelectedIds(new Set());
     onSelectSheet(sheetId);
   };
+
+  // Enter select mode specifically for sharing
+  const handleShareLeads = (sheetId: string | null) => {
+    handleEnterSelectMode(sheetId);
+  };
   const handleExitSelectMode = () => {
     setSelectionMode({
       active: false,
@@ -1006,6 +1015,12 @@ export function ProspectTable({
               <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmOpen(true)} disabled={selectedIds.size === 0} className="h-7 px-2">
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
+              <Button variant="secondary" size="sm" onClick={() => {
+                if (selectedIds.size === 0) { toast.info('Select leads to share'); return; }
+                setShareDrawerOpen(true);
+              }} disabled={selectedIds.size === 0} className="h-7 px-2 gap-1">
+                <Share2 className="h-3.5 w-3.5" />
+              </Button>
               <Button variant="ghost" size="sm" onClick={handleExitSelectMode} className="h-7 w-7 p-0">
                 <X className="h-3.5 w-3.5" />
               </Button>
@@ -1038,7 +1053,7 @@ export function ProspectTable({
 
       {/* Bottom fixed sheet tabs - always above bottom nav */}
       <div className="fixed bottom-16 left-0 right-0 md:bottom-24 lg:bottom-16 z-20 bg-card border-t border-border/50 shadow-[0_-2px_8px_rgba(0,0,0,0.1)]">
-        <SheetTabs sheets={sheets} selectedSheetId={selectedSheetId} onSelectSheet={onSelectSheet} onAddSheet={onAddSheet} onUpdateSheet={handleUpdateSheetWithUndo} onDeleteSheet={onDeleteSheet} onEnterSelectMode={handleEnterSelectMode} onDeleteAllInSheet={handleDeleteAllInSheet} onExportSheet={exportSheet} onExportAll={exportToExcel} />
+        <SheetTabs sheets={sheets} selectedSheetId={selectedSheetId} onSelectSheet={onSelectSheet} onAddSheet={onAddSheet} onUpdateSheet={handleUpdateSheetWithUndo} onDeleteSheet={onDeleteSheet} onEnterSelectMode={handleEnterSelectMode} onDeleteAllInSheet={handleDeleteAllInSheet} onExportSheet={exportSheet} onExportAll={exportToExcel} onShareLeads={handleShareLeads} />
       </div>
 
       {/* Delete confirmation dialog */}
@@ -1062,5 +1077,13 @@ export function ProspectTable({
       {/* Tag management dialogs */}
       <ManageResponseTagsDialog open={responseTagsDialogOpen} onOpenChange={setResponseTagsDialogOpen} />
       <ManageStageTagsDialog open={stageTagsDialogOpen} onOpenChange={setStageTagsDialogOpen} />
+
+      {/* Share Leads Drawer */}
+      <ShareLeadsDrawer
+        open={shareDrawerOpen}
+        onOpenChange={setShareDrawerOpen}
+        selectedProspects={prospects.filter(p => selectedIds.has(p.id))}
+        onComplete={handleExitSelectMode}
+      />
     </div>;
 }
