@@ -512,9 +512,13 @@ export function ProspectTable({
     if (!canExport) { toast.error('Upgrade to Pro to export data'); return; }
     setExporting(true);
     try {
-      // Use fetchAllForExport if available to get ALL prospects (bypasses pagination)
+      // If filters are active, export only the filtered prospects (respects retargeting)
+      const hasActiveFilters = filters.stages.length > 0 || filters.actions.length > 0 || filters.search;
       let allProspects: Prospect[];
-      if (fetchAllForExport) {
+      if (hasActiveFilters) {
+        // Export only the currently filtered/visible prospects
+        allProspects = filteredProspects;
+      } else if (fetchAllForExport) {
         allProspects = await fetchAllForExport(null); // null = all sheets
       } else {
         allProspects = filteredProspects;
