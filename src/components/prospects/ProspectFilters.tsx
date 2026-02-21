@@ -166,8 +166,8 @@ export function ProspectFilters({
         {!isMobile && filterTagButton}
 
         {hasFilters && <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9 px-2 text-xs shrink-0">
-          <X className="h-3.5 w-3.5 mr-1" />
-          Clear
+          <X className="h-3.5 w-3.5 sm:mr-1" />
+          {!isMobile && 'Clear'}
         </Button>}
 
         {/* Export button - show on both mobile and desktop, gated by feature flag */}
