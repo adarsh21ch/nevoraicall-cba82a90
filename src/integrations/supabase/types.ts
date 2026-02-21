@@ -3839,6 +3839,36 @@ export type Database = {
           },
         ]
       }
+      shared_leads: {
+        Row: {
+          created_at: string
+          id: string
+          imported_at: string | null
+          lead_data: Json
+          receiver_id: string
+          sender_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          imported_at?: string | null
+          lead_data: Json
+          receiver_id: string
+          sender_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          imported_at?: string | null
+          lead_data?: Json
+          receiver_id?: string
+          sender_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       sheets: {
         Row: {
           created_at: string
@@ -5538,6 +5568,10 @@ export type Database = {
       }
       is_community_member: {
         Args: { p_community_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      is_direct_team_member: {
+        Args: { p_receiver_id: string; p_sender_id: string }
         Returns: boolean
       }
       is_folder_owner: {
