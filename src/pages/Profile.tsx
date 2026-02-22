@@ -25,7 +25,7 @@ import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { User, LogOut, ChevronRight, ChevronDown, Loader2, FileText, Shield, Receipt, Settings, ExternalLink, BarChart3, Crown, Gift, Trash2, Sparkles, Lock, Share2 } from 'lucide-react';
+import { User, LogOut, ChevronRight, ChevronDown, Loader2, FileText, Shield, Receipt, Settings, ExternalLink, BarChart3, Crown, Gift, Trash2, Sparkles, Lock, Share2, Video } from 'lucide-react';
 
 import { useSharedLeads } from '@/hooks/useSharedLeads';
 import { AIAssistantChat } from '@/components/ai/AIAssistantChat';
@@ -130,10 +130,28 @@ export default function Profile() {
   const { canAccess: canAccessAI } = useFeatureAccess('ai_assistant');
   const { pendingCount } = useSharedLeads();
 
-  // Handle TrackUp Dashboard - direct link to nevorai.com
-  const handleOpenTrackUp = () => {
-    window.open('https://nevorai.com/trackup', '_blank', 'noopener');
-  };
+  // Handle SSO redirect to nevorai.com pages
+  const handleSSORedirect = useCallback(async (targetUrl: string) => {
+    // Open blank window synchronously to avoid popup blocker
+    const newWindow = window.open('about:blank', '_blank');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        if (newWindow) newWindow.location.href = targetUrl;
+        return;
+      }
+      const response = await supabase.functions.invoke('trackup-sso-link', {
+        body: { redirectTo: targetUrl },
+      });
+      if (response.data?.action_link && newWindow) {
+        newWindow.location.href = response.data.action_link;
+      } else if (newWindow) {
+        newWindow.location.href = targetUrl;
+      }
+    } catch {
+      if (newWindow) newWindow.location.href = targetUrl;
+    }
+  }, []);
 
   // Process pending upline email from share links
   useLeaderSetup();
@@ -247,8 +265,8 @@ export default function Profile() {
             </div>
           )}
 
-          {/* TrackUp Dashboard - External link to web dashboard */}
-          <button onClick={handleOpenTrackUp} className={cn("w-full rounded-xl px-4 py-2.5", "bg-gradient-to-r backdrop-blur-sm", "border border-emerald-500/30", "flex items-center justify-between", "transition-all duration-200 hover:shadow-md", "from-emerald-500/20 to-emerald-500/5")}>
+          {/* TrackUp Dashboard - External link with SSO */}
+          <button onClick={() => handleSSORedirect('https://nevorai.com/trackup')} className={cn("w-full rounded-xl px-4 py-2.5", "bg-gradient-to-r backdrop-blur-sm", "border border-emerald-500/30", "flex items-center justify-between", "transition-all duration-200 hover:shadow-md", "from-emerald-500/20 to-emerald-500/5")}>
             <div className="flex items-center gap-3">
               <div className="p-1.5 rounded-lg bg-emerald-500/10">
                 <BarChart3 className="h-4 w-4 text-emerald-500" />
@@ -256,6 +274,20 @@ export default function Profile() {
               <div className="text-left">
                 <span className="font-medium text-sm block">TrackUp Dashboard</span>
                 <span className="text-[11px] text-muted-foreground">Team tracking on nevorai.com</span>
+              </div>
+            </div>
+            <ExternalLink className="h-4 w-4 text-muted-foreground" />
+          </button>
+
+          {/* Nevorai Funnels - External link with SSO */}
+          <button onClick={() => handleSSORedirect('https://nevorai.com/funnels')} className={cn("w-full rounded-xl px-4 py-2.5", "bg-gradient-to-r backdrop-blur-sm", "border border-purple-500/30", "flex items-center justify-between", "transition-all duration-200 hover:shadow-md", "from-purple-500/20 to-purple-500/5")}>
+            <div className="flex items-center gap-3">
+              <div className="p-1.5 rounded-lg bg-purple-500/10">
+                <Video className="h-4 w-4 text-purple-500" />
+              </div>
+              <div className="text-left">
+                <span className="font-medium text-sm block">Nevorai Funnels</span>
+                <span className="text-[11px] text-muted-foreground">Video funnels on nevorai.com</span>
               </div>
             </div>
             <ExternalLink className="h-4 w-4 text-muted-foreground" />

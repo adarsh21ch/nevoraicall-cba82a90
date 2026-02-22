@@ -17,6 +17,21 @@ serve(async (req) => {
   }
 
   try {
+    // Parse request body for optional redirectTo
+    let redirectTo = 'https://nevorai.com/trackup';
+    try {
+      const body = await req.json();
+      if (body?.redirectTo) {
+        // Only allow redirects to nevorai.com
+        const url = new URL(body.redirectTo);
+        if (url.hostname === 'nevorai.com') {
+          redirectTo = body.redirectTo;
+        }
+      }
+    } catch {
+      // No body or invalid JSON, use default
+    }
+
     // Get the authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -57,7 +72,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('Generating SSO link for user:', user.id, 'email:', userEmail);
+    console.log('Generating SSO link for user:', user.id, 'email:', userEmail, 'redirect:', redirectTo);
 
     // Rate limiting check
     const lastRequest = rateLimitMap.get(user.id);
@@ -80,7 +95,7 @@ serve(async (req) => {
       type: 'magiclink',
       email: userEmail,
       options: {
-        redirectTo: 'https://nevorai.com/trackup'
+        redirectTo
       }
     });
 
