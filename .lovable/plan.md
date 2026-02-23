@@ -1,125 +1,155 @@
 
-
-# Share Leads Feature Enhancement Plan
+# Subscription Tier Renaming: UI-Only Refactor
 
 ## Overview
-This plan upgrades the Share Leads system to be more professional, flexible, and integrated with Nevorai Forms. Three major improvements are covered.
+
+Rename the **display-facing** tier labels across the entire App and Admin Panel to match the new universal naming convention:
+
+| Current Internal Tier | Current Display Name | New Display Name |
+|---|---|---|
+| `basic` | Basic (Free) | **Free** |
+| `pro` | Pro | **Basic** |
+| `premium` | Premium | **Pro** |
+
+**Zero backend changes.** The database `tier` column values (`basic`, `pro`, `premium`) remain untouched. Only UI labels, toast messages, and user-facing strings change.
 
 ---
 
-## 1. Add "Share to Team" in Nevorai Forms
+## What Changes
 
-**What changes:** The existing `ShareFormDialog` (which currently only has "Copy Link" and "WhatsApp") will get a new "Share to Team" button that opens the same team member selector used for prospect sharing.
+### 1. Create a Tier Display Name Mapping Utility
 
-**How it works:**
-- In `FormsListTab.tsx`, the "Share Options" menu item will trigger the updated dialog
-- The `ShareFormDialog` will gain a third action: "Share to Team" which opens a team member picker (reusing the `ShareLeadsDrawer` pattern)
-- When a user shares a form to team members, the form's public link is sent as a shared lead record (or alternatively, the form submissions are packaged as lead data)
-- This uses the existing `useDirectTeam` hook and `useSharedLeads.shareLeads()` mechanism
+A single mapping constant so all components reference one source for display names:
 
-**Files modified:**
-- `src/features/forms/components/ShareFormDialog.tsx` -- Add "Share to Team" button and team member selection UI
-- `src/features/forms/components/FormsListTab.tsx` -- Pass form submissions data to share dialog
+```text
+src/config/tierLabels.ts (new file)
+
+TIER_DISPLAY_NAME: { basic: 'Free', pro: 'Basic', premium: 'Pro' }
+TIER_ICON: { basic: null, pro: Crown, premium: Gem }
+TIER_COLOR: { basic: 'muted', pro: 'primary', premium: 'amber' }
+```
+
+### 2. TierCard Component (`src/components/subscription/TierCard.tsx`)
+
+- Rename feature lists:
+  - `PRO_FEATURES` becomes `BASIC_FEATURES` (same content)
+  - `PRO_EXCLUDED_FEATURES` becomes `BASIC_EXCLUDED_FEATURES`
+  - `PREMIUM_FEATURES` becomes `PRO_FEATURES` (same content, but "Everything in Pro" becomes "Everything in Basic")
+- Update the `isPremium` prop references to use the new display names
+- "Recommended for Leaders" badge stays as-is (it applies to the top-tier, now called "Pro")
+
+### 3. UpgradeDrawer (`src/components/subscription/UpgradeDrawer.tsx`)
+
+- `tierName="Pro"` becomes `tierName="Basic"`
+- `tierName="Premium"` becomes `tierName="Pro"`
+- `isPremiumSelected` logic stays (still checks `tier === 'premium'` internally)
+- Header text "Unlock Pro Features" becomes "Unlock Premium Features" or stays generic like "Upgrade Your Plan"
+- Toast: "Pro Activated" becomes tier-aware (e.g., "Basic Plan Activated" or "Pro Plan Activated")
+- Button text: "Upgrade to Pro" becomes "Upgrade Now" (generic) or tier-aware
+
+### 4. UpgradeModal (`src/components/subscription/UpgradeModal.tsx`)
+
+- Same tier label swaps as UpgradeDrawer
+- Toast messages updated to use tier display names
+
+### 5. UpgradeBar (`src/components/subscription/UpgradeBar.tsx`)
+
+- "Upgrade to unlock this feature" -- stays generic (already good)
+- Plan name display already comes from `defaultPlan?.name` (dynamic, no change needed)
+
+### 6. HardLimitModal (`src/components/subscription/HardLimitModal.tsx`)
+
+- "Upgrade to Pro for unlimited access" becomes "Upgrade for unlimited access"
+- "Upgrade to Pro" button text becomes "Upgrade Now" or uses dynamic plan name
+- Toast "Pro Activated" becomes dynamic
+
+### 7. ProgressiveNudgeBanner, UpgradeCard, UpgradeButton
+
+- All "Upgrade to Pro" labels become generic or use the new mapping
+- "Pro Activated" toasts become tier-aware
+
+### 8. Feature Lock Toasts (scattered across components)
+
+Update hardcoded strings in these files:
+- `src/components/trackup/ExportFunnelData.tsx` -- "Upgrade to Pro to export data"
+- `src/components/prospects/ProspectFilters.tsx` -- "Upgrade to Pro to use retargeting filters"
+- `src/components/prospects/ProspectTable.tsx` -- "Upgrade to Pro to export/share"
+- `src/pages/Profile.tsx` -- "Upgrade to Pro to unlock AI Assistant"
+- `src/pages/PaymentSuccess.tsx` -- "Pro Plan Activated", "Pro Features Unlocked"
+
+All become generic: "Upgrade to unlock this feature" or "Upgrade your plan to access this"
+
+### 9. Admin Panel -- PlansManager (`src/components/admin/PlansManager.tsx`)
+
+- Tier labels in admin:
+  - `basic: '🆓 Basic (Free)'` becomes `basic: '🆓 Free'`
+  - `pro: '⭐ Pro'` becomes `pro: '⭐ Basic'`
+  - `premium: '💎 Premium'` becomes `premium: '💎 Pro'`
+- Tier dropdown options in plan creation form updated similarly
+- Tier select values remain `basic`, `pro`, `premium` (internal, unchanged)
+
+### 10. FunnelsProBadge (`src/components/funnels/FunnelsProBadge.tsx`)
+
+- Badge text "PRO" stays as "PRO" (this is the top tier now, still called Pro)
+
+### 11. Brand Config (`src/config/brand.ts`)
+
+- `PLAN_NAME_PRO` updated to reflect new naming
+
+### 12. Safe Defaults (`src/hooks/useAdminConfig.ts`)
+
+- `SAFE_DEFAULTS` plan names: "Pro 6-Month" becomes "Basic 6-Month", "Pro Monthly" becomes "Basic Monthly" (fallback only)
 
 ---
 
-## 2. Instant Refresh After Import
+## What Does NOT Change
 
-**What changes:** After importing shared leads, the Calling tab's prospect list updates immediately without requiring a manual refresh.
-
-**How it works:**
-- After `importSharedLeads()` succeeds in `useSharedLeads.ts`, call the ProspectsContext's `refetch()` to reload prospects from the database
-- Also invalidate the sheets query cache so new sheets (e.g., "SheetName *") appear instantly in the tabs
-- In `SharedLeads.tsx`, after a successful import, use React Query's `queryClient.invalidateQueries` to refresh both prospects and sheets caches
-
-**Files modified:**
-- `src/pages/SharedLeads.tsx` -- Add query cache invalidation after import
-- `src/hooks/useSharedLeads.ts` -- Return enough info for the caller to trigger refetch
-
----
-
-## 3. Professional Shared Leads Viewer (Forms-like Interface)
-
-**What changes:** The Shared Leads page (`/shared-leads`) gets a complete redesign to look and behave like the Nevorai Forms responses page, with:
-
-- **Stats bar** showing Total leads, Pending, Imported counts
-- **Card/Table view toggle** (like Forms responses)
-- **Search** across leads by name/phone
-- **Download as Excel/CSV** for any shared batch
-- **Re-importable batches** -- Remove the one-time import restriction; users can import the same batch multiple times
-- **Detailed lead view** in a table format showing all fields (name, phone, sheet, notes, etc.)
-
-**How it works:**
-
-**a) Remove one-time import lock:**
-- In `useSharedLeads.ts`, the `importSharedLeads` function currently marks the share as `status: 'imported'` and the UI hides the Import button for imported shares
-- Change: Keep the status tracking for badge display, but always show the Import button regardless of status
-- The duplicate phone check already prevents actual duplicates, so re-importing is safe
-
-**b) Professional UI redesign of SharedLeads.tsx:**
-- Add a header with stats (total batches, total leads, pending/imported counts)
-- Add Card/Table view toggle similar to FormResponsesPage
-- Table view: spreadsheet-like layout with columns for Name, Phone, Sheet, Sender, Date, Status
-- Card view: enhanced cards with full lead details
-- Search bar filtering across all shared lead data
-- Per-batch and global Excel/CSV export using the `xlsx` library
-
-**c) Export functionality:**
-- Add "Export" option (CSV/Excel) per batch and for all shared leads
-- Reuse the same `xlsx` library already in the project
-
-**Files modified:**
-- `src/pages/SharedLeads.tsx` -- Complete redesign with stats, search, view toggle, export, re-import
-- `src/hooks/useSharedLeads.ts` -- Allow re-import (remove status gate on Import button), add import count tracking
+- Database `tier` column values (`basic`, `pro`, `premium`) -- untouched
+- `SubscriptionTier` TypeScript type -- stays `'basic' | 'pro' | 'premium'`
+- `TIER_RANK` ordering -- stays `basic: 0, pro: 1, premium: 2`
+- `meetsRequiredTier()` logic -- untouched
+- `useSubscription` hook -- `isPro`, `isPremium`, `isPaid` remain as-is
+- `PermissionsContext` -- untouched
+- `useFeatureAccess` -- untouched
+- Edge functions -- untouched
+- RLS policies -- untouched
+- Razorpay integration -- untouched
+- `admin_subscription_plans` table -- untouched
+- `admin_feature_flags` table -- untouched
+- `user_subscriptions` table -- untouched
+- Payment webhooks -- untouched
 
 ---
 
 ## Technical Details
 
-### ShareFormDialog Enhancement
-```text
-+----------------------------------+
-|         Share Form               |
-|  [Form Link input] [Copy]       |
-|  [Copy Link]  [WhatsApp]        |
-|  -------- or --------           |
-|  [Share to Team Members]        |
-|    [ ] Member 1                 |
-|    [ ] Member 2                 |
-|  [Send to Selected]             |
-+----------------------------------+
-```
+### Files to Create (1)
 
-### SharedLeads Page Redesign
-```text
-+----------------------------------+
-| < Shared Leads                   |
-| Total: 5 batches | 47 leads     |
-| [Pending: 2] [Imported: 3]      |
-|                                  |
-| [Search...]     [Card|Table] [...|
-|                                  |
-| -- Batch cards/table rows --     |
-| From: John | 10 leads | Sheet X |
-| [Import] [Download] [View]      |
-+----------------------------------+
-```
+| File | Purpose |
+|---|---|
+| `src/config/tierLabels.ts` | Central display name mapping for tiers |
 
-### Import Instant Refresh Flow
-```text
-User clicks Import
-  -> importSharedLeads() inserts into prospects table
-  -> Invalidate 'prospects' query cache
-  -> Invalidate 'sheets' query cache  
-  -> ProspectsContext refetch triggers
-  -> Calling tab shows new leads instantly
-```
+### Files to Modify (~15)
 
-### Files Summary
 | File | Change |
-|------|--------|
-| `src/features/forms/components/ShareFormDialog.tsx` | Add "Share to Team" with member picker |
-| `src/features/forms/components/FormsListTab.tsx` | Pass form data for team sharing |
-| `src/pages/SharedLeads.tsx` | Full redesign: stats, search, views, export, re-import |
-| `src/hooks/useSharedLeads.ts` | Allow re-import, add export helpers |
+|---|---|
+| `src/config/brand.ts` | Update plan name constants |
+| `src/components/subscription/TierCard.tsx` | Rename feature arrays, use new display names |
+| `src/components/subscription/UpgradeDrawer.tsx` | Swap tier display names in TierCard props and toasts |
+| `src/components/subscription/UpgradeModal.tsx` | Same as UpgradeDrawer |
+| `src/components/subscription/UpgradeBar.tsx` | Generic upgrade text |
+| `src/components/subscription/HardLimitModal.tsx` | Generic upgrade text, dynamic toasts |
+| `src/components/subscription/UpgradeCard.tsx` | Dynamic toast messages |
+| `src/components/subscription/ProgressiveNudgeBanner.tsx` | Generic trigger text |
+| `src/components/admin/PlansManager.tsx` | Update tier label mapping |
+| `src/hooks/useAdminConfig.ts` | Update SAFE_DEFAULTS plan names |
+| `src/hooks/usePaymentLinks.ts` | Update legacy plan names |
+| `src/components/trackup/ExportFunnelData.tsx` | Generic upgrade toast |
+| `src/components/prospects/ProspectFilters.tsx` | Generic upgrade toast |
+| `src/components/prospects/ProspectTable.tsx` | Generic upgrade toast |
+| `src/pages/Profile.tsx` | Generic upgrade toast for AI |
+| `src/pages/PaymentSuccess.tsx` | Dynamic tier name in success messages |
 
+### Migration / Data Changes
+
+**None required.** This is purely a display-layer rename. Existing subscriptions auto-map correctly because the internal tier values are unchanged.
