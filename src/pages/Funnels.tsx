@@ -40,7 +40,7 @@ export default function Funnels() {
   }
 
   const handleEdit = (funnel: Funnel) => {
-    navigate(`/funnels/${funnel.id}/edit`);
+    navigate(`/flow/${funnel.id}/edit`);
   };
 
   const handlePreview = (funnel: Funnel) => {
@@ -48,7 +48,7 @@ export default function Funnels() {
   };
 
   const handleAnalytics = (funnel: Funnel) => {
-    navigate(`/funnels/${funnel.id}/analytics`);
+    navigate(`/flow/${funnel.id}/analytics`);
   };
 
   const handleDelete = async () => {
@@ -68,9 +68,9 @@ export default function Funnels() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">My Funnels</h1>
+            <h1 className="text-2xl font-bold text-foreground">My Flows</h1>
             <p className="text-muted-foreground mt-1">
-              Create video funnels to capture leads and collect payments
+              Create video flows to capture leads and collect payments
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -78,9 +78,9 @@ export default function Funnels() {
             {atLimit ? (
               <FunnelsUpgradeDrawer triggerText="Upgrade to Create More" />
             ) : (
-              <Button onClick={() => navigate('/funnels/new')}>
+              <Button onClick={() => navigate('/flow/new')}>
                 <Plus className="w-4 h-4 mr-2" />
-                Create Funnel
+                Create Flow
               </Button>
             )}
           </div>
@@ -117,14 +117,14 @@ export default function Funnels() {
               <Video className="w-8 h-8 text-primary" />
             </div>
             <h2 className="text-xl font-semibold text-foreground mb-2">
-              No funnels yet
+              No flows yet
             </h2>
             <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-              Create your first video funnel to start capturing leads and collecting payments.
+              Create your first video flow to start capturing leads and collecting payments.
             </p>
-            <Button onClick={() => navigate('/funnels/new')}>
+            <Button onClick={() => navigate('/flow/new')}>
               <Plus className="w-4 h-4 mr-2" />
-              Create Your First Funnel
+              Create Your First Flow
             </Button>
           </div>
         )}
@@ -134,7 +134,7 @@ export default function Funnels() {
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Funnel</AlertDialogTitle>
+            <AlertDialogTitle>Delete Flow</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete "{deleteTarget?.title}"? This action cannot be undone
               and will remove all associated leads and analytics.

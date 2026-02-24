@@ -10,16 +10,16 @@ const BASIC_FEATURES = [
 ];
 
 const BASIC_EXCLUDED_FEATURES = [
-  'Nevorai Funnels',
-  'Funnel Video Insights',
+  'Nevorai Flow',
+  'Flow Video Insights',
   'Advanced Analytics',
   'Leader Tools',
 ];
 
 const PRO_FEATURES = [
   'Everything in Basic',
-  'Nevorai Funnels',
-  'Funnel Video Insights',
+  'Nevorai Flow',
+  'Flow Video Insights',
   'Advanced Analytics',
   'Leader Tools',
   'Priority Support',
