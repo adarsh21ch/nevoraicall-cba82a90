@@ -68,56 +68,58 @@ export default function Auth() {
     
     const email = emailOrLeaderId.trim().toLowerCase();
     
-    const { error } = await signIn(email, password);
-    if (error) {
-      // Handle specific error cases with user-friendly messages
-      const errorMessage = error.message?.toLowerCase() || '';
-      
-      if (errorMessage.includes('invalid login credentials') || errorMessage.includes('invalid credentials')) {
-        // Check if this is a provisioned user who needs to set their password
-        try {
-          const { data: provisionedData } = await supabase.rpc('check_provisioned_user', {
-            target_email: email
-          });
-          
-          if (provisionedData && provisionedData.length > 0 && provisionedData[0].is_provisioned) {
-            // This user was provisioned from another app - auto-send password reset
-            const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-              redirectTo: getPasswordRecoveryRedirectUrl(),
+    try {
+      const { error } = await signIn(email, password);
+      if (error) {
+        const errorMessage = error.message?.toLowerCase() || '';
+        
+        if (errorMessage.includes('timed out') || errorMessage.includes('connection is slow')) {
+          toast.error('Connection is slow. Please check your internet and try again.');
+        } else if (errorMessage.includes('invalid login credentials') || errorMessage.includes('invalid credentials')) {
+          try {
+            const { data: provisionedData } = await supabase.rpc('check_provisioned_user', {
+              target_email: email
             });
             
-            if (!resetError) {
-              toast.success(
-                `Your account was created via ${provisionedData[0].source_app === 'achievers_club' ? 'Achievers Club' : 'another app'}. We've sent you an email to set your password. Please check your inbox!`,
-                { duration: 8000 }
-              );
-              setIsSubmitting(false);
-              return;
+            if (provisionedData && provisionedData.length > 0 && provisionedData[0].is_provisioned) {
+              const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: getPasswordRecoveryRedirectUrl(),
+              });
+              
+              if (!resetError) {
+                toast.success(
+                  `Your account was created via ${provisionedData[0].source_app === 'achievers_club' ? 'Achievers Club' : 'another app'}. We've sent you an email to set your password. Please check your inbox!`,
+                  { duration: 8000 }
+                );
+                return;
+              }
             }
+          } catch (checkError) {
+            console.error('Error checking provisioned user:', checkError);
           }
-        } catch (checkError) {
-          console.error('Error checking provisioned user:', checkError);
+          
+          toast.error('Invalid email or password. Please check your credentials or use "Forgot Password" to reset.');
+        } else if (errorMessage.includes('email not confirmed')) {
+          toast.error('Please confirm your email before signing in. Check your inbox for the confirmation link.');
+        } else if (errorMessage.includes('user not found')) {
+          toast.error('No account found with this email. Please sign up first.');
+        } else if (errorMessage.includes('too many requests')) {
+          toast.error('Too many login attempts. Please wait a few minutes and try again.');
+        } else {
+          toast.error(error.message || 'Sign in failed. Please try again.');
         }
-        
-        toast.error('Invalid email or password. Please check your credentials or use "Forgot Password" to reset.');
-      } else if (errorMessage.includes('email not confirmed')) {
-        toast.error('Please confirm your email before signing in. Check your inbox for the confirmation link.');
-      } else if (errorMessage.includes('user not found')) {
-        toast.error('No account found with this email. Please sign up first.');
-      } else if (errorMessage.includes('too many requests')) {
-        toast.error('Too many login attempts. Please wait a few minutes and try again.');
       } else {
-        toast.error(error.message || 'Sign in failed. Please try again.');
+        if (uplineParam) {
+          sessionStorage.setItem('pending_upline_email', uplineParam);
+        }
+        toast.success('Welcome back!');
+        navigate('/dashboard');
       }
-    } else {
-      // Store upline param for processing
-      if (uplineParam) {
-        sessionStorage.setItem('pending_upline_email', uplineParam);
-      }
-      toast.success('Welcome back!');
-      navigate('/dashboard');
+    } catch (err) {
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   };
 
   const handleSendOtp = useCallback(async (emailToSend: string) => {

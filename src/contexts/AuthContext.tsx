@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getPublishedAppUrl } from '@/config/siteUrl';
 import { clearTrackingFormatCache } from '@/hooks/useTrackingFormat';
 import { clearFunnelConfigCache } from '@/hooks/useFunnelConfig';
+import { withTimeout } from '@/lib/fetchWithTimeout';
 
 interface AuthContextType {
   user: User | null;
@@ -224,35 +225,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     logAuth('Sign up attempt', { email });
-    // Use live domain for email redirect to avoid preview shell issues
-    const liveUrl = getPublishedAppUrl();
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${liveUrl}/`
+    try {
+      const liveUrl = getPublishedAppUrl();
+      const { error } = await withTimeout(
+        supabase.auth.signUp({
+          email,
+          password,
+          options: { emailRedirectTo: `${liveUrl}/` }
+        }),
+        15000,
+        'Sign up'
+      );
+      if (error) {
+        logAuth('Sign up error', error.message);
+      } else {
+        logAuth('Sign up successful');
       }
-    });
-    if (error) {
-      logAuth('Sign up error', error.message);
-    } else {
-      logAuth('Sign up successful');
+      return { error: error as Error | null };
+    } catch (timeoutErr: any) {
+      logAuth('Sign up timed out', timeoutErr.message);
+      return { error: new Error('Connection is slow. Please check your internet and try again.') };
     }
-    return { error: error as Error | null };
   };
 
   const signIn = async (email: string, password: string) => {
     logAuth('Sign in attempt', { email });
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) {
-      logAuth('Sign in error', error.message);
-    } else {
-      logAuth('Sign in successful');
+    try {
+      const { error } = await withTimeout(
+        supabase.auth.signInWithPassword({ email, password }),
+        15000,
+        'Sign in'
+      );
+      if (error) {
+        logAuth('Sign in error', error.message);
+      } else {
+        logAuth('Sign in successful');
+      }
+      return { error: error as Error | null };
+    } catch (timeoutErr: any) {
+      logAuth('Sign in timed out', timeoutErr.message);
+      return { error: new Error('Connection is slow. Please check your internet and try again.') };
     }
-    return { error: error as Error | null };
   };
 
   const signOut = async () => {
