@@ -30,7 +30,7 @@ export function usePlaybackUrl() {
     setError(null);
 
     try {
-      const { data, error: invokeError } = await supabase.functions.invoke<PlaybackUrlResponse>(
+      const fetchPromise = supabase.functions.invoke<PlaybackUrlResponse>(
         'r2-get-playback-url',
         {
           body: {
@@ -39,6 +39,14 @@ export function usePlaybackUrl() {
           },
         }
       );
+
+      // Race against a 15-second timeout
+      const { data, error: invokeError } = await Promise.race([
+        fetchPromise,
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Video loading timed out')), 15000)
+        ),
+      ]);
 
       if (invokeError || !data) {
         console.error('Failed to get playback URL:', invokeError);

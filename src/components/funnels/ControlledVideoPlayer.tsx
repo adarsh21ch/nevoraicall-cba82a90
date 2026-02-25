@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Play, Pause, Volume2, VolumeX, Maximize, Loader2 } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Maximize, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { usePlaybackUrl } from '@/hooks/usePlaybackUrl';
@@ -39,18 +39,32 @@ export function ControlledVideoPlayer({
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
 
   const { getPlaybackUrl, isLoading: isLoadingUrl, error } = usePlaybackUrl();
+  const [loadingElapsed, setLoadingElapsed] = useState(0);
+  const [hasFailed, setHasFailed] = useState(false);
 
   // Load video URL
-  useEffect(() => {
-    const loadUrl = async () => {
-      setIsLoading(true);
-      const url = await getPlaybackUrl(assetId, leadToken);
-      setVideoUrl(url);
-      setIsLoading(false);
-    };
-    
-    loadUrl();
+  const loadVideoUrl = useCallback(async () => {
+    setIsLoading(true);
+    setHasFailed(false);
+    setLoadingElapsed(0);
+    const url = await getPlaybackUrl(assetId, leadToken);
+    if (!url) {
+      setHasFailed(true);
+    }
+    setVideoUrl(url);
+    setIsLoading(false);
   }, [assetId, leadToken, getPlaybackUrl]);
+
+  useEffect(() => {
+    loadVideoUrl();
+  }, [loadVideoUrl]);
+
+  // Track loading elapsed time
+  useEffect(() => {
+    if (!isLoading && !isLoadingUrl) return;
+    const interval = setInterval(() => setLoadingElapsed(prev => prev + 1), 1000);
+    return () => clearInterval(interval);
+  }, [isLoading, isLoadingUrl]);
 
   // Video event handlers
   const handleTimeUpdate = useCallback(() => {
@@ -180,16 +194,33 @@ export function ControlledVideoPlayer({
 
   if (isLoadingUrl || isLoading) {
     return (
-      <div className={cn("aspect-video bg-black rounded-lg flex items-center justify-center", className)}>
+      <div className={cn("aspect-video bg-black rounded-lg flex flex-col items-center justify-center gap-2", className)}>
         <Loader2 className="h-12 w-12 animate-spin text-white/50" />
+        {loadingElapsed >= 5 && (
+          <p className="text-white/40 text-sm">Still loading...</p>
+        )}
+        {loadingElapsed >= 15 && (
+          <button
+            onClick={loadVideoUrl}
+            className="text-white/60 text-sm flex items-center gap-1 hover:text-white/80 mt-1"
+          >
+            <RefreshCw className="h-3 w-3" /> Tap to retry
+          </button>
+        )}
       </div>
     );
   }
 
-  if (error || !videoUrl) {
+  if (error || hasFailed || !videoUrl) {
     return (
-      <div className={cn("aspect-video bg-black rounded-lg flex items-center justify-center", className)}>
+      <div className={cn("aspect-video bg-black rounded-lg flex flex-col items-center justify-center gap-3", className)}>
         <p className="text-white/50">Failed to load video</p>
+        <button
+          onClick={loadVideoUrl}
+          className="text-white/70 text-sm flex items-center gap-1.5 hover:text-white/90 bg-white/10 px-4 py-2 rounded-lg"
+        >
+          <RefreshCw className="h-4 w-4" /> Tap to retry
+        </button>
       </div>
     );
   }
