@@ -1,44 +1,43 @@
 
 
-# Plan: Sign-In Proxy Edge Function + Fallback Logic
+# Plan: Fix Sign-In Proxy to Use Direct fetch() Instead of supabase.functions.invoke()
 
-## Problem
-The authentication service's `POST /token?grant_type=password` endpoint is not receiving requests from the browser. GET requests and token refreshes work fine, but new password sign-in POST requests hang indefinitely. This affects all your Lovable apps simultaneously, confirming it's a platform-level transport issue.
+## Problem Found
+The sign-in proxy edge function **works correctly** -- I tested it server-side and it successfully communicates with the auth service. However, the client's call via `supabase.functions.invoke('sign-in-proxy')` never reaches the function (zero logs). This is because `supabase.functions.invoke()` routes through the same Lovable Cloud proxy layer that is currently hanging for all POST requests.
 
-## Solution
-Create a server-side proxy that performs password authentication from within the backend infrastructure (where connectivity is reliable), then feed the tokens back to the client.
+## Root Cause
+`supabase.functions.invoke()` uses the Supabase client's internal routing, which passes through the same network gateway that's blocking `signInWithPassword`. The proxy bypass only works if we bypass the client SDK entirely.
 
-## Changes
+## Fix: One File Change
 
-### 1. New Edge Function: `supabase/functions/sign-in-proxy/index.ts`
-- Accepts `{ email, password }` via POST
-- Makes a direct `POST /auth/v1/token?grant_type=password` call server-side using the anon key
-- Returns the session tokens (`access_token`, `refresh_token`, `user`) to the client
-- Includes CORS headers and error handling
-- No admin/service role needed -- same security as the browser request, just routed server-side
-
-### 2. Config: `supabase/config.toml`
-- Add `[functions.sign-in-proxy]` with `verify_jwt = false` (since the user isn't authenticated yet)
-
-### 3. Update: `src/contexts/AuthContext.tsx`
-- Modify `signIn()` to try direct `signInWithPassword()` first with 8-second timeout
-- On timeout, automatically fall back to calling the `sign-in-proxy` edge function
-- On successful proxy response, use `supabase.auth.setSession()` to apply the tokens
-- Log which method succeeded for debugging
-
-## Technical Details
-
-The proxy makes the exact same request the browser would:
-```text
-Browser (hangs) ──X──> Auth Service /token?grant_type=password
-Browser ──> Edge Function ──> Auth Service /token?grant_type=password (works)
+### `src/contexts/AuthContext.tsx`
+In the `signIn()` function's proxy fallback section, replace:
+```typescript
+supabase.functions.invoke('sign-in-proxy', { body: { email, password } })
+```
+with a direct `fetch()` call:
+```typescript
+fetch(`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/sign-in-proxy`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+  },
+  body: JSON.stringify({ email, password }),
+})
 ```
 
-Edge functions run on the same infrastructure as the auth service, so internal connectivity is reliable. The `setSession()` call on the client applies the tokens identically to a normal sign-in.
+This constructs the URL directly using environment variables, completely bypassing the Supabase JS client and Lovable Cloud's proxy layer.
 
-## What This Does NOT Change
-- No changes to Auth.tsx (already handles timeouts)
-- No changes to the service worker
-- No database changes
-- Existing direct sign-in still works when the platform is healthy -- the proxy is only a fallback
+The rest of the logic (parsing the response, calling `setSession()`, error handling) stays the same.
+
+## Why This Will Work
+- I verified the proxy function responds correctly when called directly (server-side test returned auth error for wrong password in ~1 second)
+- Direct `fetch()` bypasses the Lovable Cloud proxy that's causing the hang
+- The project's memory confirms this pattern: "functions must be called using direct fetch() with explicit headers" due to Lovable Cloud's proxy behavior
+
+## No Other Changes Needed
+- Edge function code: unchanged (already working)
+- Config: unchanged
+- Auth page: unchanged
 
