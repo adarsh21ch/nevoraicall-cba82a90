@@ -285,7 +285,7 @@ export default function TodoUp() {
 
       <main ref={mainRef} className={cn("scrollable-content relative pb-24", isRecentActivity ? "pt-[132px]" : "pt-[168px]")}>
         <PullToRefreshIndicator isRefreshing={isRefreshing} pullDistance={pullDistance} showIndicator={showIndicator} />
-        <div className="container py-3 px-4 space-y-4">
+        <div className="container px-4 space-y-3">
           {/* Trial Banner - respects admin config */}
           <TrialBanner tabId="todoup" />
           <UpgradeButton tabId="todoup" variant="prominent" />
