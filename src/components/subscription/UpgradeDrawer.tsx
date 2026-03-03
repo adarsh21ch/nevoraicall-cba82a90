@@ -168,10 +168,10 @@ export function UpgradeDrawer({ variant = 'default', triggerText }: UpgradeDrawe
       {buttonText}
     </Button>
   ) : variant === 'prominent' ? (
-    <button className="w-full rounded-xl px-4 py-2.5 bg-gradient-to-r from-amber-500/15 via-amber-400/10 to-amber-500/5 border border-amber-500/40 flex items-center gap-3 transition-all duration-200 hover:shadow-md active:scale-[0.99]">
-      <Crown className="h-4 w-4 text-amber-500 shrink-0" />
-      <span className="font-semibold text-sm text-amber-700 dark:text-amber-300">{buttonText}</span>
-      <Sparkles className="h-3.5 w-3.5 text-amber-500/60 ml-auto shrink-0" />
+    <button className="w-full rounded-lg px-3 py-1.5 bg-gradient-to-r from-amber-500/10 via-amber-400/5 to-amber-500/10 border border-amber-500/30 flex items-center gap-2 transition-all duration-200 hover:border-amber-500/50 active:scale-[0.99]">
+      <Crown className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+      <span className="font-medium text-xs text-amber-700 dark:text-amber-300">{buttonText}</span>
+      <Sparkles className="h-3 w-3 text-amber-500/50 ml-auto shrink-0" />
     </button>
   ) : (
     <Button
