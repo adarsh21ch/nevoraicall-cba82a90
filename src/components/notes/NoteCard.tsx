@@ -61,7 +61,7 @@ export function NoteCard({ note, onClick, onDelete, onMove, actionLoading }: Not
   }, [swipeX, onDelete, note]);
 
   return (
-    <div className="relative overflow-hidden">
+    <div className={cn("relative", showMenu ? "overflow-visible" : "overflow-hidden")}>
       {/* Delete background */}
       <div className="absolute inset-0 bg-destructive flex items-center justify-end pr-5">
         <Trash2 className="h-5 w-5 text-destructive-foreground" />
