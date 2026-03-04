@@ -132,7 +132,7 @@ export default function Notes() {
             {pinnedNotes.length > 0 && (
               <div>
                 <p className="text-[10px] font-semibold text-muted-foreground/40 uppercase tracking-wider px-1 mb-1.5">Pinned</p>
-                <div className="rounded-2xl border border-border/40 overflow-hidden bg-card shadow-sm">
+                <div className="rounded-2xl border border-border/40 overflow-visible bg-card shadow-sm">
                   {pinnedNotes.map((note) => (
                     <NoteCard key={note.id} note={note} onClick={() => navigate(`/notes/${note.id}`)} onDelete={handleDeleteFromList} onMove={handleOpenMoveDialog} actionLoading={actionNoteId === note.id && (deleteNote.isPending || isMoving)} />
                   ))}
@@ -144,7 +144,7 @@ export default function Notes() {
                 <p className="text-[10px] font-semibold text-muted-foreground/40 uppercase tracking-wider px-1 mb-1.5">
                   {pinnedNotes.length > 0 ? 'Recent Notes' : 'All Notes'}
                 </p>
-                <div className="rounded-2xl border border-border/40 overflow-hidden bg-card shadow-sm">
+                <div className="rounded-2xl border border-border/40 overflow-visible bg-card shadow-sm">
                   {unpinnedNotes.map((note) => (
                     <NoteCard key={note.id} note={note} onClick={() => navigate(`/notes/${note.id}`)} onDelete={handleDeleteFromList} onMove={handleOpenMoveDialog} actionLoading={actionNoteId === note.id && (deleteNote.isPending || isMoving)} />
                   ))}

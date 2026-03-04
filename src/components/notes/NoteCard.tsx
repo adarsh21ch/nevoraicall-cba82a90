@@ -3,6 +3,7 @@ import { Pin, MoreVertical, FolderOpen, Trash2 } from 'lucide-react';
 import { Note, NoteBlock } from '@/hooks/useNotes';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 function getPreviewLines(blocks: NoteBlock[], maxLines = 2): string {
   const lines: string[] = [];
@@ -31,6 +32,7 @@ export function NoteCard({ note, onClick, onDelete, onMove, actionLoading }: Not
   const [showMenu, setShowMenu] = useState(false);
   const [swipeX, setSwipeX] = useState(0);
   const [swiping, setSwiping] = useState(false);
+  const isMobile = useIsMobile();
   const startXRef = useRef(0);
   const swipeThreshold = 80;
 
@@ -61,7 +63,7 @@ export function NoteCard({ note, onClick, onDelete, onMove, actionLoading }: Not
   }, [swipeX, onDelete, note]);
 
   return (
-    <div className={cn("relative", showMenu ? "overflow-visible" : "overflow-hidden")}>
+    <div className={cn('relative', showMenu && !isMobile ? 'overflow-visible' : 'overflow-hidden')}>
       {/* Delete background */}
       <div className="absolute inset-0 bg-destructive flex items-center justify-end pr-5">
         <Trash2 className="h-5 w-5 text-destructive-foreground" />
@@ -78,8 +80,8 @@ export function NoteCard({ note, onClick, onDelete, onMove, actionLoading }: Not
         onTouchEnd={handleTouchEnd}
         style={{ transform: `translateX(-${swipeX}px)`, transition: swiping ? 'none' : 'transform 0.3s ease-out' }}
         className={cn(
-          "relative flex items-start gap-3 px-4 py-3.5 bg-card border-b border-border/30",
-          "active:bg-muted/40 transition-colors cursor-pointer"
+          'relative flex items-start gap-3 px-4 py-3.5 bg-card border-b border-border/30',
+          'active:bg-muted/40 transition-colors cursor-pointer'
         )}
       >
         {/* Pin indicator */}
@@ -110,7 +112,10 @@ export function NoteCard({ note, onClick, onDelete, onMove, actionLoading }: Not
         {showActions && (
           <div className="relative shrink-0 mt-0.5">
             <button
-              onClick={(e) => { e.stopPropagation(); setShowMenu((p) => !p); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMenu((p) => (isMobile ? true : !p));
+              }}
               className="h-7 w-7 rounded-lg hover:bg-muted/60 flex items-center justify-center active:scale-90 transition-all"
               aria-label="Note actions"
               disabled={actionLoading}
@@ -119,27 +124,58 @@ export function NoteCard({ note, onClick, onDelete, onMove, actionLoading }: Not
             </button>
 
             {showMenu && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setShowMenu(false); }} />
-                <div className="absolute right-0 top-full mt-1 bg-card border border-border rounded-xl shadow-xl py-1 w-40 z-50 animate-in fade-in zoom-in-95 duration-150">
-                  {onMove && (
+              isMobile ? (
+                <>
+                  <div className="fixed inset-0 z-50 bg-black/40" onClick={(e) => { e.stopPropagation(); setShowMenu(false); }} />
+                  <div className="fixed inset-x-0 bottom-0 z-50 bg-card rounded-t-2xl border-t border-border shadow-2xl animate-in slide-in-from-bottom duration-200 px-3 pt-2 pb-[max(env(safe-area-inset-bottom),0.5rem)]">
+                    <div className="w-10 h-1 rounded-full bg-muted-foreground/20 mx-auto mb-2" />
+                    {onMove && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setShowMenu(false); onMove(note); }}
+                        className="w-full text-left px-3 py-3 text-sm hover:bg-muted/50 rounded-xl flex items-center gap-2.5 active:bg-muted transition-colors"
+                      >
+                        <FolderOpen className="h-4 w-4 text-accent" /> Move
+                      </button>
+                    )}
+                    {onDelete && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setShowMenu(false); onDelete(note); }}
+                        className="w-full text-left px-3 py-3 text-sm hover:bg-destructive/10 rounded-xl flex items-center gap-2.5 text-destructive active:bg-destructive/15 transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" /> Delete
+                      </button>
+                    )}
                     <button
-                      onClick={(e) => { e.stopPropagation(); setShowMenu(false); onMove(note); }}
-                      className="w-full text-left px-3 py-2.5 text-[13px] hover:bg-muted/50 flex items-center gap-2 active:bg-muted transition-colors"
+                      onClick={(e) => { e.stopPropagation(); setShowMenu(false); }}
+                      className="w-full text-center mt-1 px-3 py-3 text-sm text-muted-foreground hover:bg-muted/40 rounded-xl transition-colors"
                     >
-                      <FolderOpen className="h-3.5 w-3.5 text-accent" /> Move
+                      Cancel
                     </button>
-                  )}
-                  {onDelete && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setShowMenu(false); onDelete(note); }}
-                      className="w-full text-left px-3 py-2.5 text-[13px] hover:bg-destructive/10 flex items-center gap-2 text-destructive active:bg-destructive/15 transition-colors"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" /> Delete
-                    </button>
-                  )}
-                </div>
-              </>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setShowMenu(false); }} />
+                  <div className="absolute right-0 top-full mt-1 bg-card border border-border rounded-xl shadow-xl py-1 w-40 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    {onMove && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setShowMenu(false); onMove(note); }}
+                        className="w-full text-left px-3 py-2.5 text-[13px] hover:bg-muted/50 flex items-center gap-2 active:bg-muted transition-colors"
+                      >
+                        <FolderOpen className="h-3.5 w-3.5 text-accent" /> Move
+                      </button>
+                    )}
+                    {onDelete && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setShowMenu(false); onDelete(note); }}
+                        className="w-full text-left px-3 py-2.5 text-[13px] hover:bg-destructive/10 flex items-center gap-2 text-destructive active:bg-destructive/15 transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Delete
+                      </button>
+                    )}
+                  </div>
+                </>
+              )
             )}
           </div>
         )}
