@@ -1226,6 +1226,72 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_insight_preferences: {
+        Row: {
+          ai_alerts: boolean
+          coaching_insights: boolean
+          created_at: string
+          daily_snapshot: boolean
+          id: string
+          snapshot_hour: number
+          user_id: string
+          weekly_team_summary: boolean
+        }
+        Insert: {
+          ai_alerts?: boolean
+          coaching_insights?: boolean
+          created_at?: string
+          daily_snapshot?: boolean
+          id?: string
+          snapshot_hour?: number
+          user_id: string
+          weekly_team_summary?: boolean
+        }
+        Update: {
+          ai_alerts?: boolean
+          coaching_insights?: boolean
+          created_at?: string
+          daily_snapshot?: boolean
+          id?: string
+          snapshot_hour?: number
+          user_id?: string
+          weekly_team_summary?: boolean
+        }
+        Relationships: []
+      }
+      ai_tracker_configs: {
+        Row: {
+          created_at: string
+          frequency: string
+          id: string
+          is_active: boolean
+          last_sent_at: string | null
+          metric_type: string
+          notify_hour: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          last_sent_at?: string | null
+          metric_type: string
+          notify_hour?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          last_sent_at?: string | null
+          metric_type?: string
+          notify_hour?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           body: string | null
