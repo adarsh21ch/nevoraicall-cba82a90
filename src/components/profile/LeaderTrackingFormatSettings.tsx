@@ -502,21 +502,17 @@ export function LeaderTrackingFormatSettings({
         </div>
 
         {hasLeader ? (
-          <div className="space-y-3">
-            {/* Connected status */}
-            <div className="flex items-center justify-between p-3 bg-primary/8 rounded-xl border border-primary/15">
-              <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center">
-                  <Users className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Connected to</p>
-                  <p className="font-semibold text-sm text-primary">
-                    {directLeaderName || (profile?.upline_email ? profile.upline_email.split('@')[0].charAt(0).toUpperCase() + profile.upline_email.split('@')[0].slice(1) : 'Upline')}
-                  </p>
-                </div>
+          <div className="space-y-2.5">
+            {/* Connected status - compact */}
+            <div className="flex items-center justify-between p-2.5 bg-primary/6 rounded-lg border border-primary/15">
+              <div className="flex items-center gap-2 min-w-0">
+                <Users className="h-3.5 w-3.5 text-primary shrink-0" />
+                <span className="text-xs text-muted-foreground shrink-0">Connected to</span>
+                <span className="text-xs font-semibold text-primary truncate">
+                  {directLeaderName || (profile?.upline_email ? profile.upline_email.split('@')[0].charAt(0).toUpperCase() + profile.upline_email.split('@')[0].slice(1) : 'Upline')}
+                </span>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5 shrink-0 ml-2">
                 <Button 
                   variant="ghost" 
                   size="sm" 
@@ -535,41 +531,40 @@ export function LeaderTrackingFormatSettings({
                     setSavingLeader(false);
                   }} 
                   disabled={updating || savingLeader || !profile?.upline_email}
-                  className="h-8 gap-1.5 text-xs"
+                  className="h-7 px-2 gap-1 text-[11px]"
                 >
-                  {savingLeader ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                  {savingLeader ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
                   Sync
                 </Button>
-                <Button variant="ghost" size="sm" onClick={handleClearLeader} disabled={updating} className="h-8 gap-1.5 text-xs text-destructive hover:text-destructive">
-                  <Unlink className="h-3.5 w-3.5" />
-                  Disconnect
+                <Button variant="ghost" size="sm" onClick={handleClearLeader} disabled={updating} className="h-7 px-2 gap-1 text-[11px] text-destructive hover:text-destructive">
+                  <Unlink className="h-3 w-3" />
                 </Button>
               </div>
             </div>
             
-            {/* Visibility toggle */}
-            <div className="flex items-center justify-between p-3 rounded-xl bg-muted/40 border border-border/40">
-              <div className="flex items-center gap-2.5">
-                {profile?.allow_leader_to_view ? <Eye className="h-4 w-4 text-green-500" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
-                <span className="text-sm">Allow leader to see my data</span>
+            {/* Visibility toggle - compact */}
+            <div className="flex items-center justify-between px-2.5 py-2 rounded-lg bg-muted/30 border border-border/30">
+              <div className="flex items-center gap-2">
+                {profile?.allow_leader_to_view ? <Eye className="h-3.5 w-3.5 text-green-500" /> : <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />}
+                <span className="text-xs">Allow leader to see my data</span>
               </div>
               <Switch checked={profile?.allow_leader_to_view || false} onCheckedChange={handleToggleVisibility} disabled={updating} />
             </div>
 
             {/* Inherited format preview */}
-            <div className="space-y-3 pt-1">
+            <div className="space-y-2 pt-1">
               <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">
                 Inherited from {trackingFormat?.rootLeaderName || directLeaderName || 'Upline'}
               </p>
               
               {inheritedLevels.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
                     <Users className="h-3 w-3" /> Team Levels
                   </p>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap gap-1">
                     {inheritedLevels.map((level, idx) => (
-                      <Badge key={level.id} variant="secondary" className="text-xs px-2.5 py-0.5">
+                      <Badge key={level.id} variant="secondary" className="text-[10px] px-2 py-0">
                         L{idx + 1}: {level.label}
                       </Badge>
                     ))}
@@ -578,15 +573,15 @@ export function LeaderTrackingFormatSettings({
               )}
 
               {trackingFormat?.leadsTrackingTags && trackingFormat.leadsTrackingTags.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                    <Tag className="h-3 w-3" /> Leads Tracking Tags
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+                    <Tag className="h-3 w-3" /> Leads Tags
                   </p>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap gap-1">
                     {trackingFormat.leadsTrackingTags.map((tag, idx) => (
-                      <Badge key={idx} variant="outline" className="text-xs gap-1 px-2.5 py-0.5">
+                      <Badge key={idx} variant="outline" className="text-[10px] gap-1 px-2 py-0">
                         {tag.name}
-                        {tag.isStageTag && <Star className="h-3 w-3 fill-amber-500 text-amber-500" />}
+                        {tag.isStageTag && <Star className="h-2.5 w-2.5 fill-amber-500 text-amber-500" />}
                       </Badge>
                     ))}
                   </div>
@@ -594,15 +589,15 @@ export function LeaderTrackingFormatSettings({
               )}
 
               {trackingFormat?.stageTags && trackingFormat.stageTags.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                    <Layers className="h-3 w-3" /> Funnel Tags (Stages)
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+                    <Layers className="h-3 w-3" /> Funnel Stages
                   </p>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap gap-1">
                     {trackingFormat.stageTags.map((tag, idx) => (
-                      <Badge key={idx} variant="outline" className="text-xs gap-1 px-2.5 py-0.5">
+                      <Badge key={idx} variant="outline" className="text-[10px] gap-1 px-2 py-0">
                         {tag.name}
-                        {tag.isFinalTarget && <Star className="h-3 w-3 fill-amber-500 text-amber-500" />}
+                        {tag.isFinalTarget && <Star className="h-2.5 w-2.5 fill-amber-500 text-amber-500" />}
                       </Badge>
                     ))}
                   </div>
@@ -610,35 +605,28 @@ export function LeaderTrackingFormatSettings({
               )}
 
               {(!trackingFormat?.leadsTrackingTags?.length && !trackingFormat?.stageTags?.length && !inheritedLevels.length) && (
-                <p className="text-xs text-muted-foreground italic">
+                <p className="text-[11px] text-muted-foreground italic">
                   {formatLoading ? 'Loading…' : 'No tracking tags configured by leader yet'}
                 </p>
               )}
               
-              <div className="p-3 bg-muted/30 rounded-lg border border-border/30">
-                <p className="text-xs text-muted-foreground">
-                  <strong>Personal tags:</strong> You can add your own personal tags from the Calling tab dropdown. Personal tags are not shared with your team.
-                </p>
-              </div>
+              <p className="text-[11px] text-muted-foreground bg-muted/30 rounded px-2 py-1.5 border border-border/20">
+                <strong>Tip:</strong> Add personal tags from the Calling tab dropdown. They're private to you.
+              </p>
             </div>
           </div>
         ) : (
-          <div className="space-y-2.5">
-            <div className="flex gap-2">
-              <Input 
-                placeholder="Enter upline's Gmail address…" 
-                value={leaderIdInput} 
-                onChange={e => setLeaderIdInput(e.target.value.toLowerCase())} 
-                type="email"
-                className="h-10"
-              />
-              <Button onClick={handleConnectUpline} disabled={!leaderIdInput.trim() || savingLeader} className="h-10 px-5">
-                {savingLeader ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Connect'}
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Your upline must have an account with this email for the connection to work.
-            </p>
+          <div className="flex gap-2">
+            <Input 
+              placeholder="Enter upline's Gmail address…" 
+              value={leaderIdInput} 
+              onChange={e => setLeaderIdInput(e.target.value.toLowerCase())} 
+              type="email"
+              className="h-9 text-sm"
+            />
+            <Button onClick={handleConnectUpline} disabled={!leaderIdInput.trim() || savingLeader} className="h-9 px-4 text-xs">
+              {savingLeader ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Connect'}
+            </Button>
           </div>
         )}
       </Section>
