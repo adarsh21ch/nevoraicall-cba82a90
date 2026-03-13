@@ -133,24 +133,23 @@ export default function Profile() {
 
   // Handle SSO redirect to nevorai.com pages
   const handleSSORedirect = useCallback(async (targetUrl: string) => {
-    // Open blank window synchronously to avoid popup blocker
-    const newWindow = window.open('about:blank', '_blank');
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        if (newWindow) newWindow.location.href = targetUrl;
+        window.open(targetUrl, '_blank', 'noopener,noreferrer');
         return;
       }
       const response = await supabase.functions.invoke('trackup-sso-link', {
         body: { redirectTo: targetUrl },
       });
-      if (response.data?.action_link && newWindow) {
-        newWindow.location.href = response.data.action_link;
-      } else if (newWindow) {
-        newWindow.location.href = targetUrl;
+      const link = response.data?.action_link;
+      if (link) {
+        window.open(link, '_blank', 'noopener,noreferrer');
+      } else {
+        window.open(targetUrl, '_blank', 'noopener,noreferrer');
       }
     } catch {
-      if (newWindow) newWindow.location.href = targetUrl;
+      window.open(targetUrl, '_blank', 'noopener,noreferrer');
     }
   }, []);
 
@@ -267,7 +266,7 @@ export default function Profile() {
           )}
 
           {/* TrackUp Dashboard - External link with SSO */}
-          <button onClick={() => handleSSORedirect('https://nevorai.com/trackup')} className={cn("w-full rounded-xl px-4 py-2.5", "bg-gradient-to-r backdrop-blur-sm", "border border-emerald-500/30", "flex items-center justify-between", "transition-all duration-200 hover:shadow-md", "from-emerald-500/20 to-emerald-500/5")}>
+          <button onClick={() => window.open('https://nevorai.com/auth?redirect=/trackup', '_blank', 'noopener,noreferrer')} className={cn("w-full rounded-xl px-4 py-2.5", "bg-gradient-to-r backdrop-blur-sm", "border border-emerald-500/30", "flex items-center justify-between", "transition-all duration-200 hover:shadow-md", "from-emerald-500/20 to-emerald-500/5")}>
             <div className="flex items-center gap-3">
               <div className="p-1.5 rounded-lg bg-emerald-500/10">
                 <BarChart3 className="h-4 w-4 text-emerald-500" />
@@ -281,7 +280,7 @@ export default function Profile() {
           </button>
 
           {/* Nevorai Funnels - External link with SSO */}
-          <button onClick={() => handleSSORedirect('https://nevorai.com/funnels')} className={cn("w-full rounded-xl px-4 py-2.5", "bg-gradient-to-r backdrop-blur-sm", "border border-purple-500/30", "flex items-center justify-between", "transition-all duration-200 hover:shadow-md", "from-purple-500/20 to-purple-500/5")}>
+          <button onClick={() => window.open('https://nevorai.com/auth?redirect=/funnels', '_blank', 'noopener,noreferrer')} className={cn("w-full rounded-xl px-4 py-2.5", "bg-gradient-to-r backdrop-blur-sm", "border border-purple-500/30", "flex items-center justify-between", "transition-all duration-200 hover:shadow-md", "from-purple-500/20 to-purple-500/5")}>
             <div className="flex items-center gap-3">
               <div className="p-1.5 rounded-lg bg-purple-500/10">
                 <Video className="h-4 w-4 text-purple-500" />
