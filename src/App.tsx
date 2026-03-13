@@ -39,6 +39,7 @@ import PublicFormPage from "./features/forms/pages/PublicFormPage";
 import SharedLeads from "./pages/SharedLeads";
 import Notes from "./pages/Notes";
 import NoteEditor from "./pages/NoteEditor";
+import TrackingFormat from "./pages/TrackingFormat";
 
 // Error Boundary to catch rendering errors
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
