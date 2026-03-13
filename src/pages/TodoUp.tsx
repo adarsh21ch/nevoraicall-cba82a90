@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, CheckCircle, Trash2, Edit2, Send, X, Check, Plus, Clock } from 'lucide-react';
+import { Loader2, CheckCircle, Trash2, Edit2, Send, X, Check, Plus, StickyNote } from 'lucide-react';
 import { format, parseISO, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
@@ -255,9 +255,9 @@ export default function TodoUp() {
             </div>
           </div>
           <div className="flex items-center gap-1">
-            {/* Recent Activity Toggle */}
-            <Button variant="ghost" size="icon" onClick={toggleRecentActivity} className={cn("h-10 w-10 rounded-full", isRecentActivity && "bg-primary/10 text-primary")}>
-              <Clock className="h-[22px] w-[22px]" />
+            {/* Notes Button */}
+            <Button variant="ghost" size="icon" onClick={() => navigate('/notes')} className="h-10 w-10 rounded-full">
+              <StickyNote className="h-[22px] w-[22px]" />
             </Button>
             
           </div>
