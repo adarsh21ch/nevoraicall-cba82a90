@@ -258,41 +258,6 @@ export function AIAssistantChat({ open, onOpenChange }: AIAssistantChatProps) {
     }
   };
 
-  // Voice input
-  const toggleVoice = useCallback(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      toast.error('Voice input not supported in this browser');
-      return;
-    }
-
-    if (isListening && recognitionRef.current) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'en-IN';
-    recognition.interimResults = true;
-    recognition.continuous = false;
-    recognitionRef.current = recognition;
-
-    recognition.onresult = (event: any) => {
-      const transcript = Array.from(event.results)
-        .map((r: any) => r[0].transcript)
-        .join('');
-      setInput(transcript);
-    };
-    recognition.onend = () => setIsListening(false);
-    recognition.onerror = () => {
-      setIsListening(false);
-      toast.error('Voice input failed. Try again.');
-    };
-    recognition.start();
-    setIsListening(true);
-  }, [isListening]);
-
   // Follow-ups for last assistant message
   const followUps = useMemo(() => {
     if (messages.length === 0) return [];
