@@ -1,133 +1,127 @@
 
 
-# Proactive AI Business Coach Upgrade
+# Plan: Nevorai Notes — MVP
 
-## Overview
+## Scope (Apple Notes / Samsung Notes style)
 
-Expand the existing Nevorai AI assistant into a proactive system that automatically monitors business data and delivers insights, alerts, and coaching via push notifications and in-app display. No changes to existing backend tables or tracking logic -- the AI reads from existing `personal_snapshot_v2`, `total_snapshot_v2`, `prospects`, and `profiles` tables.
+**Included:**
+- Rich text notes (bold, italic, lists, checklists)
+- Audio recording & playback (voice memos)
+- Photo attachments (camera/gallery)
+- Clickable links with smart detection (YouTube, Zoom, PDF URLs auto-preview)
+- Tappable phone numbers (call/text)
+- Color labels, pinning, search
+- Folders/tags for organization
 
-## Architecture
+**Excluded (for now):**
+- Video recording/attachment
+- Team sharing
+- Prospect linking (can add later)
 
-```text
-┌──────────────────────┐
-│  AI Insights Settings │ (Profile page section)
-│  - Manage trackers    │
-│  - Toggle alerts      │
-│  - Set notification   │
-│    preferences        │
-└──────────┬───────────┘
-           │ stores config
-           ▼
-┌──────────────────────┐     ┌─────────────────────────┐
-│ ai_tracker_configs   │     │ ai_insight_preferences  │
-│ (metric, frequency,  │     │ (daily_snapshot, alerts, │
-│  notify_time, active)│     │  coaching, team_summary) │
-└──────────┬───────────┘     └────────────┬────────────┘
-           │                              │
-           ▼                              ▼
-┌─────────────────────────────────────────────────────┐
-│  Edge Function: ai-daily-insights                   │
-│  (Scheduled via pg_cron, runs every hour)            │
-│  - Check ai_tracker_configs for due notifications   │
-│  - Read from existing snapshot/prospect tables      │
-│  - Generate insights via Lovable AI                 │
-│  - Send push notifications + store in-app           │
-└─────────────────────────────────────────────────────┘
+---
+
+## Database
+
+Create a `notes` table and a `note_attachments` table, plus a `note-attachments` storage bucket.
+
+```sql
+-- notes table
+CREATE TABLE public.notes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL DEFAULT '',
+  content JSONB NOT NULL DEFAULT '[]',  -- rich text blocks
+  color_label TEXT DEFAULT 'default',
+  is_pinned BOOLEAN DEFAULT false,
+  folder TEXT DEFAULT 'General',
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- note_attachments (photos + audio)
+CREATE TABLE public.note_attachments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  note_id UUID NOT NULL REFERENCES public.notes(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN ('photo', 'audio')),
+  storage_path TEXT NOT NULL,
+  file_name TEXT,
+  file_size INTEGER,
+  duration_seconds INTEGER, -- for audio
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Storage bucket
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('note-attachments', 'note-attachments', false)
+ON CONFLICT (id) DO NOTHING;
+
+-- RLS: users can only access their own notes & attachments
 ```
 
-## Database Changes (2 new tables)
+## File Structure
 
-### 1. `ai_tracker_configs` -- user tracker subscriptions
-- `id` uuid PK
-- `user_id` uuid references auth.users NOT NULL
-- `metric_type` text NOT NULL (e.g. 'leads_added', 'calls_made', 'videos_sent', 'follow_ups', 'positive_prospects', 'funnel_stages', 'team_updates', 'team_level_counts')
-- `frequency` text NOT NULL DEFAULT 'daily' ('daily', 'weekly', 'monthly')
-- `notify_hour` integer DEFAULT 20 (0-23, hour in IST)
-- `is_active` boolean DEFAULT true
-- `last_sent_at` timestamptz
-- `created_at` timestamptz DEFAULT now()
-- RLS: users can CRUD only their own rows
+```text
+src/
+├── pages/Notes.tsx                    -- Main notes list page
+├── pages/NoteEditor.tsx               -- Single note editor
+├── components/notes/
+│   ├── NoteCard.tsx                   -- Grid/list card preview
+│   ├── NoteToolbar.tsx                -- Bold, list, checklist, attach, audio, color
+│   ├── RichTextEditor.tsx             -- Block-based editor (paragraphs, lists, checklists)
+│   ├── AudioRecorder.tsx              -- Record & playback voice memos
+│   ├── PhotoAttachment.tsx            -- Camera/gallery picker + grid display
+│   ├── LinkPreview.tsx                -- Smart link detection (YT, Zoom, PDF, phone)
+│   ├── FolderSidebar.tsx              -- Folder/tag filter
+│   └── NoteSearchBar.tsx              -- Full-text search across notes
+├── hooks/
+│   ├── useNotes.ts                    -- CRUD operations
+│   └── useNoteAttachments.ts          -- Upload/delete attachments
+```
 
-### 2. `ai_insight_preferences` -- global AI insight toggles
-- `id` uuid PK
-- `user_id` uuid references auth.users UNIQUE NOT NULL
-- `daily_snapshot` boolean DEFAULT true
-- `ai_alerts` boolean DEFAULT true
-- `coaching_insights` boolean DEFAULT true
-- `weekly_team_summary` boolean DEFAULT true
-- `created_at` timestamptz DEFAULT now()
-- RLS: users can CRUD only their own rows
+## Routes & Navigation
 
-## Frontend Changes
+- Add `/notes` route in `App.tsx`
+- Add "Notes" entry in Profile page (similar to other menu items) with a notebook icon
+- Notes page: masonry/grid of note cards, FAB to create new note, search bar, folder filter
 
-### 1. AI Insights Settings (new component: `src/components/ai/AIInsightsSettings.tsx`)
-A drawer/sheet accessible from the Profile page (new card below the notification toggle, above Settings). Contains:
+## Key Features Detail
 
-- **Daily Snapshot** toggle -- enable/disable automatic daily summary
-- **AI Alerts** toggle -- enable/disable proactive alerts (team not updated, stuck prospects, activity drops)
-- **Coaching Insights** toggle -- enable/disable weekly AI coaching tips
-- **Team Summary** toggle (leaders only) -- weekly team performance summary
-- **AI Trackers** section -- list of subscribed metrics with:
-  - Add tracker button opening a form (metric selector, frequency selector, notification time picker)
-  - Each tracker row shows metric name, frequency, toggle to enable/disable, delete
+### Rich Text Editor
+- Lightweight block-based editor (no heavy library needed)
+- Each block: `{ type: 'text'|'checklist'|'heading', content: string, checked?: boolean, style?: 'bold'|'italic' }`
+- Stored as JSON array in `content` column
 
-### 2. Profile Page (`src/pages/Profile.tsx`)
-Add an "AI Insights" card with a Sparkles icon below the App Notifications card, opening the `AIInsightsSettings` drawer.
+### Audio Recording
+- Use browser `MediaRecorder` API
+- Record → upload to `note-attachments` bucket
+- Inline playback with waveform-style progress bar
+- Max 5 minutes per recording
 
-### 3. Enhanced AI Chat suggestions (`src/components/ai/AIAssistantChat.tsx`)
-Update the SUGGESTIONS array to include proactive-style queries:
-- "Daily snapshot"
-- "Who hasn't updated today?"
-- "Funnel analysis"
-- "Coaching tips"
-- "Team performance this week"
+### Photo Attachments
+- File input (camera + gallery on mobile)
+- Upload to `note-attachments` bucket
+- Display as inline thumbnails in the note
 
-### 4. New hook: `src/hooks/useAIInsights.ts`
-- Manages CRUD for `ai_tracker_configs` and `ai_insight_preferences`
-- Provides `trackers`, `preferences`, `addTracker`, `updateTracker`, `deleteTracker`, `updatePreferences`
+### Smart Link Detection
+- Auto-detect URLs in text, render as tappable links
+- Phone numbers: detect patterns like `+91 98765 43210`, render with call/WhatsApp buttons
+- YouTube links: show thumbnail preview
+- Other links (Zoom, PDF): show favicon + domain label
 
-## Backend Changes
+### Color Labels & Pinning
+- 6 color options (default, red, orange, yellow, green, blue)
+- Pin to top of list
+- Sort: pinned first, then by `updated_at` desc
 
-### 1. Enhanced AI system prompt (nevorai-ai edge function)
-Add new tools to the existing tool-calling architecture:
+## Summary of Changes
 
-- `get_team_tracking_status` -- who updated/didn't update tracking today
-- `get_stale_prospects` -- prospects stuck in a funnel stage for X days
-- `get_unattended_positive_prospects` -- positive prospects without recent follow-up
-- `get_activity_trend` -- compare last 7 days vs prior 7 days to detect drops
-- `get_daily_snapshot_summary` -- comprehensive daily stats formatted for notification
-- `get_funnel_analysis` -- analyze funnel config + stage distribution with suggestions
-
-Update the system prompt to include coaching personality and proactive analysis capabilities.
-
-### 2. New Edge Function: `supabase/functions/ai-daily-insights/index.ts`
-Scheduled function that:
-1. Queries `ai_tracker_configs` for entries where `is_active = true` and notification is due (based on `frequency`, `notify_hour`, `last_sent_at`)
-2. Queries `ai_insight_preferences` for users with `daily_snapshot = true`
-3. For each due notification:
-   - Reads from existing snapshot tables (no modifications)
-   - Calls Lovable AI to generate a concise insight
-   - Sends push notification via existing `send-push-notification` function
-   - Stores the insight in `inbox_messages` table (existing) for in-app viewing
-   - Updates `last_sent_at`
-
-### 3. pg_cron schedule
-Set up a cron job to invoke `ai-daily-insights` every hour to check for due notifications.
-
-## Implementation Order
-
-1. Create database tables (`ai_tracker_configs`, `ai_insight_preferences`) via migration
-2. Create `useAIInsights` hook
-3. Build `AIInsightsSettings` drawer component
-4. Add AI Insights card to Profile page
-5. Add new tools to `nevorai-ai` edge function (team tracking status, stale prospects, activity trends, funnel analysis, coaching)
-6. Update AI chat suggestions
-7. Create `ai-daily-insights` scheduled edge function
-8. Set up pg_cron schedule
-
-## Scope Boundaries
-- All data is READ-ONLY from existing tables
-- No changes to tracking logic, snapshot tables, or prospect management
-- Push notifications use the existing `send-push-notification` infrastructure
-- In-app notifications use the existing `inbox_messages` table
+| Area | Change |
+|------|--------|
+| Database | Create `notes`, `note_attachments` tables + storage bucket + RLS |
+| `App.tsx` | Add `/notes` and `/notes/:id` routes |
+| `Profile.tsx` | Add "Notes" menu item |
+| New pages | `Notes.tsx` (list), `NoteEditor.tsx` (editor) |
+| New components | 7 components in `src/components/notes/` |
+| New hooks | `useNotes.ts`, `useNoteAttachments.ts` |
 

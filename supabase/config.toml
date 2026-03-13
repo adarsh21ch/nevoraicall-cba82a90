@@ -77,3 +77,6 @@ verify_jwt = false
 
 [functions.send-push-notification]
 verify_jwt = false
+
+[functions.ai-daily-insights]
+verify_jwt = false

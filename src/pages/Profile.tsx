@@ -26,12 +26,13 @@ import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { User, LogOut, ChevronRight, ChevronDown, Loader2, FileText, Shield, Receipt, Settings, ExternalLink, BarChart3, Crown, Gift, Trash2, Sparkles, Lock, Share2, Video, Sliders, NotebookPen, Bell } from 'lucide-react';
+import { User, LogOut, ChevronRight, ChevronDown, Loader2, FileText, Shield, Receipt, Settings, ExternalLink, BarChart3, Crown, Gift, Trash2, Sparkles, Lock, Share2, Video, Sliders, NotebookPen, Bell, BrainCircuit } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 import { useSharedLeads } from '@/hooks/useSharedLeads';
 import { AIAssistantChat } from '@/components/ai/AIAssistantChat';
+import { AIInsightsSettings } from '@/components/ai/AIInsightsSettings';
 import { useFeatureAccess } from '@/hooks/useFeatureAccess';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -209,6 +210,7 @@ export default function Profile() {
   } = useFreeTrial();
   const [editOpen, setEditOpen] = useState(false);
   const [showAIChat, setShowAIChat] = useState(false);
+  const [showAIInsights, setShowAIInsights] = useState(false);
   
   const { canAccess: canAccessAI } = useFeatureAccess('ai_assistant');
   const { pendingCount } = useSharedLeads();
@@ -489,6 +491,23 @@ export default function Profile() {
           {/* Notifications Toggle */}
           <NotificationToggle canSendTest={isAdmin} />
 
+          {/* AI Insights Settings */}
+          <button
+            onClick={() => setShowAIInsights(true)}
+            className="w-full rounded-xl px-4 py-2.5 bg-gradient-to-r from-primary/15 to-primary/5 backdrop-blur-sm border border-primary/20 flex items-center justify-between transition-all duration-200 hover:shadow-md"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-1.5 rounded-lg bg-primary/10">
+                <BrainCircuit className="h-4 w-4 text-primary" />
+              </div>
+              <div className="text-left">
+                <span className="font-medium text-sm block">AI Insights</span>
+                <span className="text-[11px] text-muted-foreground">Trackers, alerts & coaching</span>
+              </div>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </button>
+
           {/* Settings Section - Collapsible */}
           <Collapsible className="rounded-xl bg-card border border-border/50 overflow-hidden">
             <CollapsibleTrigger className="w-full px-4 py-2 flex items-center justify-between hover:bg-muted/50 transition-colors">
@@ -568,6 +587,7 @@ export default function Profile() {
       <EditProfileDialog open={editOpen} onOpenChange={setEditOpen} profile={profile} onSave={updateProfile} updating={updating} />
 
       <AIAssistantChat open={showAIChat} onOpenChange={setShowAIChat} />
+      <AIInsightsSettings open={showAIInsights} onOpenChange={setShowAIInsights} />
 
       
 
