@@ -89,7 +89,9 @@ self.addEventListener('push', event => {
       icon: '/icons/icon-192.png',
       badge: '/icons/icon-192.png',
       vibrate: [200, 100, 200],
-      data: { url: '/' },
+      data: { url: data.url || '/' },
+      tag: 'nevorai-push',
+      renotify: true,
     })
   );
 });
@@ -99,10 +101,14 @@ self.addEventListener('notificationclick', event => {
   event.notification.close();
   const url = event.notification.data?.url || '/';
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async clientList => {
       for (const client of clientList) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
-          return client.focus();
+          await client.focus();
+          if ('navigate' in client) {
+            await client.navigate(url);
+          }
+          return;
         }
       }
       return clients.openWindow(url);
