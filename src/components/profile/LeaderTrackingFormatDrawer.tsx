@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
 import { Sliders, ChevronRight, Users } from 'lucide-react';
-import { Sliders, ChevronRight, Users } from 'lucide-react';
 import { LeaderTrackingFormatSettings } from './LeaderTrackingFormatSettings';
 import { Profile, ProfileUpdate } from '@/hooks/useProfile';
 
