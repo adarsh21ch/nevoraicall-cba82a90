@@ -163,6 +163,11 @@ export default function Admin() {
             <TabsContent value="audit" className="mt-4">
               <AuditLogViewer />
             </TabsContent>
+
+            {/* Notify Tab */}
+            <TabsContent value="notify" className="mt-4">
+              <AdminNotificationsPanel />
+            </TabsContent>
           </Tabs>
 
           <Link to="/profile">
