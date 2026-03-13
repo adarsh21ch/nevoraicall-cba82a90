@@ -13,7 +13,7 @@ import { BottomNav } from '@/components/layout/BottomNav';
 import { HeaderBellIcon } from '@/components/layout/HeaderBellIcon';
 import { EditProfileDialog } from '@/components/profile/EditProfileDialog';
 import { ChangePasswordDialog } from '@/components/profile/ChangePasswordDialog';
-import { LeaderTrackingFormatDrawer } from '@/components/profile/LeaderTrackingFormatDrawer';
+
 import { ConnectUplineCard } from '@/components/profile/ConnectUplineCard';
 import { ProfileLevelDropdown } from '@/components/profile/ProfileLevelDropdown';
 import { HelpSupportDrawer } from '@/components/profile/HelpSupportDrawer';
