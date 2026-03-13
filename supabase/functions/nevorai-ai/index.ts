@@ -515,6 +515,74 @@ const TOOLS = [
       parameters: { type: "object", properties: {}, additionalProperties: false },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "compare_members",
+      description: "Compare KPIs of 2 or more team members side-by-side for a date range (leaders only). Use when user asks to compare members or asks 'who performed better'.",
+      parameters: {
+        type: "object",
+        properties: {
+          member_names: { type: "array", items: { type: "string" }, description: "Display names of team members to compare (2 or more)" },
+          start_date: { type: "string", description: "YYYY-MM-DD" },
+          end_date: { type: "string", description: "YYYY-MM-DD" },
+        },
+        required: ["member_names", "start_date", "end_date"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_team_funnel_breakdown",
+      description: "Get funnel stage counts per team member for a date range (leaders only). Shows who has the most prospects at each funnel stage.",
+      parameters: {
+        type: "object",
+        properties: {
+          start_date: { type: "string", description: "YYYY-MM-DD" },
+          end_date: { type: "string", description: "YYYY-MM-DD" },
+        },
+        required: ["start_date", "end_date"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_member_daily_history",
+      description: "Get day-by-day leads/responses/enrollments for a specific team member over a date range (leaders only). Useful for 'show X's last 7 days' type queries.",
+      parameters: {
+        type: "object",
+        properties: {
+          member_name: { type: "string", description: "Display name of the team member" },
+          start_date: { type: "string", description: "YYYY-MM-DD" },
+          end_date: { type: "string", description: "YYYY-MM-DD" },
+        },
+        required: ["member_name", "start_date", "end_date"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_performance_ratios",
+      description: "Calculate performance ratios and conversion metrics for a date range. Works for user's own data or a specific team member. Returns lead-to-response ratio, response-to-enrollment ratio, per-day averages.",
+      parameters: {
+        type: "object",
+        properties: {
+          start_date: { type: "string", description: "YYYY-MM-DD" },
+          end_date: { type: "string", description: "YYYY-MM-DD" },
+          member_name: { type: "string", description: "Optional: team member name. If omitted, uses user's own data." },
+          source: { type: "string", enum: ["total", "personal"], description: "Data source (default: total)" },
+        },
+        required: ["start_date", "end_date"],
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 // Helper: compute enrollments from response_tags using enrollmentSlotKey
@@ -670,13 +738,37 @@ async function executeTool(
         const totalResponses = rows.reduce((s: number, r: any) => s + (r.total_responses || 0), 0);
         const totalEnrollments = computeEnrollments(rows, labels);
         
+        // Accumulate tag breakdowns
+        const rawResponseTags: Record<string, number> = {};
+        const rawStageTags: Record<string, number> = {};
+        for (const r of rows) {
+          if (r.response_tags && typeof r.response_tags === "object") {
+            for (const [k, v] of Object.entries(r.response_tags)) {
+              rawResponseTags[k] = (rawResponseTags[k] || 0) + (typeof v === "number" ? v : 0);
+            }
+          }
+          if (r.stage_tags && typeof r.stage_tags === "object") {
+            for (const [k, v] of Object.entries(r.stage_tags)) {
+              rawStageTags[k] = (rawStageTags[k] || 0) + (typeof v === "number" ? v : 0);
+            }
+          }
+        }
+        const responseSlots = coerceToSlots(rawResponseTags, labels.responseLabels.length, labels.responseLabels, "response_tag_", labels.responseLabels);
+        const responseTags = slotsToLabels(responseSlots, labels.responseLabels, "response_tag_");
+        const stageSlots = coerceToSlots(rawStageTags, labels.stageLabels.length, labels.stageLabels, "stage_tag_", labels.stageLabels);
+        const stageTags = slotsToLabels(stageSlots, labels.stageLabels, "stage_tag_");
+        
         return JSON.stringify({
           member_name: member.display_name,
+          level: member.level_label || "Unassigned",
           period: `${args.start_date} to ${args.end_date}`,
           days_tracked: rows.length,
           total_leads: totalLeads,
           total_responses: totalResponses,
           total_enrollments: totalEnrollments,
+          response_breakdown: responseTags,
+          stage_breakdown: stageTags,
+          conversion_rate: totalLeads > 0 ? `${((totalEnrollments / totalLeads) * 100).toFixed(1)}%` : "N/A",
         });
       }
 
@@ -1181,6 +1273,205 @@ async function executeTool(
         });
       }
 
+      case "compare_members": {
+        if (team.length === 0) return JSON.stringify({ error: "No team members found." });
+        const memberNames: string[] = args.member_names || [];
+        if (memberNames.length < 2) return JSON.stringify({ error: "Please provide at least 2 member names to compare." });
+        
+        const matched = memberNames.map(name => {
+          const m = team.find(t => t.display_name.toLowerCase().includes(name.toLowerCase()));
+          return m ? { ...m, search_name: name } : null;
+        });
+        const notFound = matched.filter(m => !m).map((_, i) => memberNames[i]);
+        if (notFound.length > 0) return JSON.stringify({ error: `Members not found: ${notFound.join(", ")}` });
+        
+        const validMembers = matched.filter(Boolean) as (TeamMember & { search_name: string })[];
+        const memberIds = validMembers.map(m => m.user_id);
+        
+        const { data } = await supabase
+          .from("total_snapshot_v2")
+          .select("user_id, total_leads, total_responses, response_tags, stage_tags, final_tag_count")
+          .in("user_id", memberIds)
+          .gte("date", args.start_date)
+          .lte("date", args.end_date);
+        
+        const rows = data || [];
+        const memberAgg: Record<string, { name: string; level: string; leads: number; responses: number; enrollments: number; days: number }> = {};
+        for (const m of validMembers) {
+          memberAgg[m.user_id] = { name: m.display_name, level: m.level_label || "Unassigned", leads: 0, responses: 0, enrollments: 0, days: 0 };
+        }
+        const userDates = new Map<string, Set<string>>();
+        for (const r of rows) {
+          const m = memberAgg[r.user_id];
+          if (m) {
+            m.leads += r.total_leads || 0;
+            m.responses += r.total_responses || 0;
+            if (labels.enrollmentSlotKey && r.response_tags && typeof r.response_tags === "object") {
+              m.enrollments += (typeof r.response_tags[labels.enrollmentSlotKey] === "number" ? r.response_tags[labels.enrollmentSlotKey] : 0);
+            }
+            if (!userDates.has(r.user_id)) userDates.set(r.user_id, new Set());
+            userDates.get(r.user_id)!.add(r.date || "");
+          }
+        }
+        for (const [uid, dates] of userDates) {
+          if (memberAgg[uid]) memberAgg[uid].days = dates.size;
+        }
+        
+        const comparison = Object.values(memberAgg);
+        const best = comparison.reduce((a, b) => a.leads > b.leads ? a : b);
+        
+        return JSON.stringify({
+          period: `${args.start_date} to ${args.end_date}`,
+          members: comparison,
+          top_performer: best.name,
+          insight: `${best.name} leads with ${best.leads} leads added in this period.`,
+        });
+      }
+
+      case "get_team_funnel_breakdown": {
+        if (team.length === 0) return JSON.stringify({ error: "No team members found." });
+        const memberIds = team.map(m => m.user_id);
+        
+        const { data } = await supabase
+          .from("total_snapshot_v2")
+          .select("user_id, stage_tags")
+          .in("user_id", memberIds)
+          .gte("date", args.start_date)
+          .lte("date", args.end_date);
+        
+        const rows = data || [];
+        // Per-member stage aggregation
+        const memberStages: Record<string, Record<string, number>> = {};
+        const teamTotals: Record<string, number> = {};
+        
+        for (const m of team) {
+          memberStages[m.user_id] = {};
+        }
+        
+        for (const r of rows) {
+          if (!r.stage_tags || typeof r.stage_tags !== "object") continue;
+          if (!memberStages[r.user_id]) continue;
+          for (const [k, v] of Object.entries(r.stage_tags)) {
+            const val = typeof v === "number" ? v : 0;
+            memberStages[r.user_id][k] = (memberStages[r.user_id][k] || 0) + val;
+          }
+        }
+        
+        // Convert to human labels per member
+        const perMember: { name: string; stages: Record<string, number> }[] = [];
+        for (const m of team) {
+          const raw = memberStages[m.user_id] || {};
+          const slots = coerceToSlots(raw, labels.stageLabels.length, labels.stageLabels, "stage_tag_", labels.stageLabels);
+          const labeled = slotsToLabels(slots, labels.stageLabels, "stage_tag_");
+          // Accumulate team totals
+          for (const [k, v] of Object.entries(labeled)) {
+            teamTotals[k] = (teamTotals[k] || 0) + v;
+          }
+          const hasData = Object.values(labeled).some(v => v > 0);
+          if (hasData) {
+            perMember.push({ name: m.display_name, stages: labeled });
+          }
+        }
+        
+        return JSON.stringify({
+          period: `${args.start_date} to ${args.end_date}`,
+          team_totals: teamTotals,
+          per_member: perMember,
+          members_with_data: perMember.length,
+        });
+      }
+
+      case "get_member_daily_history": {
+        const member = team.find(m => m.display_name.toLowerCase().includes(args.member_name.toLowerCase()));
+        if (!member) return JSON.stringify({ error: `Member "${args.member_name}" not found in your team.` });
+        
+        const { data } = await supabase
+          .from("total_snapshot_v2")
+          .select("date, total_leads, total_responses, response_tags, final_tag_count")
+          .eq("user_id", member.user_id)
+          .gte("date", args.start_date)
+          .lte("date", args.end_date)
+          .order("date", { ascending: true });
+        
+        const rows = data || [];
+        const daily = rows.map((r: any) => {
+          let enrollments = 0;
+          if (labels.enrollmentSlotKey && r.response_tags && typeof r.response_tags === "object") {
+            enrollments = typeof r.response_tags[labels.enrollmentSlotKey] === "number" ? r.response_tags[labels.enrollmentSlotKey] : 0;
+          } else {
+            enrollments = r.final_tag_count || 0;
+          }
+          return {
+            date: r.date,
+            leads: r.total_leads || 0,
+            responses: r.total_responses || 0,
+            enrollments,
+          };
+        });
+        
+        const totalLeads = daily.reduce((s, d) => s + d.leads, 0);
+        const totalResponses = daily.reduce((s, d) => s + d.responses, 0);
+        const totalEnrollments = daily.reduce((s, d) => s + d.enrollments, 0);
+        
+        return JSON.stringify({
+          member_name: member.display_name,
+          period: `${args.start_date} to ${args.end_date}`,
+          days_tracked: daily.length,
+          totals: { leads: totalLeads, responses: totalResponses, enrollments: totalEnrollments },
+          daily_breakdown: daily,
+          avg_per_day: {
+            leads: daily.length > 0 ? +(totalLeads / daily.length).toFixed(1) : 0,
+            responses: daily.length > 0 ? +(totalResponses / daily.length).toFixed(1) : 0,
+            enrollments: daily.length > 0 ? +(totalEnrollments / daily.length).toFixed(1) : 0,
+          },
+        });
+      }
+
+      case "get_performance_ratios": {
+        let targetUserId = userId;
+        let targetName = "Your";
+        
+        if (args.member_name) {
+          const member = team.find(m => m.display_name.toLowerCase().includes(args.member_name.toLowerCase()));
+          if (!member) return JSON.stringify({ error: `Member "${args.member_name}" not found in your team.` });
+          targetUserId = member.user_id;
+          targetName = member.display_name + "'s";
+        }
+        
+        const table = snapshotTable(args.source);
+        const { data } = await supabase
+          .from(table)
+          .select("date, total_leads, total_responses, response_tags, final_tag_count")
+          .eq("user_id", targetUserId)
+          .gte("date", args.start_date)
+          .lte("date", args.end_date);
+        
+        const rows = data || [];
+        const totalLeads = rows.reduce((s: number, r: any) => s + (r.total_leads || 0), 0);
+        const totalResponses = rows.reduce((s: number, r: any) => s + (r.total_responses || 0), 0);
+        const totalEnrollments = computeEnrollments(rows, labels);
+        const daysTracked = rows.length;
+        
+        const pct = (num: number, den: number) => den > 0 ? `${((num / den) * 100).toFixed(1)}%` : "N/A";
+        
+        return JSON.stringify({
+          target: targetName,
+          period: `${args.start_date} to ${args.end_date}`,
+          days_tracked: daysTracked,
+          totals: { leads: totalLeads, responses: totalResponses, enrollments: totalEnrollments },
+          ratios: {
+            lead_to_response: pct(totalResponses, totalLeads),
+            response_to_enrollment: pct(totalEnrollments, totalResponses),
+            lead_to_enrollment: pct(totalEnrollments, totalLeads),
+          },
+          per_day_avg: {
+            leads: daysTracked > 0 ? +(totalLeads / daysTracked).toFixed(1) : 0,
+            responses: daysTracked > 0 ? +(totalResponses / daysTracked).toFixed(1) : 0,
+            enrollments: daysTracked > 0 ? +(totalEnrollments / daysTracked).toFixed(1) : 0,
+          },
+        });
+      }
+
       default:
         return JSON.stringify({ error: `Unknown tool: ${name}` });
     }
@@ -1287,6 +1578,15 @@ COACHING PERSONALITY
 - After showing data, add 1-2 brief actionable suggestions when relevant
 - Be encouraging but honest about areas needing improvement
 
+COMPARISON & ANALYTICS:
+- When user says "compare X and Y" or "who performed better", use compare_members tool with the member names
+- When user asks for "team funnel breakdown" or "who has most Day-2 prospects", use get_team_funnel_breakdown tool
+- When user asks for "show X's daily history" or "X's last 7 days", use get_member_daily_history tool
+- When user asks for "ratios", "conversion metrics", or "lead-to-response ratio", use get_performance_ratios tool
+- For "top performers" or "team ranking", use get_rankings tool with order="top"
+- When user asks about a specific member's details (e.g. "show Rohit's stats"), use get_member_kpis — it now includes full response and stage tag breakdowns
+- For combined queries like "Level 2 members who added leads today", use filter_team_by_level with appropriate dates
+
 TEAM LEVEL SYNONYMS:
 - Users may say "supervisors", "managers", "associates" etc.
 - Match these to the closest level label/code available
@@ -1297,6 +1597,8 @@ DATE INTELLIGENCE:
 - "yesterday" = previous day
 - "last 7 days" = 7 days back from today
 - "last 30 days" = 30 days back from today
+- "this week" = Monday to today
+- "last week" = previous Monday to Sunday
 - Understand natural language dates like "12 March" → YYYY-MM-DD
 
 DATA SOURCE RULES:
@@ -1388,7 +1690,7 @@ serve(async (req) => {
     const systemPrompt = buildSystemPrompt(role, team.length, displayName, levels);
     let conversationMessages: any[] = [
       { role: "system", content: systemPrompt },
-      ...messages.slice(-6), // Keep last 6 messages for context
+      ...messages.slice(-10), // Keep last 10 messages for multi-turn analytics
     ];
 
     let finalResponse = "";
