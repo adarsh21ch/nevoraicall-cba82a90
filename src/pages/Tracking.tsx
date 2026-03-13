@@ -43,6 +43,7 @@ export default function Tracking() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showUpdateDrawer, setShowUpdateDrawer] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
   
 
   const monthYear = format(currentMonth, 'yyyy-MM');
