@@ -17,6 +17,7 @@ import { UsageLimitsManager } from '@/components/admin/UsageLimitsManager';
 import { FeatureFlagsManager } from '@/components/admin/FeatureFlagsManager';
 import { EnhancedUsersTab } from '@/components/admin/EnhancedUsersTab';
 import { AuditLogViewer } from '@/components/admin/AuditLogViewer';
+import { AdminNotificationsPanel } from '@/components/admin/AdminNotificationsPanel';
 
 export default function Admin() {
   const navigate = useNavigate();
