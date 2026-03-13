@@ -32,6 +32,7 @@ import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 import { useSharedLeads } from '@/hooks/useSharedLeads';
 import { AIAssistantChat } from '@/components/ai/AIAssistantChat';
+import { AIInsightsSettings } from '@/components/ai/AIInsightsSettings';
 import { useFeatureAccess } from '@/hooks/useFeatureAccess';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
