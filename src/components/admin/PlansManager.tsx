@@ -290,6 +290,18 @@ function PlanCard({
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
+            {/* Reorder arrows */}
+            <div className="flex flex-col gap-0.5 mr-1">
+              <Button variant="ghost" size="icon" className="h-5 w-5" onClick={onMoveUp} disabled={!onMoveUp}>
+                <ArrowUp className="h-3 w-3" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-5 w-5" onClick={onMoveDown} disabled={!onMoveDown}>
+                <ArrowDown className="h-3 w-3" />
+              </Button>
+            </div>
+            {position && (
+              <Badge variant="outline" className="text-[10px] tabular-nums">#{position}</Badge>
+            )}
             <Crown className="h-4 w-4 text-primary" />
             <span className="font-semibold">{plan.plan_name}</span>
             {(plan as any).display_name && (
