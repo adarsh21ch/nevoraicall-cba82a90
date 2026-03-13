@@ -1690,7 +1690,7 @@ serve(async (req) => {
     const systemPrompt = buildSystemPrompt(role, team.length, displayName, levels);
     let conversationMessages: any[] = [
       { role: "system", content: systemPrompt },
-      ...messages.slice(-6), // Keep last 6 messages for context
+      ...messages.slice(-10), // Keep last 10 messages for multi-turn analytics
     ];
 
     let finalResponse = "";
