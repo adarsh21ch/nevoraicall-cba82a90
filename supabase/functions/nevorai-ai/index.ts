@@ -459,6 +459,62 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "get_team_tracking_status",
+      description: "Get which team members have or haven't updated their tracking today (leaders only). Use for 'who hasn't updated today' queries.",
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_stale_prospects",
+      description: "Find prospects stuck in a funnel stage for too long without activity",
+      parameters: {
+        type: "object",
+        properties: {
+          days_stale: { type: "number", description: "Number of days without activity to consider stale (default 7)" },
+          limit: { type: "number", description: "Max results (default 15)" },
+        },
+        required: [],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_activity_trend",
+      description: "Compare recent 7-day activity vs prior 7 days to detect drops or improvements",
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_daily_snapshot_summary",
+      description: "Generate a comprehensive daily business snapshot including leads, responses, enrollments, team status, and streak",
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_funnel_analysis",
+      description: "Analyze funnel configuration and stage distribution with drop-off detection and suggestions",
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_coaching_tips",
+      description: "Analyze recent activity trends and provide actionable coaching suggestions based on data",
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+    },
+  },
 ];
 
 // Helper: compute enrollments from response_tags using enrollmentSlotKey
