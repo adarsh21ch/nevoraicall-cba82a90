@@ -587,6 +587,7 @@ export default function Profile() {
       <EditProfileDialog open={editOpen} onOpenChange={setEditOpen} profile={profile} onSave={updateProfile} updating={updating} />
 
       <AIAssistantChat open={showAIChat} onOpenChange={setShowAIChat} />
+      <AIInsightsSettings open={showAIInsights} onOpenChange={setShowAIInsights} />
 
       
 
