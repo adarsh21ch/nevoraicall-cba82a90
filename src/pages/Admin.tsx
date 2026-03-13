@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { Loader2, Shield, Users, Crown, ArrowLeft, BarChart3, MessageSquare, Tag, Sliders, Sparkles, History } from 'lucide-react';
+import { Loader2, Shield, Users, Crown, ArrowLeft, BarChart3, MessageSquare, Tag, Sliders, Sparkles, History, Bell } from 'lucide-react';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
 import { AdminAnalyticsDashboard } from '@/components/admin/AdminAnalyticsDashboard';
 import { AdminSupportPanel } from '@/components/admin/AdminSupportPanel';
