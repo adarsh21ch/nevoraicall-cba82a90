@@ -17,6 +17,7 @@ import { MonthlyTotalsTable } from '@/components/trackup-v2/MonthlyTotalsTable';
 import { ManualUpdateDrawer } from '@/components/trackup-v2/ManualUpdateDrawer';
 import { FloatingUpdateButton } from '@/components/trackup-v2/FloatingUpdateButton';
 import { TrackingSettingsDialog } from '@/components/trackup-v2/TrackingSettingsDialog';
+import { TrackingGuideSheet } from '@/components/tracking/TrackingGuideSheet';
 import { usePersonalTagMetrics } from '@/hooks/usePersonalTagMetrics';
 import {
   Tooltip,
