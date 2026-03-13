@@ -3,7 +3,6 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sliders, ChevronRight, Users } from 'lucide-react';
 import { LeaderTrackingFormatSettings } from './LeaderTrackingFormatSettings';
 import { Profile, ProfileUpdate } from '@/hooks/useProfile';
@@ -36,18 +35,16 @@ export function LeaderTrackingFormatDrawer({
     </button>
   );
 
-  const Content = (
-    <ScrollArea className="h-[calc(100vh-120px)] md:h-[calc(100vh-80px)]">
-      <div className="px-4 pb-8">
-        <LeaderTrackingFormatSettings
-          profile={profile}
-          updating={updating}
-          onUpdateProfile={onUpdateProfile}
-          onUpdateUplineByEmail={onUpdateUplineByEmail}
-          onClearLeaderHierarchy={onClearLeaderHierarchy}
-        />
-      </div>
-    </ScrollArea>
+  const ContentInner = (
+    <div className="px-4 pb-12">
+      <LeaderTrackingFormatSettings
+        profile={profile}
+        updating={updating}
+        onUpdateProfile={onUpdateProfile}
+        onUpdateUplineByEmail={onUpdateUplineByEmail}
+        onClearLeaderHierarchy={onClearLeaderHierarchy}
+      />
+    </div>
   );
 
   // Mobile: Bottom drawer
@@ -57,14 +54,16 @@ export function LeaderTrackingFormatDrawer({
         <DrawerTrigger asChild>
           {TriggerButton}
         </DrawerTrigger>
-        <DrawerContent className="max-h-[90vh]">
-          <DrawerHeader className="border-b border-border/50 pb-4">
+        <DrawerContent className="max-h-[92dvh] flex flex-col">
+          <DrawerHeader className="border-b border-border/50 pb-4 flex-shrink-0">
             <DrawerTitle className="flex items-center gap-2">
               <Users className="h-5 w-5 text-primary" />
               Upline Tracking Format
             </DrawerTitle>
           </DrawerHeader>
-          {Content}
+          <div className="flex-1 overflow-y-auto overscroll-contain min-h-0">
+            {ContentInner}
+          </div>
         </DrawerContent>
       </Drawer>
     );
@@ -76,14 +75,16 @@ export function LeaderTrackingFormatDrawer({
       <SheetTrigger asChild>
         {TriggerButton}
       </SheetTrigger>
-      <SheetContent side="right" className="w-full sm:max-w-lg p-0">
-        <SheetHeader className="px-6 py-4 border-b border-border/50">
+      <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col">
+        <SheetHeader className="px-6 py-4 border-b border-border/50 flex-shrink-0">
           <SheetTitle className="flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />
             Upline Tracking Format
           </SheetTitle>
         </SheetHeader>
-        {Content}
+        <div className="flex-1 overflow-y-auto min-h-0">
+          {ContentInner}
+        </div>
       </SheetContent>
     </Sheet>
   );

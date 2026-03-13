@@ -64,12 +64,12 @@ export function LevelManagement() {
           Manage Levels ({levels.length})
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[450px] max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[450px] flex flex-col max-h-[85dvh]">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Team Levels</DialogTitle>
         </DialogHeader>
         
-        <div className="mt-4 space-y-4">
+        <div className="flex-1 overflow-y-auto overscroll-contain min-h-0 space-y-4 py-2">
           <p className="text-xs text-muted-foreground">
             Define levels for your team members. Each new member who connects with you will be assigned the default level (marked with a star).
           </p>
@@ -81,15 +81,17 @@ export function LevelManagement() {
               value={newLabel}
               onChange={(e) => setNewLabel(e.target.value)}
               className="flex-1"
+              onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
             />
             <Input
               placeholder="Code (L1)"
               value={newCode}
               onChange={(e) => setNewCode(e.target.value)}
               className="w-20"
+              onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
             />
             <Button size="sm" onClick={handleAdd} disabled={!newLabel.trim() || adding}>
-              <Plus className="h-4 w-4" />
+              {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             </Button>
           </div>
 
@@ -119,17 +121,20 @@ export function LevelManagement() {
                         onChange={(e) => setEditLabel(e.target.value)}
                         className="flex-1 h-8"
                         placeholder="Level name"
+                        autoFocus
+                        onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit()}
                       />
                       <Input
                         value={editCode}
                         onChange={(e) => setEditCode(e.target.value)}
                         className="w-16 h-8"
                         placeholder="Code"
+                        onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit()}
                       />
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="h-8 w-8 text-green-600"
+                        className="h-8 w-8 shrink-0 text-green-600"
                         onClick={handleSaveEdit}
                       >
                         <Check className="h-4 w-4" />
@@ -137,7 +142,7 @@ export function LevelManagement() {
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="h-8 w-8"
+                        className="h-8 w-8 shrink-0"
                         onClick={handleCancelEdit}
                       >
                         ×
@@ -145,9 +150,9 @@ export function LevelManagement() {
                     </div>
                   ) : (
                     <>
-                      <GripVertical className="h-4 w-4 text-muted-foreground/50" />
+                      <GripVertical className="h-4 w-4 text-muted-foreground/50 shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-medium text-sm">{level.label}</span>
                           {level.code && (
                             <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
@@ -159,8 +164,7 @@ export function LevelManagement() {
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        {/* Compulsory Actions Manager Button */}
+                      <div className="flex items-center gap-1 shrink-0">
                         <TodoTemplateManager 
                           levelPosition={level.position} 
                           levelLabel={level.label}
@@ -213,7 +217,7 @@ export function LevelManagement() {
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-shrink-0">
           <Button variant="outline" onClick={() => setOpen(false)}>
             Done
           </Button>
