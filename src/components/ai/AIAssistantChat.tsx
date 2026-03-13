@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Send, Sparkles, Loader2, User, Copy, Check, Mic, MicOff, Trash2 } from 'lucide-react';
+import { Send, Sparkles, Loader2, User, Copy, Check, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
@@ -120,10 +120,8 @@ export function AIAssistantChat({ open, onOpenChange }: AIAssistantChatProps) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
-  const [isListening, setIsListening] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const recognitionRef = useRef<any>(null);
   const [showBriefing, setShowBriefing] = useState(false);
 
   // Persist messages to localStorage
@@ -259,41 +257,6 @@ export function AIAssistantChat({ open, onOpenChange }: AIAssistantChatProps) {
       sendMessage(input);
     }
   };
-
-  // Voice input
-  const toggleVoice = useCallback(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      toast.error('Voice input not supported in this browser');
-      return;
-    }
-
-    if (isListening && recognitionRef.current) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'en-IN';
-    recognition.interimResults = true;
-    recognition.continuous = false;
-    recognitionRef.current = recognition;
-
-    recognition.onresult = (event: any) => {
-      const transcript = Array.from(event.results)
-        .map((r: any) => r[0].transcript)
-        .join('');
-      setInput(transcript);
-    };
-    recognition.onend = () => setIsListening(false);
-    recognition.onerror = () => {
-      setIsListening(false);
-      toast.error('Voice input failed. Try again.');
-    };
-    recognition.start();
-    setIsListening(true);
-  }, [isListening]);
 
   // Follow-ups for last assistant message
   const followUps = useMemo(() => {
@@ -455,15 +418,6 @@ export function AIAssistantChat({ open, onOpenChange }: AIAssistantChatProps) {
             className="min-h-[40px] max-h-[100px] resize-none text-sm rounded-xl"
             rows={1}
           />
-          <Button
-            size="icon"
-            variant="ghost"
-            className={`h-10 w-10 rounded-xl flex-shrink-0 ${isListening ? 'text-destructive bg-destructive/10' : ''}`}
-            onClick={toggleVoice}
-            title={isListening ? 'Stop listening' : 'Voice input'}
-          >
-            {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-          </Button>
           <Button
             size="icon"
             className="h-10 w-10 rounded-xl flex-shrink-0"
