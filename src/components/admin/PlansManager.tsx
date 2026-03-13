@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Loader2, Plus, Pencil, Crown, Link as LinkIcon, Clock, IndianRupee, Star, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Pencil, Crown, Link as LinkIcon, Clock, IndianRupee, Star, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { getTierDisplayName } from '@/config/tierLabels';
 
@@ -126,39 +126,66 @@ export function PlansManager() {
         </Button>
       </div>
 
-      {plansByTier.map(({ tier, label, active, inactive }) => (
-        <div key={tier} className="space-y-3">
-          <h3 className="text-sm font-medium text-muted-foreground">{label}</h3>
-          {active.length > 0 && (
-            <div className="grid gap-3">
-              {active.map((plan) => (
-                <PlanCard 
-                  key={plan.id} 
-                  plan={plan}
-                  onEdit={() => openEditSheet(plan)}
-                  onToggleActive={() => handleToggleActive(plan)}
-                  onToggleDefault={() => handleToggleDefault(plan)}
-                  onDelete={() => handleDelete(plan)}
-                />
-              ))}
-            </div>
-          )}
-          {inactive.length > 0 && (
-            <div className="grid gap-3 opacity-60">
-              {inactive.map((plan) => (
-                <PlanCard 
-                  key={plan.id} 
-                  plan={plan}
-                  onEdit={() => openEditSheet(plan)}
-                  onToggleActive={() => handleToggleActive(plan)}
-                  onToggleDefault={() => handleToggleDefault(plan)}
-                  onDelete={() => handleDelete(plan)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      ))}
+      {plansByTier.map(({ tier, label, active, inactive }) => {
+        const sortedActive = [...active].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+        const sortedInactive = [...inactive].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+
+        const handleMove = async (plan: SubscriptionPlan, direction: 'up' | 'down') => {
+          const list = plan.is_active ? sortedActive : sortedInactive;
+          const idx = list.findIndex(p => p.id === plan.id);
+          const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+          if (swapIdx < 0 || swapIdx >= list.length) return;
+          const other = list[swapIdx];
+          try {
+            await updatePlan(plan.id, { sort_order: other.sort_order ?? swapIdx });
+            await updatePlan(other.id, { sort_order: plan.sort_order ?? idx });
+            await logAdminAction('plan_reordered', 'plan', plan.id, { sort_order: plan.sort_order }, { sort_order: other.sort_order }, `Reordered "${plan.plan_name}" ${direction}`);
+            toast.success('Plan order updated');
+          } catch {
+            toast.error('Failed to reorder');
+          }
+        };
+
+        return (
+          <div key={tier} className="space-y-3">
+            <h3 className="text-sm font-medium text-muted-foreground">{label}</h3>
+            {sortedActive.length > 0 && (
+              <div className="grid gap-3">
+                {sortedActive.map((plan, idx) => (
+                  <PlanCard 
+                    key={plan.id} 
+                    plan={plan}
+                    onEdit={() => openEditSheet(plan)}
+                    onToggleActive={() => handleToggleActive(plan)}
+                    onToggleDefault={() => handleToggleDefault(plan)}
+                    onDelete={() => handleDelete(plan)}
+                    onMoveUp={idx > 0 ? () => handleMove(plan, 'up') : undefined}
+                    onMoveDown={idx < sortedActive.length - 1 ? () => handleMove(plan, 'down') : undefined}
+                    position={idx + 1}
+                  />
+                ))}
+              </div>
+            )}
+            {sortedInactive.length > 0 && (
+              <div className="grid gap-3 opacity-60">
+                {sortedInactive.map((plan, idx) => (
+                  <PlanCard 
+                    key={plan.id} 
+                    plan={plan}
+                    onEdit={() => openEditSheet(plan)}
+                    onToggleActive={() => handleToggleActive(plan)}
+                    onToggleDefault={() => handleToggleDefault(plan)}
+                    onDelete={() => handleDelete(plan)}
+                    onMoveUp={idx > 0 ? () => handleMove(plan, 'up') : undefined}
+                    onMoveDown={idx < sortedInactive.length - 1 ? () => handleMove(plan, 'down') : undefined}
+                    position={idx + 1}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
 
       {/* Edit/Create Sheet */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
@@ -244,19 +271,37 @@ function PlanCard({
   onEdit, 
   onToggleActive, 
   onToggleDefault,
-  onDelete 
+  onDelete,
+  onMoveUp,
+  onMoveDown,
+  position,
 }: { 
   plan: SubscriptionPlan;
   onEdit: () => void;
   onToggleActive: () => void;
   onToggleDefault: () => void;
   onDelete: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  position?: number;
 }) {
   return (
     <Card className="p-4">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
+            {/* Reorder arrows */}
+            <div className="flex flex-col gap-0.5 mr-1">
+              <Button variant="ghost" size="icon" className="h-5 w-5" onClick={onMoveUp} disabled={!onMoveUp}>
+                <ArrowUp className="h-3 w-3" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-5 w-5" onClick={onMoveDown} disabled={!onMoveDown}>
+                <ArrowDown className="h-3 w-3" />
+              </Button>
+            </div>
+            {position && (
+              <Badge variant="outline" className="text-[10px] tabular-nums">#{position}</Badge>
+            )}
             <Crown className="h-4 w-4 text-primary" />
             <span className="font-semibold">{plan.plan_name}</span>
             {(plan as any).display_name && (
