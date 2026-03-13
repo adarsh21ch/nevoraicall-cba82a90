@@ -738,13 +738,37 @@ async function executeTool(
         const totalResponses = rows.reduce((s: number, r: any) => s + (r.total_responses || 0), 0);
         const totalEnrollments = computeEnrollments(rows, labels);
         
+        // Accumulate tag breakdowns
+        const rawResponseTags: Record<string, number> = {};
+        const rawStageTags: Record<string, number> = {};
+        for (const r of rows) {
+          if (r.response_tags && typeof r.response_tags === "object") {
+            for (const [k, v] of Object.entries(r.response_tags)) {
+              rawResponseTags[k] = (rawResponseTags[k] || 0) + (typeof v === "number" ? v : 0);
+            }
+          }
+          if (r.stage_tags && typeof r.stage_tags === "object") {
+            for (const [k, v] of Object.entries(r.stage_tags)) {
+              rawStageTags[k] = (rawStageTags[k] || 0) + (typeof v === "number" ? v : 0);
+            }
+          }
+        }
+        const responseSlots = coerceToSlots(rawResponseTags, labels.responseLabels.length, labels.responseLabels, "response_tag_", labels.responseLabels);
+        const responseTags = slotsToLabels(responseSlots, labels.responseLabels, "response_tag_");
+        const stageSlots = coerceToSlots(rawStageTags, labels.stageLabels.length, labels.stageLabels, "stage_tag_", labels.stageLabels);
+        const stageTags = slotsToLabels(stageSlots, labels.stageLabels, "stage_tag_");
+        
         return JSON.stringify({
           member_name: member.display_name,
+          level: member.level_label || "Unassigned",
           period: `${args.start_date} to ${args.end_date}`,
           days_tracked: rows.length,
           total_leads: totalLeads,
           total_responses: totalResponses,
           total_enrollments: totalEnrollments,
+          response_breakdown: responseTags,
+          stage_breakdown: stageTags,
+          conversion_rate: totalLeads > 0 ? `${((totalEnrollments / totalLeads) * 100).toFixed(1)}%` : "N/A",
         });
       }
 
