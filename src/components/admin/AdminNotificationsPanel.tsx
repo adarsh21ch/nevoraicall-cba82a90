@@ -50,7 +50,7 @@ export function AdminNotificationsPanel() {
         body: { title: title.trim(), body: body.trim() },
       });
       if (error) throw error;
-      toast.success(`Notification sent to ${data?.sent || 0} subscribers`);
+      toast.success(`Notification sent: ${data?.sent || 0} delivered${data?.failed ? `, ${data.failed} failed` : ''}`);
       setTitle('');
       setBody('');
       fetchHistory();

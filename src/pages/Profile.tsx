@@ -487,7 +487,7 @@ export default function Profile() {
           <HelpSupportDrawer />
 
           {/* Notifications Toggle */}
-          <NotificationToggle />
+          <NotificationToggle canSendTest={isAdmin} />
 
           {/* Settings Section - Collapsible */}
           <Collapsible className="rounded-xl bg-card border border-border/50 overflow-hidden">
