@@ -11,7 +11,6 @@ export default function TrackingFormat() {
   const { profile, updateProfile, updating, updateUplineByEmail, clearLeaderHierarchy } = useProfile();
 
   if (!user) {
-    navigate('/auth');
     return null;
   }
 
