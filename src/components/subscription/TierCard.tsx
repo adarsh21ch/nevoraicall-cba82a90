@@ -112,8 +112,7 @@ export function TierCard({ tierName, plans, isPremium = false, selectedPlanKey, 
         <div className={`grid gap-1.5 ${sortedPlans.length <= 3 ? `grid-cols-${sortedPlans.length}` : 'grid-cols-3'}`}>
           {sortedPlans.map((plan) => {
             const isSelected = selectedPlanKey === plan.plan_key;
-            const months = Math.round(plan.durationDays / 30);
-            const monthlyPrice = getMonthlyPrice(plan);
+            const dailyPrice = getDailyPrice(plan);
 
             return (
               <button
