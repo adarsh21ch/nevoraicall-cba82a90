@@ -174,6 +174,10 @@ export function EnhancedUsersTab({ headerPlanFilter }: EnhancedUsersTabProps) {
     else { setSortField(field); setSortDir('desc'); }
   };
 
+  useEffect(() => {
+    setPage(0);
+  }, [searchQuery, planFilter]);
+
   const sortedUsers = useMemo(() => {
     return [...users].sort((a, b) => {
       let cmp = 0;
@@ -186,15 +190,15 @@ export function EnhancedUsersTab({ headerPlanFilter }: EnhancedUsersTabProps) {
   }, [users, sortField, sortDir]);
 
   const fetchUsers = useCallback(async () => {
-    if (users.length === 0) setLoading(true);
+    if (users.length === 0 && page === 0) setLoading(true);
     else setSearching(true);
 
     try {
       const { data, error } = await supabase.rpc('admin_search_users_enhanced' as any, {
         search_query: searchQuery,
         plan_filter: planFilter === 'all' ? null : planFilter,
-        page_size: 100,
-        page_offset: 0,
+        page_size: pageSize,
+        page_offset: page * pageSize,
       });
 
       if (error) throw error;
@@ -218,7 +222,7 @@ export function EnhancedUsersTab({ headerPlanFilter }: EnhancedUsersTabProps) {
       }));
 
       setUsers(mappedUsers);
-      setTotalCount(data?.[0]?.total_count || mappedUsers.length);
+      setTotalCount(data?.[0]?.total_count || 0);
     } catch (err) {
       console.error('Failed to fetch users:', err);
       toast.error('Failed to load users');
@@ -226,7 +230,7 @@ export function EnhancedUsersTab({ headerPlanFilter }: EnhancedUsersTabProps) {
       setLoading(false);
       setSearching(false);
     }
-  }, [searchQuery, planFilter]);
+  }, [searchQuery, planFilter, page, pageSize, users.length]);
 
   useEffect(() => {
     fetchUsers();
