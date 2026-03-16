@@ -136,7 +136,7 @@ export function TierCard({ tierName, plans, isPremium = false, selectedPlanKey, 
                   {getDurationLabel(plan)}
                 </span>
                 <span className={`text-sm font-bold leading-tight mt-1 ${isPremium ? 'text-amber-600 dark:text-amber-400' : 'text-primary'}`}>
-                  Only ₹{dailyPrice}/day
+                  ₹{dailyPrice}/day
                 </span>
                 <span className="text-[9px] text-muted-foreground mt-0.5 leading-tight">
                   ₹{plan.price} {getBillingLabel(plan)}
