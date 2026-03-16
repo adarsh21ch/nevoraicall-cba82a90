@@ -35,10 +35,10 @@ export function TierCard({ tierName, plans, isPremium = false, selectedPlanKey, 
   const sortedPlans = [...plans].sort((a, b) => a.sortOrder - b.sortOrder);
 
   const getDailyPrice = (plan: PlanConfig) => {
-    return Math.ceil(plan.price / plan.durationDays);
+    return Math.round(plan.price / plan.durationDays);
   };
 
-  const lowestDailyPrice = Math.min(...sortedPlans.map(p => Math.ceil(p.price / p.durationDays)));
+  const lowestDailyPrice = Math.min(...sortedPlans.map(p => Math.round(p.price / p.durationDays)));
 
   const getDurationLabel = (plan: PlanConfig) => {
     const months = Math.round(plan.durationDays / 30);
