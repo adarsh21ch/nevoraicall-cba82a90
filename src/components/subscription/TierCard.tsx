@@ -87,7 +87,10 @@ export function TierCard({ tierName, plans, isPremium = false, selectedPlanKey, 
               <Crown className="h-3 w-3 text-primary" />
             </div>
           )}
-          <h4 className="font-bold text-sm text-foreground">{tierName}</h4>
+          <h4 className="font-bold text-sm text-foreground flex-1">{tierName}</h4>
+          <span className={`text-sm font-bold ${isPremium ? 'text-amber-600 dark:text-amber-400' : 'text-primary'}`}>
+            ₹{lowestDailyPrice}/day
+          </span>
         </div>
 
         <div className={`${compact ? 'space-y-0.5' : 'space-y-1'}`}>
