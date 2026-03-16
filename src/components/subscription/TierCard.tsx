@@ -34,10 +34,8 @@ export function TierCard({ tierName, plans, isPremium = false, selectedPlanKey, 
   const isThisTierSelected = plans.some(p => p.plan_key === selectedPlanKey);
   const sortedPlans = [...plans].sort((a, b) => a.sortOrder - b.sortOrder);
 
-  const getMonthlyPrice = (plan: PlanConfig) => {
-    const months = Math.round(plan.durationDays / 30);
-    if (months > 1) return Math.floor(plan.price / months);
-    return plan.price;
+  const getDailyPrice = (plan: PlanConfig) => {
+    return Math.ceil(plan.price / plan.durationDays);
   };
 
   const getDurationLabel = (plan: PlanConfig) => {
@@ -46,6 +44,14 @@ export function TierCard({ tierName, plans, isPremium = false, selectedPlanKey, 
     if (months === 6) return '6 Months';
     if (months === 12) return '1 Year';
     return `${months} Mo`;
+  };
+
+  const getBillingLabel = (plan: PlanConfig) => {
+    const months = Math.round(plan.durationDays / 30);
+    if (months === 1) return 'billed monthly';
+    if (months === 6) return 'billed every 6 months';
+    if (months === 12) return 'billed yearly';
+    return `billed every ${months} months`;
   };
 
   return (
@@ -106,15 +112,14 @@ export function TierCard({ tierName, plans, isPremium = false, selectedPlanKey, 
         <div className={`grid gap-1.5 ${sortedPlans.length <= 3 ? `grid-cols-${sortedPlans.length}` : 'grid-cols-3'}`}>
           {sortedPlans.map((plan) => {
             const isSelected = selectedPlanKey === plan.plan_key;
-            const months = Math.round(plan.durationDays / 30);
-            const monthlyPrice = getMonthlyPrice(plan);
+            const dailyPrice = getDailyPrice(plan);
 
             return (
               <button
                 key={plan.plan_key}
                 type="button"
                 onClick={() => onSelectPlan(plan.plan_key)}
-                className={`flex flex-col items-center px-1.5 py-2 rounded-xl border transition-all text-center ${
+                className={`flex flex-col items-center px-1.5 py-2.5 rounded-xl border transition-all text-center ${
                   isSelected
                     ? isPremium
                       ? 'border-amber-500 bg-amber-500/10 shadow-sm'
@@ -125,13 +130,12 @@ export function TierCard({ tierName, plans, isPremium = false, selectedPlanKey, 
                 <span className="text-[10px] font-medium text-muted-foreground leading-tight">
                   {getDurationLabel(plan)}
                 </span>
-                <span className="text-base font-bold text-foreground leading-tight mt-0.5">
-                  ₹{monthlyPrice}
+                <span className={`text-sm font-bold leading-tight mt-1 ${isPremium ? 'text-amber-600 dark:text-amber-400' : 'text-primary'}`}>
+                  Only ₹{dailyPrice}/day
                 </span>
-                <span className="text-[9px] text-muted-foreground">/mo</span>
-                {months > 1 && (
-                  <span className="text-[9px] text-muted-foreground mt-0.5">₹{plan.price} total</span>
-                )}
+                <span className="text-[9px] text-muted-foreground mt-0.5 leading-tight">
+                  ₹{plan.price} {getBillingLabel(plan)}
+                </span>
                 {plan.badgeText && (
                   <span className={`text-[8px] font-semibold mt-1 px-1.5 py-0.5 rounded-full ${
                     isPremium ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-primary/10 text-primary'
