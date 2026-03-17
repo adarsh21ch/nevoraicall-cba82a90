@@ -44,12 +44,23 @@ export interface ProUser {
   neverai_id: string | null;
   plan: string;
   tier: string;
+  status: string;
   subscribed_at: string | null;
   expires_at: string | null;
   is_admin_override: boolean;
   is_expired: boolean;
   days_remaining: number | null;
   payment_amount: number | null;
+}
+
+export interface SubscriberHealth {
+  totalPaid: number;
+  activePaid: number;
+  dormantPaid: number;
+  adminGranted: number;
+  organicPaid: number;
+  repeatBuyers: number;
+  renewalsThisMonth: number;
 }
 
 export interface FreeUser {
