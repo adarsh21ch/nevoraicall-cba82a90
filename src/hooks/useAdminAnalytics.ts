@@ -301,6 +301,7 @@ export function useAdminAnalytics() {
         conversion,
         newSignupsThisMonth: thisMonthSignupsRes.count || 0,
       };
+    },
     enabled: !!user,
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
