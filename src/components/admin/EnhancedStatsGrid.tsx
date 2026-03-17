@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { ProUserDrawer, FreeUserDrawer } from './UserListDrawer';
-import { useProUsers, useFreeUsers, useExpiringSubscriptions, RevenueStats, ActiveUsageStats, ConversionAnalytics } from '@/hooks/useAdminAnalytics';
+import { useProUsers, useFreeUsers, useExpiringSubscriptions, useRetentionAnalytics, RevenueStats, ActiveUsageStats, ConversionAnalytics } from '@/hooks/useAdminAnalytics';
 import { format, differenceInDays } from 'date-fns';
 
 interface EnhancedStatsGridProps {
