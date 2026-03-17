@@ -136,6 +136,8 @@ export interface AdminAnalytics {
   revenue: RevenueStats;
   // Conversion analytics
   conversion: ConversionAnalytics;
+  // New signups this month
+  newSignupsThisMonth: number;
 }
 
 export function useAdminAnalytics() {
