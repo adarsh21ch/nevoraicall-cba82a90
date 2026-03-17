@@ -264,7 +264,7 @@ export function EnhancedStatsGrid({
   const { data: proUsers, isLoading: proLoading } = useProUsers();
   const { data: freeUsersData, isLoading: freeLoading } = useFreeUsers();
   const { data: expiringUsers } = useExpiringSubscriptions(7);
-  
+  const { data: retention } = useRetentionAnalytics();
   const freeUsers = freeUsersData?.users || [];
   const formatRevenue = (amount: number) => `₹${(amount / 100).toLocaleString('en-IN')}`;
 
