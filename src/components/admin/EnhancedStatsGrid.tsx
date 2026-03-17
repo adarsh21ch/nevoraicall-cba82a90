@@ -23,6 +23,7 @@ interface EnhancedStatsGridProps {
   revenue: RevenueStats;
   activeUsage: ActiveUsageStats;
   conversion?: ConversionAnalytics;
+  newSignupsThisMonth: number;
 }
 
 function MiniStat({ 
