@@ -100,6 +100,7 @@ export function RevenueAnalytics({ revenue, recentPayments }: RevenueAnalyticsPr
       color: PLAN_COLORS[i % PLAN_COLORS.length],
     };
   });
+  const planBreakdownWithData = planBreakdown.filter(p => p.value > 0);
 
   const monthChange = revenue.lastMonthRevenue > 0 
     ? ((revenue.thisMonthRevenue - revenue.lastMonthRevenue) / revenue.lastMonthRevenue * 100).toFixed(1)
