@@ -72,6 +72,10 @@ export function TrialExpiredModal({ forceOpen, onClose }: TrialExpiredModalProps
   const handleUpgrade = () => {
     initiatePayment({
       planType: selectedPlanKey,
+      beforeOpen: async () => {
+        handleClose();
+        await new Promise((resolve) => window.setTimeout(resolve, 320));
+      },
       onSuccess: () => {
         toast({
           title: "Plan Activated 🎉",

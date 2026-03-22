@@ -26,6 +26,7 @@ export function UpgradeModal({
   open, onClose, currentLeadCount, hasTeamFeatures = false,
   appContext = 'nevorai', title, description,
 }: UpgradeModalProps) {
+  const MOBILE_CHECKOUT_DELAY_MS = 320;
   const { initiatePayment, initiateSubscription, loading: paymentLoading } = useRazorpay();
   const { toast } = useToast();
   const { refetch } = useSubscription();
@@ -55,11 +56,19 @@ export function UpgradeModal({
   const selectedPlan = allPlans.find(p => p.plan_key === selectedPlanKey) || allPlans[0];
   const isPremiumSelected = selectedPlan?.tier === 'premium';
 
+  const prepareForMobileCheckout = async () => {
+    if (!isMobile) return;
+
+    onClose();
+    await new Promise((resolve) => window.setTimeout(resolve, MOBILE_CHECKOUT_DELAY_MS));
+  };
+
   const handleUpgrade = (planKey: string) => {
     const plan = plans.find(p => p.plan_key === planKey);
     if (plan?.billing_type === 'recurring') {
       initiateSubscription({
         planType: planKey,
+        beforeOpen: prepareForMobileCheckout,
         onSuccess: () => { toast({ title: "Subscription Started 🎉", description: "Your recurring subscription has been initiated." }); refetch(); onClose(); },
         onError: (error) => console.error('Subscription error:', error),
       });
@@ -68,6 +77,7 @@ export function UpgradeModal({
     const tierLabel = plan ? getTierDisplayName(plan.tier) : 'Plan';
     initiatePayment({
       planType: planKey,
+      beforeOpen: prepareForMobileCheckout,
       onSuccess: () => { toast({ title: `${tierLabel} Plan Activated 🎉`, description: "All features are now unlocked." }); refetch(); onClose(); },
       onError: (error) => console.error('Payment error:', error),
     });

@@ -18,6 +18,7 @@ interface FunnelsUpgradeDrawerProps {
 }
 
 export function FunnelsUpgradeDrawer({ triggerText, trigger, variant = 'default' }: FunnelsUpgradeDrawerProps) {
+  const MOBILE_CHECKOUT_DELAY_MS = 320;
   const { isPaid, loading: subLoading } = useSubscription();
   const { initiatePayment, initiateSubscription, loading: paymentLoading } = useRazorpay();
   const { toast } = useToast();
@@ -39,12 +40,20 @@ export function FunnelsUpgradeDrawer({ triggerText, trigger, variant = 'default'
   const selectedPlan = allPlans.find(p => p.plan_key === selectedPlanKey) || allPlans[0];
   const isProSelected = selectedPlan?.tier === 'premium';
 
+  const prepareForMobileCheckout = async () => {
+    if (!isMobile) return;
+
+    setOpen(false);
+    await new Promise((resolve) => window.setTimeout(resolve, MOBILE_CHECKOUT_DELAY_MS));
+  };
+
   const handleUpgrade = (planKey: string) => {
     const plan = plans.find(p => p.plan_key === planKey);
     const tierLabel = plan ? getTierDisplayName(plan.tier) : 'Plan';
     if (plan?.billing_type === 'recurring') {
       initiateSubscription({
         planType: planKey,
+        beforeOpen: prepareForMobileCheckout,
         onSuccess: () => { toast({ title: `${tierLabel} Plan Activated 🎉`, description: "All features including Funnels are now unlocked!" }); refetch(); setOpen(false); },
         onError: (error) => console.error('Subscription error:', error),
       });
@@ -52,6 +61,7 @@ export function FunnelsUpgradeDrawer({ triggerText, trigger, variant = 'default'
     }
     initiatePayment({
       planType: planKey,
+      beforeOpen: prepareForMobileCheckout,
       onSuccess: () => { toast({ title: `${tierLabel} Plan Activated 🎉`, description: "All features including Funnels are now unlocked!" }); refetch(); setOpen(false); },
       onError: (error) => console.error('Payment error:', error),
     });
