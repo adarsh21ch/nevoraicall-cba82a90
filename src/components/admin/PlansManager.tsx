@@ -348,7 +348,7 @@ function PlanCard({
               </Badge>
             )}
             {plan.is_default && (
-              <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30">
+              <Badge variant="outline" className="border-border bg-secondary text-secondary-foreground text-xs">
                 Default
               </Badge>
             )}
