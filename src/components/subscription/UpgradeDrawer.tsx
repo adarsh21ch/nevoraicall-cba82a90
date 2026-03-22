@@ -19,6 +19,7 @@ interface UpgradeDrawerProps {
 }
 
 export function UpgradeDrawer({ variant = 'default', triggerText }: UpgradeDrawerProps) {
+  const MOBILE_CHECKOUT_DELAY_MS = 320;
   const { isPaid: permPaid, isLoading: permLoading } = usePermissions();
   const { initiatePayment, initiateSubscription, loading: paymentLoading } = useRazorpay();
   const { toast } = useToast();
@@ -69,6 +70,13 @@ export function UpgradeDrawer({ variant = 'default', triggerText }: UpgradeDrawe
   const hasOffersForPlan = offersForSelectedPlan.length > 0;
   const selectedPlan = allTierPlans.find(p => p.plan_key === selectedPlanKey) || allTierPlans[0];
 
+  const prepareForMobileCheckout = async () => {
+    if (!isMobile) return;
+
+    setOpen(false);
+    await new Promise((resolve) => window.setTimeout(resolve, MOBILE_CHECKOUT_DELAY_MS));
+  };
+
   const validateCoupon = () => {
     if (!couponCode.trim()) {
       setCouponError('Please enter a coupon code');
@@ -118,6 +126,7 @@ export function UpgradeDrawer({ variant = 'default', triggerText }: UpgradeDrawe
     if (plan?.billing_type === 'recurring') {
       initiateSubscription({
         planType: planKey,
+        beforeOpen: prepareForMobileCheckout,
         onSuccess: () => {
           toast({ title: "Subscription Started 🎉", description: "Your recurring subscription has been initiated." });
           refetch();
@@ -139,6 +148,7 @@ export function UpgradeDrawer({ variant = 'default', triggerText }: UpgradeDrawe
     initiatePayment({
       planType: planKey,
       offer: offerDetails,
+      beforeOpen: prepareForMobileCheckout,
       onSuccess: () => {
         toast({ title: `${tierLabel} Plan Activated 🎉`, description: "All features are now unlocked." });
         refetch();

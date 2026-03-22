@@ -86,6 +86,10 @@ export function HardLimitModal({ forceOpen, onClose }: HardLimitModalProps) {
     const tierLabel = plan ? getTierDisplayName(plan.tier) : 'Plan';
     initiatePayment({
       planType: selectedPlanKey,
+      beforeOpen: async () => {
+        handleClose();
+        await new Promise((resolve) => window.setTimeout(resolve, 320));
+      },
       onSuccess: () => {
         toast({
           title: `${tierLabel} Plan Activated 🎉`,

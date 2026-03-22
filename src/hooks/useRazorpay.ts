@@ -21,9 +21,12 @@ export interface OfferDetails {
   discountedAmount: number; // Final price in rupees
 }
 
+type RazorpayBeforeOpen = () => void | Promise<void>;
+
 interface RazorpayOptions {
   planType?: PlanType;
   offer?: OfferDetails;
+  beforeOpen?: RazorpayBeforeOpen;
   onSuccess?: () => void;
   onError?: (error: string) => void;
 }
@@ -47,6 +50,18 @@ export function useRazorpay() {
       script.onerror = () => resolve(false);
       document.body.appendChild(script);
     });
+  }, []);
+
+  const prepareCheckoutSurface = useCallback(async (beforeOpen?: RazorpayBeforeOpen) => {
+    if (beforeOpen) {
+      await beforeOpen();
+    }
+
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
+    await new Promise((resolve) => window.setTimeout(resolve, 60));
   }, []);
 
   const initiatePayment = useCallback(async (options?: RazorpayOptions) => {
@@ -113,6 +128,8 @@ export function useRazorpay() {
 
       const { order_id, amount, currency, key_id } = data;
 
+      await prepareCheckoutSurface(options?.beforeOpen);
+
       // Open Razorpay checkout with handler callback
       const razorpayOptions = {
         key: key_id,
@@ -168,7 +185,7 @@ export function useRazorpay() {
       options?.onError?.(err.message);
       setLoading(false);
     }
-  }, [user, loadRazorpayScript, toast, config.plans]);
+  }, [user, loadRazorpayScript, toast, config.plans, prepareCheckoutSurface]);
 
   const initiateSubscription = useCallback(async (options?: RazorpayOptions) => {
     if (!user) {
@@ -210,6 +227,8 @@ export function useRazorpay() {
       }
 
       const { subscription_id, key_id } = data;
+
+      await prepareCheckoutSurface(options?.beforeOpen);
 
       // Open Razorpay checkout with subscription_id
       const razorpayOptions = {
@@ -264,7 +283,7 @@ export function useRazorpay() {
       options?.onError?.(err.message);
       setLoading(false);
     }
-  }, [user, loadRazorpayScript, toast]);
+  }, [user, loadRazorpayScript, toast, prepareCheckoutSurface]);
 
   return { initiatePayment, initiateSubscription, loading };
 }
