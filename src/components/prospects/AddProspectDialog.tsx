@@ -43,11 +43,7 @@ export function AddProspectDialog({ onAdd, existingProspects = [] }: AddProspect
     e.preventDefault();
     setErrors({});
 
-    // Check lead limit before submitting
-    if (!canAddLead) {
-      setShowLimitModal(true);
-      return;
-    }
+    // Show warning if near/at limit, but never block manual add
 
     const trimmedName = name.trim();
     const trimmedPhone = phone.trim();
