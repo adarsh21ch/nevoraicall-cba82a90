@@ -83,12 +83,8 @@ export function AddProspectDialog({ onAdd, existingProspects = [] }: AddProspect
     setIsSubmitting(false);
   };
 
-  // Handle dialog open - check limit first
+  // Handle dialog open - always allow opening (never block manual add)
   const handleOpenChange = (isOpen: boolean) => {
-    if (isOpen && isAtLimit) {
-      setShowLimitModal(true);
-      return;
-    }
     setOpen(isOpen);
   };
 
