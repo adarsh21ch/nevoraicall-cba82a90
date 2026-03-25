@@ -999,6 +999,9 @@ export function ProspectTable({
   const isCalling = filterMode === 'calling';
   const COLUMN_ORDER = isCalling ? CALLING_COLUMN_ORDER : FILTER_COLUMN_ORDER;
 
+  // Collapsible search state - must be before early returns
+  const [searchCollapsed, setSearchCollapsed] = useState(true);
+
   // Only show skeleton on initial load when we have no data
   // If we have cached data, show it immediately even while refreshing
   if (loading && prospects.length === 0) {
@@ -1014,8 +1017,6 @@ export function ProspectTable({
         </div>
       </div>;
   }
-  // Collapsible search state
-  const [searchCollapsed, setSearchCollapsed] = useState(true);
 
   return <div className="flex flex-col h-full gap-2">
       {/* Progressive Upgrade Nudge Banner - non-spammy, stage-based */}
