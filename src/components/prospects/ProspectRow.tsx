@@ -219,9 +219,9 @@ export const ProspectRow = memo(function ProspectRow({
                 )}
               >
                 <div className="flex flex-col overflow-hidden min-w-0 flex-1">
-                  <span className={cn(
+                   <span className={cn(
                     "font-semibold text-foreground group-hover:text-primary truncate transition-colors",
-                    isMobileTable && "text-xs",
+                    isMobileTable ? "text-sm" : "text-sm",
                     isExpanded && "text-primary"
                   )} title={prospect.name}>
                     {prospect.name}
