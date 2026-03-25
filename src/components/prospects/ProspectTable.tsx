@@ -3,7 +3,7 @@ import { Prospect, FunnelStage, ProspectQuality, Sheet, ExtendedActionTaken, FUN
 import { SortableProspectRow } from './SortableProspectRow';
 import { MobileProspectCard } from './MobileProspectCard';
 import { ProspectFilters } from './ProspectFilters';
-import { KPIStrip } from './KPIStrip';
+import { CollapsibleSearchBar } from './CollapsibleSearchBar';
 import { AddProspectDialog } from './AddProspectDialog';
 import { ImportExcelDialog } from './ImportExcelDialog';
 import { SheetTabs } from './SheetTabs';
