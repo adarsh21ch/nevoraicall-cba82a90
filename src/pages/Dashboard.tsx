@@ -358,6 +358,7 @@ export default function Dashboard() {
               filterMode="funnel" 
               subFilter="all" 
               externalSearch={searchQuery}
+              onExternalSearchChange={setSearchQuery}
               hasNextPage={hasNextPage}
               onLoadMore={fetchNextPage}
               isLoadingMore={isFetchingNextPage}

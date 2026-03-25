@@ -1024,15 +1024,36 @@ export function ProspectTable({
       {/* Hard Limit Modal - shows once per session at 1000 prospects */}
       <HardLimitModal />
 
-      {/* Single Action Bar - Filters left, Actions right */}
-      <div className="flex-shrink-0 flex items-center justify-between gap-2">
-        {/* Left side - Filters */}
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <ProspectFilters filters={filters} onFiltersChange={setFilters} showStagesFilter={!isCalling} showResponsesFilter={isCalling} filterTagButton={!isCalling ? <ChangeFilterTagButton /> : undefined} hideSearch={!!externalSearch} />
+      {/* Single Action Bar - Search + Filters + Actions on one line */}
+      <div className="flex-shrink-0 flex items-center gap-1.5">
+        {/* Collapsible Search */}
+        <CollapsibleSearchBar
+          value={externalSearch || filters.search}
+          onChange={(val) => {
+            if (onExternalSearchChange) {
+              onExternalSearchChange(val);
+            } else {
+              setFilters({ ...filters, search: val });
+            }
+          }}
+          isCollapsed={searchCollapsed}
+          onExpand={() => setSearchCollapsed(false)}
+          placeholder="Search name, phone..."
+        />
+
+        {/* Filters - hidden when search is expanded on mobile */}
+        <div className={cn(
+          "flex items-center gap-1.5 flex-1 min-w-0",
+          !searchCollapsed && externalSearch !== undefined && "hidden sm:flex"
+        )}>
+          <ProspectFilters filters={filters} onFiltersChange={setFilters} showStagesFilter={!isCalling} showResponsesFilter={isCalling} filterTagButton={!isCalling ? <ChangeFilterTagButton /> : undefined} hideSearch={true} />
         </div>
 
         {/* Right side - Actions */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className={cn(
+          "flex items-center gap-1.5 shrink-0",
+          !searchCollapsed && externalSearch !== undefined && "hidden sm:flex"
+        )}>
           {/* Selection mode controls */}
           {selectionMode.active ? <div className="flex items-center gap-2 bg-muted/50 rounded-lg px-2 py-1">
               <span className="text-xs font-medium">{selectedIds.size} Selected</span>
