@@ -31,7 +31,7 @@ export function RecentActivity({ prospects }: RecentActivityProps) {
 
   return (
     <div className="bg-card rounded-lg border border-border p-4 card-shadow">
-      <h3 className="text-sm font-medium mb-4">Recent Activity</h3>
+      <h3 className="text-sm font-medium mb-4">Activity History</h3>
       <div className="space-y-3">
         {recentProspects.map((prospect) => (
           <div
