@@ -209,8 +209,8 @@ export const ProspectRow = memo(function ProspectRow({
             onPointerDown={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-1.5">
-              {/* Call icon only */}
-              <CallIconButton onClick={openCall} className={isMobileTable ? "p-0.5 h-6 w-6" : "h-7 w-7"} />
+              {/* Call icon - tinted with tag color */}
+              <CallIconButton onClick={openCall} className={isMobileTable ? "h-7 w-7" : "h-8 w-8"} color={accentColor} />
               <button
                 onClick={onToggleExpand}
                 className={cn(
