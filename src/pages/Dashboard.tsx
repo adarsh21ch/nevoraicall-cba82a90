@@ -11,7 +11,7 @@ import { ProspectTable } from '@/components/prospects/ProspectTable';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { TopTabBar } from '@/components/ui/TopTabBar';
 import { FilterTagSetupDialog, useFilterTagSetup } from '@/components/prospects/FilterTagSetupDialog';
-import { SearchBar } from '@/components/ui/SearchBar';
+import { KPIStrip } from '@/components/prospects/KPIStrip';
 import { TrialBanner } from '@/components/subscription/TrialBanner';
 import { UpgradeButton } from '@/components/subscription/UpgradeButton';
 import { RecentActivityView } from '@/components/todo/RecentActivityView';
@@ -283,18 +283,18 @@ export default function Dashboard() {
           </div>
         ) : (
           <>
-            {/* Search Bar - scrolls with content, tight below header */}
+            {/* KPI Strip - above search/action bar */}
             <div className="px-4 pt-2">
-              <SearchBar 
-                value={searchQuery} 
-                onChange={setSearchQuery} 
-                placeholder="Search name, phone..." 
-                className="h-8" 
+              <KPIStrip 
+                prospects={prospects} 
+                isCalling={mainTab === 'leads'} 
+                kpiTotal={kpiTotal} 
+                kpiTagCounts={kpiTagCounts} 
               />
             </div>
             
             {/* Trial Banner */}
-            <div className="px-4 pt-2">
+            <div className="px-4 pt-1">
               <TrialBanner tabId="dashboard" />
               <UpgradeButton tabId="dashboard" variant="prominent" />
             </div>
@@ -325,6 +325,7 @@ export default function Dashboard() {
               filterMode="calling" 
               subFilter="all" 
               externalSearch={searchQuery}
+              onExternalSearchChange={setSearchQuery}
               hasNextPage={hasNextPage}
               onLoadMore={fetchNextPage}
               isLoadingMore={isFetchingNextPage}
@@ -357,6 +358,7 @@ export default function Dashboard() {
               filterMode="funnel" 
               subFilter="all" 
               externalSearch={searchQuery}
+              onExternalSearchChange={setSearchQuery}
               hasNextPage={hasNextPage}
               onLoadMore={fetchNextPage}
               isLoadingMore={isFetchingNextPage}

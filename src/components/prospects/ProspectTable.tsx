@@ -3,7 +3,7 @@ import { Prospect, FunnelStage, ProspectQuality, Sheet, ExtendedActionTaken, FUN
 import { SortableProspectRow } from './SortableProspectRow';
 import { MobileProspectCard } from './MobileProspectCard';
 import { ProspectFilters } from './ProspectFilters';
-import { KPIStrip } from './KPIStrip';
+import { CollapsibleSearchBar } from './CollapsibleSearchBar';
 import { AddProspectDialog } from './AddProspectDialog';
 import { ImportExcelDialog } from './ImportExcelDialog';
 import { SheetTabs } from './SheetTabs';
@@ -69,6 +69,7 @@ interface ProspectTableProps {
   subFilter: 'all' | 'hot' | 'scheduled' | 'day1' | 'progress';
   // External search from parent (optional - if provided, will be used instead of internal search)
   externalSearch?: string;
+  onExternalSearchChange?: (value: string) => void;
   // Pagination props
   hasNextPage?: boolean;
   onLoadMore?: () => void;
@@ -330,7 +331,8 @@ export function ProspectTable({
   kpiTotal,
   kpiTagCounts,
   fetchAllForExport,
-  stickyHeaderTop = 0
+  stickyHeaderTop = 0,
+  onExternalSearchChange
 }: ProspectTableProps) {
   const {
     logBulkActivity
@@ -997,6 +999,9 @@ export function ProspectTable({
   const isCalling = filterMode === 'calling';
   const COLUMN_ORDER = isCalling ? CALLING_COLUMN_ORDER : FILTER_COLUMN_ORDER;
 
+  // Collapsible search state - must be before early returns
+  const [searchCollapsed, setSearchCollapsed] = useState(true);
+
   // Only show skeleton on initial load when we have no data
   // If we have cached data, show it immediately even while refreshing
   if (loading && prospects.length === 0) {
@@ -1012,27 +1017,44 @@ export function ProspectTable({
         </div>
       </div>;
   }
-  return <div className="flex flex-col h-full gap-2">
-      {/* KPI Strip - horizontal scrolling on mobile */}
-      <div className="flex-shrink-0">
-        <KPIStrip prospects={filteredProspects} isCalling={isCalling} className="my-0 py-[2px]" kpiTotal={kpiTotal} kpiTagCounts={kpiTagCounts} />
-      </div>
 
+  return <div className="flex flex-col h-full gap-2">
       {/* Progressive Upgrade Nudge Banner - non-spammy, stage-based */}
       <ProgressiveNudgeBanner context="calling" />
 
       {/* Hard Limit Modal - shows once per session at 1000 prospects */}
       <HardLimitModal />
 
-      {/* Single Action Bar - Filters left, Actions right */}
-      <div className="flex-shrink-0 flex items-center justify-between gap-2">
-        {/* Left side - Filters */}
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <ProspectFilters filters={filters} onFiltersChange={setFilters} showStagesFilter={!isCalling} showResponsesFilter={isCalling} filterTagButton={!isCalling ? <ChangeFilterTagButton /> : undefined} hideSearch={!!externalSearch} />
+      {/* Single Action Bar - Search + Filters + Actions on one line */}
+      <div className="flex-shrink-0 flex items-center gap-1.5">
+        {/* Collapsible Search */}
+        <CollapsibleSearchBar
+          value={externalSearch || filters.search}
+          onChange={(val) => {
+            if (onExternalSearchChange) {
+              onExternalSearchChange(val);
+            } else {
+              setFilters({ ...filters, search: val });
+            }
+          }}
+          isCollapsed={searchCollapsed}
+          onExpand={() => setSearchCollapsed(false)}
+          placeholder="Search name, phone..."
+        />
+
+        {/* Filters - hidden when search is expanded on mobile */}
+        <div className={cn(
+          "flex items-center gap-1.5 flex-1 min-w-0",
+          !searchCollapsed && externalSearch !== undefined && "hidden sm:flex"
+        )}>
+          <ProspectFilters filters={filters} onFiltersChange={setFilters} showStagesFilter={!isCalling} showResponsesFilter={isCalling} filterTagButton={!isCalling ? <ChangeFilterTagButton /> : undefined} hideSearch={true} />
         </div>
 
         {/* Right side - Actions */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className={cn(
+          "flex items-center gap-1.5 shrink-0",
+          !searchCollapsed && externalSearch !== undefined && "hidden sm:flex"
+        )}>
           {/* Selection mode controls */}
           {selectionMode.active ? <div className="flex items-center gap-2 bg-muted/50 rounded-lg px-2 py-1">
               <span className="text-xs font-medium">{selectedIds.size} Selected</span>
