@@ -281,14 +281,9 @@ export default function Dashboard() {
           </div>
         ) : (
           <>
-            {/* Search Bar - scrolls with content, tight below header */}
+            {/* KPI Strip - between toggle and action row */}
             <div className="px-4 pt-2">
-              <SearchBar 
-                value={searchQuery} 
-                onChange={setSearchQuery} 
-                placeholder="Search name, phone..." 
-                className="h-8" 
-              />
+              <KPIStrip prospects={prospects} isCalling={mainTab === 'leads'} kpiTotal={kpiTotal} kpiTagCounts={kpiTagCounts} />
             </div>
             
             {/* Trial Banner */}
