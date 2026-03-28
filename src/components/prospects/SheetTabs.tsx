@@ -162,7 +162,7 @@ export function SheetTabs({
               {sheets.map((sheet) =>
             <div
               key={sheet.id}
-              className="flex items-center border-r border-border/50"
+              className="flex items-center border-r border-border/30"
               ref={(el) => {
                 if (el) sheetRefs.current.set(sheet.id, el);else
                 sheetRefs.current.delete(sheet.id);
@@ -170,11 +170,11 @@ export function SheetTabs({
 
                   <button
                 onClick={() => onSelectSheet(sheet.id)}
-                className={cn("px-3 text-xs font-medium transition-colors rounded-sm py-[12px]",
+                className={cn("px-3 min-h-[36px] text-xs font-medium transition-colors rounded-lg mx-0.5",
 
                 selectedSheetId === sheet.id ?
-                "bg-accent text-accent-foreground" :
-                "text-muted-foreground hover:text-foreground hover:bg-muted/80"
+                "bg-primary text-primary-foreground shadow-sm" :
+                "text-muted-foreground hover:text-foreground hover:bg-muted/60"
                 )}>
 
                     {sheet.name}
