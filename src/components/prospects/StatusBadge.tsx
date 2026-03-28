@@ -11,9 +11,10 @@ export function StatusBadge({ status }: StatusBadgeProps) {
   
   return (
     <span 
-      className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-[11px] font-medium border whitespace-nowrap"
+      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium border whitespace-nowrap"
       style={style}
     >
+      <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: style.color || 'currentColor' }} />
       {status}
     </span>
   );
@@ -49,9 +50,10 @@ export function StageBadge({ stage }: StageBadgeProps) {
   
   return (
     <span 
-      className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-[11px] font-medium border whitespace-nowrap"
+      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium border whitespace-nowrap"
       style={style}
     >
+      <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: style.color || 'currentColor' }} />
       {stage}
     </span>
   );
@@ -91,9 +93,10 @@ export function ActionBadge({ action }: ActionBadgeProps) {
 
   return (
     <span 
-      className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-[11px] font-medium border whitespace-nowrap"
+      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium border whitespace-nowrap"
       style={style}
     >
+      <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: style.color || 'currentColor' }} />
       {action}
     </span>
   );
@@ -111,9 +114,10 @@ export function GenericTagBadge({ value, type, customColor }: GenericTagBadgePro
   
   return (
     <span 
-      className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-[11px] font-medium border whitespace-nowrap"
+      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium border whitespace-nowrap"
       style={style}
     >
+      <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: style.color || 'currentColor' }} />
       {value}
     </span>
   );
