@@ -114,7 +114,7 @@ export function GenericTagBadge({ value, type, customColor }: GenericTagBadgePro
   
   return (
     <span 
-      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap"
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border whitespace-nowrap leading-none"
       style={style}
     >
       <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: style.color || 'currentColor' }} />
