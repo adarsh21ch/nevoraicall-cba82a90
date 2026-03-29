@@ -266,16 +266,14 @@ export default function TodoUp() {
 
         {/* Segmented Control - Hidden when Recent Activity is active */}
         {!isRecentActivity && <div className="px-4 pb-2">
-            <Tabs value={viewMode} onValueChange={handleTabChange} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 h-9">
-                <TabsTrigger value="daily-tasks" className="text-xs font-medium">
-                  Daily Tasks
-                </TabsTrigger>
-                <TabsTrigger value="todo-list" className="text-xs font-medium">
-                  To-Do List
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <TopTabBar 
+              options={[
+                { value: 'daily-tasks', label: 'Daily Tasks', icon: CalendarCheck },
+                { value: 'todo-list', label: 'To-Do List', icon: ListChecks },
+              ]} 
+              value={viewMode} 
+              onChange={handleTabChange} 
+            />
           </div>}
       </header>
 
