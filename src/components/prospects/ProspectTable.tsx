@@ -70,7 +70,6 @@ interface ProspectTableProps {
   subFilter: 'all' | 'hot' | 'scheduled' | 'day1' | 'progress';
   // External search from parent (optional - if provided, will be used instead of internal search)
   externalSearch?: string;
-  onSearchChange?: (val: string) => void;
   // Pagination props
   hasNextPage?: boolean;
   onLoadMore?: () => void;
@@ -324,7 +323,6 @@ export function ProspectTable({
   filterMode,
   subFilter,
   externalSearch = '',
-  onSearchChange,
   hasNextPage,
   onLoadMore,
   isLoadingMore,
@@ -1034,11 +1032,8 @@ export function ProspectTable({
               <CollapsibleSearchBar 
                 value={externalSearch || filters.search || ''} 
                 onChange={(val) => {
-                  if (onSearchChange) {
-                    onSearchChange(val);
-                  } else {
-                    setFilters({ ...filters, search: val });
-                  }
+                  if (externalSearch !== undefined) return;
+                  setFilters({ ...filters, search: val });
                 }}
                 isCollapsed={true}
                 onExpand={() => setIsSearchExpanded(true)}
@@ -1051,11 +1046,8 @@ export function ProspectTable({
               <CollapsibleSearchBar 
                 value={externalSearch || filters.search || ''} 
                 onChange={(val) => {
-                  if (onSearchChange) {
-                    onSearchChange(val);
-                  } else {
-                    setFilters({ ...filters, search: val });
-                  }
+                  if (externalSearch !== undefined) return;
+                  setFilters({ ...filters, search: val });
                 }}
                 isCollapsed={false}
                 onExpand={() => {}}

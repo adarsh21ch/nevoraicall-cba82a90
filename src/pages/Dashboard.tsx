@@ -318,7 +318,6 @@ export default function Dashboard() {
               filterMode="calling" 
               subFilter="all" 
               externalSearch={searchQuery}
-              onSearchChange={setSearchQuery}
               hasNextPage={hasNextPage}
               onLoadMore={fetchNextPage}
               isLoadingMore={isFetchingNextPage}
@@ -351,7 +350,6 @@ export default function Dashboard() {
               filterMode="funnel" 
               subFilter="all" 
               externalSearch={searchQuery}
-              onSearchChange={setSearchQuery}
               hasNextPage={hasNextPage}
               onLoadMore={fetchNextPage}
               isLoadingMore={isFetchingNextPage}

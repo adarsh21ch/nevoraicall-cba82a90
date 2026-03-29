@@ -171,9 +171,9 @@ export const ProspectRow = memo(function ProspectRow({
 
   const renderCell = (columnId: string) => {
     const cellClass = cn(
-      "px-2 py-3.5 whitespace-nowrap",
+      "px-2 py-3 whitespace-nowrap",
       isLastContacted ? "bg-primary/10" : (isEven ? "bg-card" : "bg-muted"),
-      isMobileTable && "text-xs px-1.5 py-3"
+      isMobileTable && "text-xs px-1.5 py-2.5"
     );
     
     switch (columnId) {
@@ -264,20 +264,18 @@ export const ProspectRow = memo(function ProspectRow({
             style={{ width: '35%', minWidth: '100px' }}
             onPointerDown={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-end">
-              <InlineSelect 
-                value={getActionDisplayValue()} 
-                options={actionOptions} 
-                onChange={handleActionChange} 
-                placeholder="Select..." 
-                renderValue={(value) => <ActionBadge action={value} />} 
-                showTagSeparation={showLeadsTagSeparation}
-                trackingOptions={leadsTrackingTagNames}
-                nonTrackingOptions={leadsNonTrackingTags}
-                finalTargetTag={leadsFinalTargetTag}
-                stageTag={leadsStageTag}
-              />
-            </div>
+            <InlineSelect 
+              value={getActionDisplayValue()} 
+              options={actionOptions} 
+              onChange={handleActionChange} 
+              placeholder="Select..." 
+              renderValue={(value) => <ActionBadge action={value} />} 
+              showTagSeparation={showLeadsTagSeparation}
+              trackingOptions={leadsTrackingTagNames}
+              nonTrackingOptions={leadsNonTrackingTags}
+              finalTargetTag={leadsFinalTargetTag}
+              stageTag={leadsStageTag}
+            />
           </td>
         );
       
@@ -289,19 +287,17 @@ export const ProspectRow = memo(function ProspectRow({
             style={{ width: '35%', minWidth: '100px' }}
             onPointerDown={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-end">
-              <InlineSelect 
-                value={getStageDisplayValue()} 
-                options={stageOptions} 
-                onChange={handleStageChange} 
-                renderValue={(value) => <StageBadge stage={value} />} 
-                placeholder="Select..." 
-                showTagSeparation={showStageTagSeparation}
-                trackingOptions={stageTagNames}
-                nonTrackingOptions={stageNonTrackingTags}
-                finalTargetTag={stageFinalTargetTag}
-              />
-            </div>
+            <InlineSelect 
+              value={getStageDisplayValue()} 
+              options={stageOptions} 
+              onChange={handleStageChange} 
+              renderValue={(value) => <StageBadge stage={value} />} 
+              placeholder="Select..." 
+              showTagSeparation={showStageTagSeparation}
+              trackingOptions={stageTagNames}
+              nonTrackingOptions={stageNonTrackingTags}
+              finalTargetTag={stageFinalTargetTag}
+            />
           </td>
         );
       
