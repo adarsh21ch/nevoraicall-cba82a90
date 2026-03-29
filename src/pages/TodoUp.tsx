@@ -246,7 +246,7 @@ export default function TodoUp() {
           <div className="flex items-center gap-3">
             <img src={nevoraLogo} alt="NevorAI Logo" className="h-9 w-9 rounded-xl object-cover shadow-md" />
             <div>
-              <h1 className="text-xl font-bold tracking-tight">
+              <h1 className="text-lg font-bold tracking-tight">
                 {isRecentActivity ? 'Activity History' : 'To-Do List'}
               </h1>
               <p className="text-xs text-muted-foreground font-medium">
