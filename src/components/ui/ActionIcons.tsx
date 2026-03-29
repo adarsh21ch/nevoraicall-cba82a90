@@ -112,13 +112,13 @@ export function CallIconButton({ onClick, className, color }: { onClick: (e: Rea
       className={cn(
         "rounded-lg flex items-center justify-center shrink-0 transition-all active:scale-95",
         "h-8 w-8",
-        !hasColor && "bg-muted border border-border/50",
+        !hasColor && "bg-muted/60 border border-border/30",
         className
       )}
-      style={hasColor ? { backgroundColor: color } : undefined}
+      style={hasColor ? { backgroundColor: `${color}15`, borderColor: `${color}30`, border: `1px solid ${color}30` } : undefined}
       aria-label="Call"
     >
-      <PhoneOutlineIcon className={cn("h-4 w-4", hasColor ? "text-white" : "text-muted-foreground")} />
+      <PhoneOutlineIcon className={cn("h-4 w-4", hasColor ? "" : "text-muted-foreground")} style={hasColor ? { color } : undefined} />
     </button>
   );
 }
