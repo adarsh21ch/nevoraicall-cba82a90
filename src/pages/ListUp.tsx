@@ -11,7 +11,7 @@ import { TrialBanner } from '@/components/subscription/TrialBanner';
 import { UpgradeButton } from '@/components/subscription/UpgradeButton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Filter, ChevronDown, ChevronUp, Tags, X, Eye, Search, Phone, Layers, Clock } from 'lucide-react';
+import { Loader2, Filter, ChevronDown, ChevronUp, Tags, X, Eye, Search, Phone, Layers, Clock, Calendar1 } from 'lucide-react';
 import { RecentActivityView } from '@/components/todo/RecentActivityView';
 import { CalendarStrip } from '@/components/calendar/CalendarStrip';
 import { useCalendarStrip } from '@/hooks/useCalendarStrip';
@@ -461,7 +461,7 @@ export default function ListUp() {
                     prospectsDateFilter ? "bg-accent text-accent-foreground border-accent" : "bg-card text-muted-foreground border-border/50 hover:text-foreground"
                   )}
                 >
-                  <Clock className="h-4 w-4" />
+                  <Calendar1 className="h-4 w-4" />
                 </button>
               </div>
 
