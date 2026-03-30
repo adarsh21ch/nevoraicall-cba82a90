@@ -30,27 +30,47 @@ interface ColumnMapping {
   profession: string | null;
 }
 
-const FIELD_LABELS: Record<keyof ColumnMapping, string> = {
-  name: 'Name *',
-  phone: 'Phone 1 *',
-  phone2: 'Phone 2',
-  address: 'Address',
-  age_or_dob: 'Age / DOB',
-  gender: 'Gender',
-  instagram: 'Instagram',
-  profession: 'Profession',
-};
+const APP_FIELDS: { key: keyof ColumnMapping; label: string; required?: boolean }[] = [
+  { key: 'name', label: 'Name', required: true },
+  { key: 'phone', label: 'Phone 1', required: true },
+  { key: 'phone2', label: 'Phone 2' },
+  { key: 'address', label: 'Address' },
+  { key: 'age_or_dob', label: 'Age / DOB' },
+  { key: 'gender', label: 'Gender' },
+  { key: 'instagram', label: 'Instagram' },
+  { key: 'profession', label: 'Profession' },
+];
 
-const FIELD_PLACEHOLDERS: Record<keyof ColumnMapping, string> = {
-  name: 'Select column...',
-  phone: 'Select column...',
-  phone2: 'Select column...',
-  address: 'City and State',
-  age_or_dob: 'Select column...',
-  gender: 'Select column...',
-  instagram: 'Select column...',
-  profession: 'Select column...',
-};
+type ReverseMapping = Record<string, keyof ColumnMapping | 'skip' | null>;
+
+function autoDetectMapping(columns: string[]): ReverseMapping {
+  const result: ReverseMapping = {};
+  const used = new Set<string>();
+  const patterns: [keyof ColumnMapping, RegExp][] = [
+    ['name', /name/i],
+    ['phone', /phone\s*1|mobile|phone|contact/i],
+    ['phone2', /phone\s*2|alt.*phone/i],
+    ['address', /address|city|location/i],
+    ['age_or_dob', /age|dob|birth/i],
+    ['gender', /gender|sex/i],
+    ['instagram', /insta|ig/i],
+    ['profession', /profession|occupation|job/i],
+  ];
+  for (const col of columns) {
+    const lower = col.toLowerCase();
+    let matched = false;
+    for (const [field, regex] of patterns) {
+      if (!used.has(field) && regex.test(lower)) {
+        result[col] = field;
+        used.add(field);
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) result[col] = null;
+  }
+  return result;
+}
 
 export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
   const [open, setOpen] = useState(false);
