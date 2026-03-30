@@ -872,7 +872,7 @@ export function useProspectsQuery(options: UseProspectsQueryOptions = {}) {
 
   // Realtime subscription for cross-tab/device sync
   useEffect(() => {
-    if (!user) return;
+    if (!isQueryEnabled || !user) return;
 
     const channel = supabase
       .channel('prospects-realtime')
@@ -895,7 +895,7 @@ export function useProspectsQuery(options: UseProspectsQueryOptions = {}) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, queryClient]);
+  }, [isQueryEnabled, user, queryClient]);
 
   return {
     // Data

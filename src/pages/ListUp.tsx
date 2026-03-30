@@ -241,26 +241,8 @@ export default function ListUp() {
     };
   }, [modeFilteredProspects]);
 
-  // Get all tags (including empty ones from all prospects) for "Show All" option
-  const allTags = useMemo(() => {
-    const responses = new Set<string>();
-    const stages = new Set<string>();
-    const qualities = new Set<string>();
-    prospects.forEach(p => {
-      if (p.action_taken) responses.add(p.action_taken);
-      if (p.funnel_stage) stages.add(p.funnel_stage);
-      if (p.prospect_status) qualities.add(p.prospect_status);
-    });
-    return {
-      responseTags: Array.from(responses).sort(),
-      stageTags: Array.from(stages).sort(),
-      qualityTags: Array.from(qualities).sort()
-    };
-  }, [prospects]);
-
-  // Choose which tags to display based on showAllTags toggle
-  const displayResponseTags = showAllTags ? allTags.responseTags : responseTags;
-  const displayStageTags = showAllTags ? allTags.stageTags : stageTags;
+  const displayResponseTags = responseTags;
+  const displayStageTags = stageTags;
 
   // Check if any filters are active
   const hasActiveFilters = selectedResponses.length > 0 || selectedStages.length > 0 || selectedQualities.length > 0;
