@@ -30,27 +30,47 @@ interface ColumnMapping {
   profession: string | null;
 }
 
-const FIELD_LABELS: Record<keyof ColumnMapping, string> = {
-  name: 'Name *',
-  phone: 'Phone 1 *',
-  phone2: 'Phone 2',
-  address: 'Address',
-  age_or_dob: 'Age / DOB',
-  gender: 'Gender',
-  instagram: 'Instagram',
-  profession: 'Profession',
-};
+const APP_FIELDS: { key: keyof ColumnMapping; label: string; required?: boolean }[] = [
+  { key: 'name', label: 'Name', required: true },
+  { key: 'phone', label: 'Phone 1', required: true },
+  { key: 'phone2', label: 'Phone 2' },
+  { key: 'address', label: 'Address' },
+  { key: 'age_or_dob', label: 'Age / DOB' },
+  { key: 'gender', label: 'Gender' },
+  { key: 'instagram', label: 'Instagram' },
+  { key: 'profession', label: 'Profession' },
+];
 
-const FIELD_PLACEHOLDERS: Record<keyof ColumnMapping, string> = {
-  name: 'Select column...',
-  phone: 'Select column...',
-  phone2: 'Select column...',
-  address: 'City and State',
-  age_or_dob: 'Select column...',
-  gender: 'Select column...',
-  instagram: 'Select column...',
-  profession: 'Select column...',
-};
+type ReverseMapping = Record<string, keyof ColumnMapping | 'skip' | null>;
+
+function autoDetectMapping(columns: string[]): ReverseMapping {
+  const result: ReverseMapping = {};
+  const used = new Set<string>();
+  const patterns: [keyof ColumnMapping, RegExp][] = [
+    ['name', /name/i],
+    ['phone', /phone\s*1|mobile|phone|contact/i],
+    ['phone2', /phone\s*2|alt.*phone/i],
+    ['address', /address|city|location/i],
+    ['age_or_dob', /age|dob|birth/i],
+    ['gender', /gender|sex/i],
+    ['instagram', /insta|ig/i],
+    ['profession', /profession|occupation|job/i],
+  ];
+  for (const col of columns) {
+    const lower = col.toLowerCase();
+    let matched = false;
+    for (const [field, regex] of patterns) {
+      if (!used.has(field) && regex.test(lower)) {
+        result[col] = field;
+        used.add(field);
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) result[col] = null;
+  }
+  return result;
+}
 
 export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
   const [open, setOpen] = useState(false);
@@ -60,16 +80,7 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
   const [columns, setColumns] = useState<string[]>([]);
   const [previewData, setPreviewData] = useState<Record<string, string>[]>([]);
   const [fullData, setFullData] = useState<Record<string, string>[]>([]);
-  const [mapping, setMapping] = useState<ColumnMapping>({
-    name: null,
-    phone: null,
-    phone2: null,
-    address: null,
-    age_or_dob: null,
-    gender: null,
-    instagram: null,
-    profession: null,
-  });
+  const [reverseMapping, setReverseMapping] = useState<ReverseMapping>({});
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState<{ current: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -140,16 +151,7 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
     setColumns([]);
     setPreviewData([]);
     setFullData([]);
-      setMapping({
-        name: null,
-        phone: null,
-        phone2: null,
-        address: null,
-        age_or_dob: null,
-        gender: null,
-        instagram: null,
-        profession: null,
-      });
+    setReverseMapping({});
     setError(null);
     setImportProgress(null);
     setPreviewColumnWidths({});
@@ -222,17 +224,7 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
       setColumns(cols);
       setPreviewData(jsonData.slice(0, 5));
       setFullData(jsonData);
-      // Reset mapping since we now use generic column names
-      setMapping({
-        name: null,
-        phone: null,
-        phone2: null,
-        address: null,
-        age_or_dob: null,
-        gender: null,
-        instagram: null,
-        profession: null,
-      });
+      setReverseMapping(autoDetectMapping(cols));
       setStep('mapping');
     } catch (err) {
       setError('Failed to parse file. Please ensure it\'s a valid Excel or CSV file.');
@@ -248,8 +240,19 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
   const getColumnWidth = (idx: number) => previewColumnWidths[`col_${idx}`] ?? 120;
 
   const handleImport = async () => {
+    // Convert reverseMapping to ColumnMapping
+    const mapping: ColumnMapping = {
+      name: null, phone: null, phone2: null, address: null,
+      age_or_dob: null, gender: null, instagram: null, profession: null,
+    };
+    for (const [col, field] of Object.entries(reverseMapping)) {
+      if (field && field !== 'skip') {
+        mapping[field] = col;
+      }
+    }
+
     if (!mapping.name || !mapping.phone) {
-      setError('Name and Phone columns are required');
+      setError('Name and Phone 1 must be mapped');
       return;
     }
 
@@ -505,35 +508,49 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
               </p>
             </div>
 
-            {/* Fixed Column Mapping Section - Bottom, always visible - Single column layout for both mobile and desktop */}
+            {/* Reversed Column Mapping Section - Source data on left, app field dropdown on right */}
             <div className="flex-shrink-0 bg-muted/30 rounded-lg p-3 border border-border">
-              <p className="text-xs text-muted-foreground mb-2 font-medium">
-                Map Columns
-              </p>
-              <div className="grid grid-cols-1 gap-2">
-                {(Object.keys(mapping) as (keyof ColumnMapping)[]).map((field) => (
-                  <div key={field} className="flex items-center gap-2 h-8">
-                    <Label className="text-xs w-[80px] shrink-0">{FIELD_LABELS[field]}</Label>
-                    <Select
-                      value={mapping[field] || '__none__'}
-                      onValueChange={(value) => setMapping({ ...mapping, [field]: value === '__none__' ? null : value })}
-                    >
-                      <SelectTrigger className="h-8 text-xs flex-1 bg-background">
-                        <SelectValue placeholder={FIELD_PLACEHOLDERS[field]} />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border-border z-50 max-h-[480px]">
-                        <SelectItem value="__none__" className="text-muted-foreground">
-                          {field === 'address' ? 'City and State' : 'None'}
-                        </SelectItem>
-                        {columns.map((col, idx) => (
-                          <SelectItem key={idx} value={col} className="text-xs">
-                            {col}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-muted-foreground font-medium">
+                  Map Your Data
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {Object.values(reverseMapping).filter(v => v === 'name').length > 0 && Object.values(reverseMapping).filter(v => v === 'phone').length > 0 ? '✓ Ready' : 'Name & Phone required'}
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-1.5">
+                {columns.map((col) => {
+                  const sampleValue = previewData[0]?.[col] || '–';
+                  const assignedFields = new Set(Object.values(reverseMapping).filter(v => v && v !== 'skip'));
+                  return (
+                    <div key={col} className="flex items-center gap-2 min-h-[36px]">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate" title={sampleValue}>{sampleValue}</p>
+                      </div>
+                      <Select
+                        value={reverseMapping[col] || '__skip__'}
+                        onValueChange={(value) => setReverseMapping(prev => ({ ...prev, [col]: value === '__skip__' ? null : value as keyof ColumnMapping | 'skip' }))}
+                      >
+                        <SelectTrigger className="h-8 text-xs w-[120px] shrink-0 bg-background">
+                          <SelectValue placeholder="Skip" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border-border z-50">
+                          <SelectItem value="__skip__" className="text-muted-foreground text-xs">Skip</SelectItem>
+                          {APP_FIELDS.map((f) => (
+                            <SelectItem
+                              key={f.key}
+                              value={f.key}
+                              disabled={assignedFields.has(f.key) && reverseMapping[col] !== f.key}
+                              className="text-xs"
+                            >
+                              {f.label}{f.required ? ' *' : ''}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -545,7 +562,7 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
               <Button
                 size="sm"
                 onClick={handleImport}
-                disabled={isImporting || !mapping.name || !mapping.phone}
+                disabled={isImporting || !Object.values(reverseMapping).includes('name') || !Object.values(reverseMapping).includes('phone')}
                 className="min-w-[120px]"
               >
                 {isImporting && importProgress
