@@ -46,18 +46,33 @@ export function RecentActivityView({ selectedDate: externalDate, searchQuery: ex
   const loading = prospectsLoading || todosLoading;
 
   // Get personal activities for the selected date
-  const activities = useMemo(() => {
-    const prospectActivities = prospects
-      .filter(p => isSameDay(parseISO(p.updated_at), selectedDate))
-      .map(p => ({
-        id: p.id,
-        type: 'lead' as const,
-        name: p.name,
-        phone: p.phone,
-        stage: p.funnel_stage,
-        action: p.action_taken,
-        time: new Date(p.updated_at)
-      }));
+  const { activities, importedCount } = useMemo(() => {
+    const dayProspects = prospects.filter(p => isSameDay(parseISO(p.updated_at), selectedDate));
+    
+    // Separate imported (never updated after creation) vs genuinely updated leads
+    const imported: typeof dayProspects = [];
+    const updated: typeof dayProspects = [];
+    
+    for (const p of dayProspects) {
+      const addedTime = new Date(p.date_added).getTime();
+      const updatedTime = new Date(p.updated_at).getTime();
+      // If updated_at is within 5 seconds of date_added, it's just an import/creation
+      if (Math.abs(updatedTime - addedTime) < 5000) {
+        imported.push(p);
+      } else {
+        updated.push(p);
+      }
+    }
+    
+    const prospectActivities = updated.map(p => ({
+      id: p.id,
+      type: 'lead' as const,
+      name: p.name,
+      phone: p.phone,
+      stage: p.funnel_stage,
+      action: p.action_taken,
+      time: new Date(p.updated_at)
+    }));
     
     const todoActivities = todos
       .filter(t => isSameDay(parseISO(t.updated_at), selectedDate))
@@ -83,7 +98,7 @@ export function RecentActivityView({ selectedDate: externalDate, searchQuery: ex
         a => a.name.toLowerCase().includes(query) || (a.phone && a.phone.includes(query))
       );
     }
-    return activitiesList;
+    return { activities: activitiesList, importedCount: imported.length };
   }, [prospects, todos, selectedDate, searchQuery]);
 
   const cleanPhoneNumber = (phone: string) => phone.replace(/[^0-9+]/g, '');
@@ -133,11 +148,20 @@ export function RecentActivityView({ selectedDate: externalDate, searchQuery: ex
           <Clock className="h-4 w-4 text-primary" />
           <div>
             <h3 className="font-medium text-sm">Activities</h3>
-            <p className="text-xs text-muted-foreground">{activities.length} activities</p>
+            <p className="text-xs text-muted-foreground">{activities.length} activities{importedCount > 0 ? ` · ${importedCount} imported` : ''}</p>
           </div>
         </div>
 
-        {activities.length === 0 ? (
+        {/* Import summary banner */}
+        {importedCount > 0 && !searchQuery.trim() && (
+          <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/40 mb-2">
+            <span className="text-xs text-muted-foreground">
+              📥 Imported {importedCount} lead{importedCount > 1 ? 's' : ''}
+            </span>
+          </div>
+        )}
+
+        {activities.length === 0 && importedCount === 0 ? (
           <div className="text-center py-8">
             <Clock className="h-10 w-10 mx-auto text-muted-foreground/30 mb-2" />
             <p className="text-sm text-muted-foreground">
@@ -147,7 +171,7 @@ export function RecentActivityView({ selectedDate: externalDate, searchQuery: ex
               {searchQuery.trim() ? 'Try a different search term' : 'Activities will appear here'}
             </p>
           </div>
-        ) : (
+        ) : activities.length > 0 ? (
           <div className="space-y-0">
             {activities.map((activity, index) => (
               <div key={`${activity.type}-${activity.id}`} className="relative">
@@ -213,7 +237,7 @@ export function RecentActivityView({ selectedDate: externalDate, searchQuery: ex
               </div>
             ))}
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );
