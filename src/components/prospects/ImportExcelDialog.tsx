@@ -288,7 +288,7 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
       setColumns(cols);
       setPreviewData(jsonData.slice(0, 5));
       setFullData(jsonData);
-      setReverseMapping(autoDetectMapping(cols));
+      setReverseMapping(autoDetectMapping(cols, jsonData));
       setStep('mapping');
     } catch (err) {
       setError('Failed to parse file. Please ensure it\'s a valid Excel or CSV file.');
