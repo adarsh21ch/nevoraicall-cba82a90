@@ -125,8 +125,11 @@ export default function ListUp() {
     { value: 'funnel', label: 'Funnel', icon: Layers }
   ];
 
-  // Main tab: Activity vs Prospects
-  const [mainTab, setMainTab] = useState<FollowUpMainTab>('prospects');
+  // Main tab: Activity vs Prospects - persist to sessionStorage, default activity
+  const [mainTab, setMainTab] = useState<FollowUpMainTab>(() => {
+    const saved = sessionStorage.getItem('listup-main-tab');
+    return (saved as FollowUpMainTab) || 'activity';
+  });
   const mainTabOptions: [{ value: string; label: string; icon: typeof Clock }, { value: string; label: string; icon: typeof Tags }] = [
     { value: 'activity', label: 'Activity', icon: Clock },
     { value: 'prospects', label: 'Prospects', icon: Tags }
