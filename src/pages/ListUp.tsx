@@ -361,33 +361,24 @@ export default function ListUp() {
             <div>
               <h1 className="text-xl font-bold tracking-tight">Follow Up</h1>
               <p className="text-xs text-muted-foreground font-medium">
-                {leadMode === 'funnel' ? 'Funnel Leads' : 'Response Leads'} ({modeFilteredProspects.length})
+                {mainTab === 'prospects' 
+                  ? `${leadMode === 'funnel' ? 'Funnel Leads' : 'Response Leads'} (${modeFilteredProspects.length})`
+                  : 'Activity History'}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowRecentActivity(!showRecentActivity)}
-              className={cn(
-                "p-2 rounded-lg transition-colors",
-                showRecentActivity ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              )}
-            >
-              <Clock className="h-4.5 w-4.5" />
-            </button>
-            {hasActiveFilters && !showRecentActivity && <Button variant="ghost" size="sm" onClick={clearAllFilters} className="text-xs gap-1">
+            {hasActiveFilters && mainTab === 'prospects' && <Button variant="ghost" size="sm" onClick={clearAllFilters} className="text-xs gap-1">
                 <X className="h-3 w-3" />
                 Clear
               </Button>}
           </div>
         </div>
         
-        {/* TopTabBar - hidden when Activity History is active */}
-        {!showRecentActivity && (
-          <div className="px-4 pb-2">
-            <TopTabBar options={toggleOptions} value={leadMode} onChange={(v) => handleModeChange(v as LeadMode)} />
-          </div>
-        )}
+        {/* Main Tab Bar: Activity | Prospects */}
+        <div className="px-4 pb-2">
+          <TopTabBar options={mainTabOptions} value={mainTab} onChange={(v) => setMainTab(v as FollowUpMainTab)} />
+        </div>
       </header>
 
       <main ref={containerRef} className="scrollable-content relative pb-20">
@@ -397,12 +388,13 @@ export default function ListUp() {
           <TrialBanner tabId="listup" />
           <UpgradeButton tabId="listup" variant="prominent" />
 
-          {showRecentActivity ? (
+          {mainTab === 'activity' ? (
             /* Activity History View */
             <RecentActivityView />
           ) : (
             <>
-              {/* Search Bar */}
+              {/* Leads/Funnel sub-toggle */}
+              <TopTabBar options={toggleOptions} value={leadMode} onChange={(v) => handleModeChange(v as LeadMode)} />
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
