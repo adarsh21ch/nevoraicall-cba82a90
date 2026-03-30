@@ -164,20 +164,11 @@ export function RecentActivityView({ selectedDate: externalDate, searchQuery: ex
           <Clock className="h-4 w-4 text-primary" />
           <div>
             <h3 className="font-medium text-sm">Activities</h3>
-            <p className="text-xs text-muted-foreground">{activities.length} activities{importedCount > 0 ? ` · ${importedCount} imported` : ''}</p>
+            <p className="text-xs text-muted-foreground">{activities.length} activities</p>
           </div>
         </div>
 
-        {/* Import summary banner */}
-        {importedCount > 0 && !searchQuery.trim() && (
-          <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/40 mb-2">
-            <span className="text-xs text-muted-foreground">
-              📥 Imported {importedCount} lead{importedCount > 1 ? 's' : ''}
-            </span>
-          </div>
-        )}
-
-        {activities.length === 0 && importedCount === 0 ? (
+        {activities.length === 0 ? (
           <div className="text-center py-8">
             <Clock className="h-10 w-10 mx-auto text-muted-foreground/30 mb-2" />
             <p className="text-sm text-muted-foreground">
@@ -187,7 +178,7 @@ export function RecentActivityView({ selectedDate: externalDate, searchQuery: ex
               {searchQuery.trim() ? 'Try a different search term' : 'Activities will appear here'}
             </p>
           </div>
-        ) : activities.length > 0 ? (
+        ) : (
           <div className="space-y-0">
             {activities.map((activity, index) => (
               <div key={`${activity.type}-${activity.id}`} className="relative">
