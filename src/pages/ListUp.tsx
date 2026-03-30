@@ -374,10 +374,12 @@ export default function ListUp() {
           </div>
         </div>
         
-        {/* TopTabBar - same as Calling and Tracking tabs */}
-        <div className="px-4 pb-2">
-          <TopTabBar options={toggleOptions} value={leadMode} onChange={(v) => handleModeChange(v as LeadMode)} />
-        </div>
+        {/* TopTabBar - hidden when Activity History is active */}
+        {!showRecentActivity && (
+          <div className="px-4 pb-2">
+            <TopTabBar options={toggleOptions} value={leadMode} onChange={(v) => handleModeChange(v as LeadMode)} />
+          </div>
+        )}
       </header>
 
       <main ref={containerRef} className="scrollable-content relative pb-20">
