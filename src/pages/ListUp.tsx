@@ -262,8 +262,13 @@ export default function ListUp() {
   // Filter prospects by selected tags (AND between categories, OR within category)
   const filteredProspects = useMemo(() => {
     let result = modeFilteredProspects;
+
+    // Apply date filter if active
+    if (prospectsDateFilter) {
+      result = result.filter(p => isSameDay(parseISO(p.updated_at), prospectsCalendar.selectedDate));
+    }
     
-    // Apply search filter first
+    // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
       result = result.filter(p => 
