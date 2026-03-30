@@ -514,8 +514,8 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
               </div>
               
               {/* Preview table container - scrollable both ways */}
-              <div className="flex-1 border border-border rounded-lg overflow-hidden min-h-[80px]">
-                <div className={cn("h-full overflow-x-auto overflow-y-auto", isResizing && "select-none")}>
+              <div className="border border-border rounded-lg overflow-hidden max-h-[120px]">
+                <div className={cn("overflow-x-auto overflow-y-auto max-h-[120px]", isResizing && "select-none")}>
                   <table className="text-xs border-collapse w-max">
                     <thead className="bg-muted sticky top-0 z-10">
                       <tr>
