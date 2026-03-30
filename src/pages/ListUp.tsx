@@ -105,11 +105,6 @@ export default function ListUp() {
     user,
     loading: authLoading
   } = useAuth();
-  const {
-    prospects,
-    loading: prospectsLoading,
-    refetch
-  } = useProspectsQuery();
 
   // Lead mode toggle - default to leads
   const [leadMode, setLeadMode] = useState<LeadMode>(() => {
@@ -134,10 +129,15 @@ export default function ListUp() {
     { value: 'activity', label: 'Activity', icon: Clock },
     { value: 'prospects', label: 'Prospects', icon: Tags }
   ];
-  
-  // Show all tags toggle (including empty ones)
-  const [showAllTags, setShowAllTags] = useState(false);
-  
+
+  const prospectsEnabled = mainTab === 'prospects';
+  const {
+    prospects,
+    refetch
+  } = useProspectsQuery({
+    enabled: prospectsEnabled
+  });
+
   // Search query
   const [searchQuery, setSearchQuery] = useState('');
 
