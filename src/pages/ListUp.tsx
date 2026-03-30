@@ -138,6 +138,10 @@ export default function ListUp() {
   // Search query
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Calendar for prospects date filtering
+  const prospectsCalendar = useCalendarStrip();
+  const [prospectsDateFilter, setProspectsDateFilter] = useState(false);
+
   // Persist filters in sessionStorage so they survive tab switches
   const [selectedResponses, setSelectedResponses] = useState<string[]>(() => {
     const saved = sessionStorage.getItem('listup-responses');
