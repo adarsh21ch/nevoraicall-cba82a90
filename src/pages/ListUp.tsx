@@ -405,8 +405,62 @@ export default function ListUp() {
             <RecentActivityView />
           ) : (
             <>
-              {/* Leads/Funnel sub-toggle */}
-              <TopTabBar options={toggleOptions} value={leadMode} onChange={(v) => handleModeChange(v as LeadMode)} />
+              {/* Leads/Funnel sub-toggle - smaller, outline style to differentiate */}
+              <div className="flex items-center gap-1 bg-muted/40 rounded-lg p-0.5 border border-border/40">
+                {toggleOptions.map((opt) => {
+                  const Icon = opt.icon;
+                  const isActive = leadMode === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => handleModeChange(opt.value as LeadMode)}
+                      className={cn(
+                        "flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md text-xs font-medium transition-all",
+                        isActive
+                          ? "bg-card text-foreground shadow-sm border border-border/50"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Calendar strip for date filtering */}
+              <div className="bg-card rounded-xl border border-border/50 overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-1.5">
+                  <button
+                    onClick={() => setProspectsDateFilter(!prospectsDateFilter)}
+                    className={cn(
+                      "text-[11px] font-medium transition-colors",
+                      prospectsDateFilter ? "text-primary" : "text-muted-foreground"
+                    )}
+                  >
+                    {prospectsDateFilter ? '✓ Date filter ON' : 'Filter by date'}
+                  </button>
+                  {prospectsDateFilter && (
+                    <button onClick={() => setProspectsDateFilter(false)} className="text-muted-foreground hover:text-foreground">
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+                {prospectsDateFilter && (
+                  <CalendarStrip
+                    selectedDate={prospectsCalendar.selectedDate}
+                    daysInMonth={prospectsCalendar.daysInMonth}
+                    monthYearLabel={prospectsCalendar.monthYearLabel}
+                    onSelectDate={prospectsCalendar.selectDate}
+                    onPreviousMonth={prospectsCalendar.goToPreviousMonth}
+                    onNextMonth={prospectsCalendar.goToNextMonth}
+                    onTodayClick={prospectsCalendar.goToToday}
+                    className="rounded-b-xl"
+                  />
+                )}
+              </div>
+
+              {/* Search Bar */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
