@@ -105,8 +105,6 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
-  // Recent activity toggle
-  const [showRecentActivity, setShowRecentActivity] = useState(false);
 
   const headerRef = useRef<HTMLElement>(null);
 
