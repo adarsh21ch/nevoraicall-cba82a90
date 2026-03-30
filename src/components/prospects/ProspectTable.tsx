@@ -580,6 +580,7 @@ export function ProspectTable({
         'Instagram': p.instagram || '',
         'Date Added': p.date_added ? format(new Date(p.date_added), 'dd/MM/yyyy') : ''
       }));
+      const XLSX = await import('xlsx');
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(exportData);
       ws['!cols'] = [{
