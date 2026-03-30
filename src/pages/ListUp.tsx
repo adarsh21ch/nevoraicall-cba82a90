@@ -566,11 +566,12 @@ export default function ListUp() {
                   {tagProspects.length === 0 ? <div className="py-8 text-center">
                       <p className="text-sm text-muted-foreground">No leads</p>
                     </div> : <div className="divide-y divide-border/30">
-                      {tagProspects.map(prospect => {
+                      {tagProspects.map((prospect, idx) => {
                   const isExpanded = expandedProspectId === prospect.id;
                   return <div key={prospect.id}>
                             <button onClick={() => toggleProspect(prospect.id)} className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors text-left gap-2">
                               <div className="flex items-center gap-2 min-w-0 flex-1">
+                                <span className="text-[10px] font-semibold text-muted-foreground bg-muted/60 rounded px-1.5 py-0.5 shrink-0">{idx + 1}</span>
                                 <span className="text-sm font-medium truncate">{prospect.name}</span>
                                 {/* Inline tag badges */}
                                 <div className="flex items-center gap-1 shrink-0">
