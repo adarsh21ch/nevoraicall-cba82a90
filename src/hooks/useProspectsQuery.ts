@@ -100,7 +100,7 @@ export function useProspectsQuery(options: UseProspectsQueryOptions = {}) {
 
       return { total, tagCounts };
     },
-    enabled: !!user,
+    enabled: isQueryEnabled,
     placeholderData: (previousData) => previousData,
     staleTime: 30000, // 30 seconds
     gcTime: 300000, // 5 minutes
