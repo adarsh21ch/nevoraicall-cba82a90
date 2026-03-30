@@ -665,9 +665,10 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
                 })}
               </div>
             </div>
+            </div> {/* end scrollable area */}
 
             {/* Fixed Action Buttons at bottom - always visible */}
-            <div className="flex-shrink-0 flex justify-between gap-2 pt-3 mt-auto border-t border-border bg-card">
+            <div className="flex-shrink-0 flex justify-between gap-2 pt-3 border-t border-border bg-card">
               <Button variant="outline" size="sm" onClick={resetState} className="min-w-[70px]">
                 Back
               </Button>
