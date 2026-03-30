@@ -125,6 +125,7 @@ export default function ListUp() {
   
   // Search query
   const [searchQuery, setSearchQuery] = useState('');
+  const [showRecentActivity, setShowRecentActivity] = useState(false);
 
   // Persist filters in sessionStorage so they survive tab switches
   const [selectedResponses, setSelectedResponses] = useState<string[]>(() => {
