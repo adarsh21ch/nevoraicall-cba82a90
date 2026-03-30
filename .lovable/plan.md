@@ -1,39 +1,40 @@
 
 
-# Follow-Up Tab Upgrade Plan
+## Flip Column Mapping UI
 
-## Current State
-The Follow-Up tab has a simple layout: header with Leads/Funnel toggle, search bar, tag filters, and an accordion list of prospects. It lacks any activity/timeline view.
+The proposed approach — showing Excel column headers on the left and letting users pick which app field each maps to — is the better UX pattern. It's how most modern import tools work (Mailchimp, HubSpot, Airtable). Users recognize *their* data and assign meaning to it, rather than hunting through dropdowns for their column names.
 
-## What Changes
+### Current Flow
+```text
+Name *        → [dropdown: Col A, Col B, Col C...]
+Phone 1 *     → [dropdown: Col A, Col B, Col C...]
+Address       → [dropdown: Col A, Col B, Col C...]
+```
 
-### 1. Add Activity History toggle icon in the header (like Calling tab)
-- Add a **Clock icon** button to the top-right of the header (same pattern as Dashboard's Activity History toggle)
-- When active, it highlights with `bg-accent` styling
-- Tapping it switches the main content between **Prospects list** (current view) and **Activity History**
+### New Flow
+```text
+"John Doe"      → [dropdown: Name, Phone 1, Phone 2, Address, Age/DOB, Gender, Instagram, Profession, Skip]
+"9876543210"     → [dropdown: Name, Phone 1, Phone 2, Address, ...]
+"Mumbai"         → [dropdown: Name, Phone 1, Phone 2, Address, ...]
+```
 
-### 2. Reuse the existing `RecentActivityView` component
-- When Activity History is active, render `<RecentActivityView />` with its built-in calendar strip
-- This gives date-based filtering, prospect change timeline, and search — all already built
-- The Leads/Funnel TopTabBar and tag filters hide when Activity view is active (clean focus)
+Each row shows the first-row sample value (from the Excel file) on the left. The dropdown on the right contains the app fields (Name, Phone 1, etc.) plus a "Skip" option. This way users see their actual data and decide what it means.
 
-### 3. Show inline tag badges on prospect rows
-- Add small response/stage tag badges next to each prospect name in the collapsed row
-- Makes the list more scannable without needing to expand each row
+### Changes
 
-### 4. Header layout update
-- Left: Logo + title + count
-- Right: Clock icon (Activity toggle) + Clear filters button (when applicable)
+**File: `src/components/prospects/ImportExcelDialog.tsx`**
 
-## Technical Details
+1. Reverse the mapping logic: instead of `ColumnMapping` (field → column), use a `reverseMapping` (column → field) where each Excel column maps to an app field or "skip"
+2. Left side: render each Excel column's first-row sample value as a label
+3. Right side: dropdown with app field options (Name, Phone 1, Phone 2, Address, Age/DOB, Gender, Instagram, Profession, Skip)
+4. Auto-detect: try to pre-match columns by fuzzy-matching header text (e.g. if column contains "name" → auto-select Name)
+5. Convert reverse mapping back to `ColumnMapping` format before calling `handleImport`
+6. Ensure each app field can only be selected once (grey out already-assigned fields or show a checkmark)
 
-**File: `src/pages/ListUp.tsx`**
-- Import `RecentActivityView` from `@/components/todo/RecentActivityView`
-- Import `Clock` from lucide-react
-- Add `showRecentActivity` state (boolean, default false)
-- In header right section: add Clock icon button with active state styling
-- In main content: conditionally render `<RecentActivityView />` OR the current prospects list based on `showRecentActivity`
-- Add inline tag badges to the collapsed prospect row (small `Badge` components after the name)
+### Technical Details
 
-**No new files or database changes needed.** This reuses existing components entirely.
+- The reverse mapping state: `Record<string, keyof ColumnMapping | 'skip' | null>`
+- Auto-detect logic: simple lowercase `.includes()` checks on column header text
+- Validation: ensure at least Name and Phone 1 are mapped before enabling Import button
+- The preview table above remains unchanged
 
