@@ -43,6 +43,7 @@ const [localData, setLocalData] = useState({
     notes: prospect.notes || '',
     instagram: prospect.instagram || '',
     profession: prospect.profession || '',
+    email: prospect.email || '',
   });
   const [isDeleting, setIsDeleting] = useState(false);
   const { activities } = useActivityLogs();
