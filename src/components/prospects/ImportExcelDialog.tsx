@@ -508,35 +508,49 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
               </p>
             </div>
 
-            {/* Fixed Column Mapping Section - Bottom, always visible - Single column layout for both mobile and desktop */}
+            {/* Reversed Column Mapping Section - Source data on left, app field dropdown on right */}
             <div className="flex-shrink-0 bg-muted/30 rounded-lg p-3 border border-border">
-              <p className="text-xs text-muted-foreground mb-2 font-medium">
-                Map Columns
-              </p>
-              <div className="grid grid-cols-1 gap-2">
-                {(Object.keys(mapping) as (keyof ColumnMapping)[]).map((field) => (
-                  <div key={field} className="flex items-center gap-2 h-8">
-                    <Label className="text-xs w-[80px] shrink-0">{FIELD_LABELS[field]}</Label>
-                    <Select
-                      value={mapping[field] || '__none__'}
-                      onValueChange={(value) => setMapping({ ...mapping, [field]: value === '__none__' ? null : value })}
-                    >
-                      <SelectTrigger className="h-8 text-xs flex-1 bg-background">
-                        <SelectValue placeholder={FIELD_PLACEHOLDERS[field]} />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border-border z-50 max-h-[480px]">
-                        <SelectItem value="__none__" className="text-muted-foreground">
-                          {field === 'address' ? 'City and State' : 'None'}
-                        </SelectItem>
-                        {columns.map((col, idx) => (
-                          <SelectItem key={idx} value={col} className="text-xs">
-                            {col}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-muted-foreground font-medium">
+                  Map Your Data
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {Object.values(reverseMapping).filter(v => v === 'name').length > 0 && Object.values(reverseMapping).filter(v => v === 'phone').length > 0 ? '✓ Ready' : 'Name & Phone required'}
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-1.5">
+                {columns.map((col) => {
+                  const sampleValue = previewData[0]?.[col] || '–';
+                  const assignedFields = new Set(Object.values(reverseMapping).filter(v => v && v !== 'skip'));
+                  return (
+                    <div key={col} className="flex items-center gap-2 min-h-[36px]">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate" title={sampleValue}>{sampleValue}</p>
+                      </div>
+                      <Select
+                        value={reverseMapping[col] || '__skip__'}
+                        onValueChange={(value) => setReverseMapping(prev => ({ ...prev, [col]: value === '__skip__' ? null : value as keyof ColumnMapping | 'skip' }))}
+                      >
+                        <SelectTrigger className="h-8 text-xs w-[120px] shrink-0 bg-background">
+                          <SelectValue placeholder="Skip" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border-border z-50">
+                          <SelectItem value="__skip__" className="text-muted-foreground text-xs">Skip</SelectItem>
+                          {APP_FIELDS.map((f) => (
+                            <SelectItem
+                              key={f.key}
+                              value={f.key}
+                              disabled={assignedFields.has(f.key) && reverseMapping[col] !== f.key}
+                              className="text-xs"
+                            >
+                              {f.label}{f.required ? ' *' : ''}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -548,7 +562,7 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
               <Button
                 size="sm"
                 onClick={handleImport}
-                disabled={isImporting || !mapping.name || !mapping.phone}
+                disabled={isImporting || !Object.values(reverseMapping).includes('name') || !Object.values(reverseMapping).includes('phone')}
                 className="min-w-[120px]"
               >
                 {isImporting && importProgress
