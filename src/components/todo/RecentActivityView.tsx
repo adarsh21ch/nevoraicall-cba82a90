@@ -244,7 +244,7 @@ export function RecentActivityView({ selectedDate: externalDate, searchQuery: ex
               </div>
             ))}
           </div>
-        ) : null}
+        )}
       </div>
     </div>
   );
