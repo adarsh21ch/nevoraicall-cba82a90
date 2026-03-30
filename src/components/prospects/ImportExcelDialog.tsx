@@ -498,7 +498,7 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
         )}
 
         {step === 'mapping' && (
-          <div className="flex flex-col h-[65vh] max-h-[550px] overflow-hidden">
+          <div className="flex flex-col overflow-y-auto overflow-x-hidden" style={{ maxHeight: 'calc(90vh - 80px)' }}>
             {/* Data Preview Section - Top, scrollable */}
             <div className="flex-1 flex flex-col min-h-0 space-y-2 mb-3 overflow-hidden">
               <div className="flex items-center justify-between flex-shrink-0">
