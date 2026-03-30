@@ -23,6 +23,7 @@ interface ColumnMapping {
   name: string | null;
   phone: string | null;
   phone2: string | null;
+  email: string | null;
   address: string | null;
   age_or_dob: string | null;
   gender: string | null;
@@ -34,6 +35,7 @@ const APP_FIELDS: { key: keyof ColumnMapping; label: string; required?: boolean 
   { key: 'name', label: 'Name', required: true },
   { key: 'phone', label: 'Phone 1', required: true },
   { key: 'phone2', label: 'Phone 2' },
+  { key: 'email', label: 'Email' },
   { key: 'address', label: 'Address' },
   { key: 'age_or_dob', label: 'Age / DOB' },
   { key: 'gender', label: 'Gender' },
@@ -43,32 +45,94 @@ const APP_FIELDS: { key: keyof ColumnMapping; label: string; required?: boolean 
 
 type ReverseMapping = Record<string, keyof ColumnMapping | 'skip' | null>;
 
-function autoDetectMapping(columns: string[]): ReverseMapping {
+// Smart detection: analyze SAMPLE DATA (not just headers) to guess field types
+function guessFieldFromValues(values: string[]): keyof ColumnMapping | null {
+  const nonEmpty = values.filter(v => v && v.trim().length > 0);
+  if (nonEmpty.length === 0) return null;
+
+  // Phone: 10+ digit numbers, may start with + or country code
+  const phonePattern = /^[\+]?[\d\s\-\(\)]{7,15}$/;
+  const phoneMatches = nonEmpty.filter(v => phonePattern.test(v.trim())).length;
+  if (phoneMatches >= nonEmpty.length * 0.6) return 'phone';
+
+  // Email
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const emailMatches = nonEmpty.filter(v => emailPattern.test(v.trim())).length;
+  if (emailMatches >= nonEmpty.length * 0.5) return 'email';
+
+  // Instagram: starts with @ or looks like username
+  const igPattern = /^@[\w.]{1,30}$/;
+  const igMatches = nonEmpty.filter(v => igPattern.test(v.trim())).length;
+  if (igMatches >= nonEmpty.length * 0.5) return 'instagram';
+
+  // Age: small numbers 1-120
+  const agePattern = /^\d{1,3}$/;
+  const ageMatches = nonEmpty.filter(v => {
+    const n = parseInt(v.trim());
+    return agePattern.test(v.trim()) && n >= 1 && n <= 120;
+  }).length;
+  if (ageMatches >= nonEmpty.length * 0.6) return 'age_or_dob';
+
+  // DOB: date-like patterns
+  const dobPattern = /^\d{1,4}[\-\/\.]\d{1,2}[\-\/\.]\d{1,4}$/;
+  const dobMatches = nonEmpty.filter(v => dobPattern.test(v.trim())).length;
+  if (dobMatches >= nonEmpty.length * 0.5) return 'age_or_dob';
+
+  // Gender
+  const genderValues = ['male', 'female', 'm', 'f', 'other', 'man', 'woman'];
+  const genderMatches = nonEmpty.filter(v => genderValues.includes(v.trim().toLowerCase())).length;
+  if (genderMatches >= nonEmpty.length * 0.5) return 'gender';
+
+  // Name: 2+ words with letters, not too long
+  const namePattern = /^[a-zA-Z\u0900-\u097F\s\.]{2,50}$/;
+  const nameMatches = nonEmpty.filter(v => namePattern.test(v.trim()) && v.trim().includes(' ')).length;
+  if (nameMatches >= nonEmpty.length * 0.4) return 'name';
+
+  return null;
+}
+
+function autoDetectMapping(columns: string[], allData: Record<string, string>[]): ReverseMapping {
   const result: ReverseMapping = {};
   const used = new Set<string>();
-  const patterns: [keyof ColumnMapping, RegExp][] = [
-    ['name', /name/i],
+
+  // First pass: header-based matching
+  const headerPatterns: [keyof ColumnMapping, RegExp][] = [
+    ['name', /\bname\b/i],
     ['phone', /phone\s*1|mobile|phone|contact/i],
     ['phone2', /phone\s*2|alt.*phone/i],
-    ['address', /address|city|location/i],
-    ['age_or_dob', /age|dob|birth/i],
+    ['email', /email|gmail|mail/i],
+    ['address', /address|city|location|state/i],
+    ['age_or_dob', /\bage\b|dob|birth/i],
     ['gender', /gender|sex/i],
-    ['instagram', /insta|ig/i],
+    ['instagram', /insta|ig\b/i],
     ['profession', /profession|occupation|job/i],
   ];
+
   for (const col of columns) {
     const lower = col.toLowerCase();
-    let matched = false;
-    for (const [field, regex] of patterns) {
+    for (const [field, regex] of headerPatterns) {
       if (!used.has(field) && regex.test(lower)) {
         result[col] = field;
         used.add(field);
-        matched = true;
         break;
       }
     }
-    if (!matched) result[col] = null;
   }
+
+  // Second pass: data-based detection for unmatched columns
+  const sampleRows = allData.slice(0, 10);
+  for (const col of columns) {
+    if (result[col]) continue; // already matched by header
+    const sampleValues = sampleRows.map(row => row[col] || '');
+    const guess = guessFieldFromValues(sampleValues);
+    if (guess && !used.has(guess)) {
+      result[col] = guess;
+      used.add(guess);
+    } else {
+      result[col] = null;
+    }
+  }
+
   return result;
 }
 
@@ -192,17 +256,28 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
         return;
       }
 
-      // Generate column names using first row sample data for better readability
+      // Generate unique column names using first row sample data
       const maxCols = Math.max(...rawData.map(row => row.length));
       const firstRowData = rawData[0] || [];
+      const usedNames = new Set<string>();
       const cols = Array.from({ length: maxCols }, (_, i) => {
         const sampleValue = firstRowData[i];
         const sampleText = sampleValue !== null && sampleValue !== undefined ? String(sampleValue).trim() : '';
-        // Use truncated sample data as label, fallback to generic if empty
+        let baseName = '';
         if (sampleText.length > 0) {
-          return sampleText.length > 20 ? sampleText.substring(0, 20) + '...' : sampleText;
+          baseName = sampleText.length > 20 ? sampleText.substring(0, 20) + '...' : sampleText;
+        } else {
+          baseName = `Col ${i + 1}`;
         }
-        return `Col ${i + 1}`;
+        // Ensure uniqueness by appending suffix if needed
+        let finalName = baseName;
+        let counter = 2;
+        while (usedNames.has(finalName)) {
+          finalName = `${baseName} (${counter})`;
+          counter++;
+        }
+        usedNames.add(finalName);
+        return finalName;
       });
       
       // Convert raw array data to objects with column keys
@@ -224,7 +299,7 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
       setColumns(cols);
       setPreviewData(jsonData.slice(0, 5));
       setFullData(jsonData);
-      setReverseMapping(autoDetectMapping(cols));
+      setReverseMapping(autoDetectMapping(cols, jsonData));
       setStep('mapping');
     } catch (err) {
       setError('Failed to parse file. Please ensure it\'s a valid Excel or CSV file.');
@@ -242,7 +317,7 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
   const handleImport = async () => {
     // Convert reverseMapping to ColumnMapping
     const mapping: ColumnMapping = {
-      name: null, phone: null, phone2: null, address: null,
+      name: null, phone: null, phone2: null, email: null, address: null,
       age_or_dob: null, gender: null, instagram: null, profession: null,
     };
     for (const [col, field] of Object.entries(reverseMapping)) {
@@ -293,6 +368,9 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
       }
       if (mapping.gender && row[mapping.gender]) {
         prospect.gender = sanitizeImportString(row[mapping.gender], 20);
+      }
+      if (mapping.email && row[mapping.email]) {
+        prospect.email = sanitizeImportString(row[mapping.email], 200);
       }
       if (mapping.instagram && row[mapping.instagram]) {
         prospect.instagram = sanitizeImportString(row[mapping.instagram], 100);
@@ -431,17 +509,24 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
         )}
 
         {step === 'mapping' && (
-          <div className="flex flex-col h-[65vh] max-h-[550px] overflow-hidden">
-            {/* Data Preview Section - Top, scrollable */}
-            <div className="flex-1 flex flex-col min-h-0 space-y-2 mb-3 overflow-hidden">
+          <div className="flex flex-col overflow-y-auto overflow-x-hidden" style={{ maxHeight: 'calc(90vh - 80px)' }}>
+            {/* Disclaimer */}
+            <div className="bg-primary/5 border border-primary/20 rounded-lg p-2.5 mb-3 flex-shrink-0">
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                🤖 <span className="font-medium text-foreground/80">We auto-detected your columns.</span> Review the mappings below and change any that look wrong using the dropdown. <span className="font-medium">Name</span> and <span className="font-medium">Phone 1</span> are required.
+              </p>
+            </div>
+
+            {/* Data Preview Section */}
+            <div className="flex flex-col space-y-2 mb-3">
               <div className="flex items-center justify-between flex-shrink-0">
                 <Label className="text-xs font-medium">Data Preview (first 3 rows)</Label>
                 <span className="text-xs text-muted-foreground">{columns.length} columns • Drag column edges to resize</span>
               </div>
               
               {/* Preview table container - scrollable both ways */}
-              <div className="flex-1 border border-border rounded-lg overflow-hidden min-h-[80px]">
-                <div className={cn("h-full overflow-x-auto overflow-y-auto", isResizing && "select-none")}>
+              <div className="border border-border rounded-lg overflow-hidden max-h-[120px]">
+                <div className={cn("overflow-x-auto overflow-y-auto max-h-[120px]", isResizing && "select-none")}>
                   <table className="text-xs border-collapse w-max">
                     <thead className="bg-muted sticky top-0 z-10">
                       <tr>

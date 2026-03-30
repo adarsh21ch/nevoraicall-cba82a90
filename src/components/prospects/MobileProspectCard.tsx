@@ -43,6 +43,7 @@ const [localData, setLocalData] = useState({
     notes: prospect.notes || '',
     instagram: prospect.instagram || '',
     profession: prospect.profession || '',
+    email: prospect.email || '',
   });
   const [isDeleting, setIsDeleting] = useState(false);
   const { activities } = useActivityLogs();
@@ -93,6 +94,7 @@ const [localData, setLocalData] = useState({
       notes: prospect.notes || '',
       instagram: prospect.instagram || '',
       profession: prospect.profession || '',
+      email: prospect.email || '',
     });
     // Clear optimistic state when prospect updates
     setOptimisticAction(null);
@@ -417,6 +419,16 @@ const [localData, setLocalData] = useState({
                 onChange={(e) => setLocalData(prev => ({ ...prev, instagram: e.target.value }))}
                 onBlur={() => handleFieldUpdate('instagram', localData.instagram)}
                 placeholder="@username"
+                className="h-8 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-muted-foreground mb-0.5 block">Email</label>
+              <Input
+                value={localData.email}
+                onChange={(e) => setLocalData(prev => ({ ...prev, email: e.target.value }))}
+                onBlur={() => handleFieldUpdate('email', localData.email)}
+                placeholder="email@example.com"
                 className="h-8 text-sm"
               />
             </div>

@@ -3877,6 +3877,7 @@ export type Database = {
           batch_date: string | null
           date_added: string
           deleted_at: string | null
+          email: string | null
           funnel_stage: string | null
           funnel_stage_at: string | null
           gender: string | null
@@ -3905,6 +3906,7 @@ export type Database = {
           batch_date?: string | null
           date_added?: string
           deleted_at?: string | null
+          email?: string | null
           funnel_stage?: string | null
           funnel_stage_at?: string | null
           gender?: string | null
@@ -3933,6 +3935,7 @@ export type Database = {
           batch_date?: string | null
           date_added?: string
           deleted_at?: string | null
+          email?: string | null
           funnel_stage?: string | null
           funnel_stage_at?: string | null
           gender?: string | null

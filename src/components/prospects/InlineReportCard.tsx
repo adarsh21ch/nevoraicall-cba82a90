@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { StageBadge, StatusBadge, ActionBadge } from './StatusBadge';
-import { X, Phone, ChevronDown, Instagram, Clock, Trash2, MessageSquareText } from 'lucide-react';
+import { X, Phone, ChevronDown, Instagram, Clock, Trash2, MessageSquareText, Mail } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/ui/ActionIcons';
 import { formatDistanceToNow, parseISO, format } from 'date-fns';
 import { toast } from 'sonner';
@@ -102,6 +102,7 @@ const [localData, setLocalData] = useState<Partial<Prospect>>({});
       prospect_status: prospect.prospect_status,
       instagram: prospect.instagram || '',
       profession: prospect.profession || '',
+      email: prospect.email || '',
     });
   }, [prospect.id]); // Only reset when lead ID changes
 
@@ -330,6 +331,17 @@ const [localData, setLocalData] = useState<Partial<Prospect>>({});
                 onBlur={() => handleFieldBlur('instagram')}
                 className="h-7 text-xs"
                 placeholder="@username"
+              />
+            </div>
+            {/* Email */}
+            <div>
+              <Label className="text-[10px] text-muted-foreground mb-0.5 block">Email</Label>
+              <Input
+                value={localData.email || ''}
+                onChange={(e) => handleFieldChange('email', e.target.value)}
+                onBlur={() => handleFieldBlur('email')}
+                className="h-7 text-xs"
+                placeholder="email@example.com"
               />
             </div>
           </div>
