@@ -99,6 +99,7 @@ export function useProspectsQuery(options: UseProspectsQueryOptions = {}) {
       return { total, tagCounts };
     },
     enabled: !!user,
+    placeholderData: (previousData) => previousData,
     staleTime: 30000, // 30 seconds
     gcTime: 300000, // 5 minutes
   });
@@ -204,6 +205,7 @@ export function useProspectsQuery(options: UseProspectsQueryOptions = {}) {
     initialPageParam: 0,
     getNextPageParam: (lastPage) => lastPage.nextOffset,
     enabled: !!user,
+    placeholderData: (previousData) => previousData,
     staleTime: 60000, // 1 minute
     gcTime: 300000, // 5 minutes
   });
