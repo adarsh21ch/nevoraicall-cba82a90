@@ -1161,9 +1161,11 @@ export function ProspectTable({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Tag management dialogs */}
-      <ManageResponseTagsDialog open={responseTagsDialogOpen} onOpenChange={setResponseTagsDialogOpen} />
-      <ManageStageTagsDialog open={stageTagsDialogOpen} onOpenChange={setStageTagsDialogOpen} />
+      {/* Tag management dialogs - lazy loaded */}
+      <Suspense fallback={null}>
+        {responseTagsDialogOpen && <ManageResponseTagsDialog open={responseTagsDialogOpen} onOpenChange={setResponseTagsDialogOpen} />}
+        {stageTagsDialogOpen && <ManageStageTagsDialog open={stageTagsDialogOpen} onOpenChange={setStageTagsDialogOpen} />}
+      </Suspense>
 
       {/* Share Leads Drawer */}
       <ShareLeadsDrawer
