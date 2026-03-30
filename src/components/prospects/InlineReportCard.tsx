@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { StageBadge, StatusBadge, ActionBadge } from './StatusBadge';
-import { X, Phone, ChevronDown, Instagram, Clock, Trash2, MessageSquareText } from 'lucide-react';
+import { X, Phone, ChevronDown, Instagram, Clock, Trash2, MessageSquareText, Mail } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/ui/ActionIcons';
 import { formatDistanceToNow, parseISO, format } from 'date-fns';
 import { toast } from 'sonner';
