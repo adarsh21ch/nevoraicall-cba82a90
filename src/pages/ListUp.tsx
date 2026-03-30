@@ -13,12 +13,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Filter, ChevronDown, ChevronUp, Tags, X, Eye, Search, Phone, Layers, Clock } from 'lucide-react';
 import { RecentActivityView } from '@/components/todo/RecentActivityView';
+import { CalendarStrip } from '@/components/calendar/CalendarStrip';
+import { useCalendarStrip } from '@/hooks/useCalendarStrip';
+import { isSameDay, parseISO } from 'date-fns';
 
 type FollowUpMainTab = 'activity' | 'prospects';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { getTagStyle } from '@/lib/tagColors';
-import nevoraLogo from '@/assets/nevorai-logo.jpeg';
 import { Prospect } from '@/types/prospect';
 
 type LeadMode = 'leads' | 'funnel';
