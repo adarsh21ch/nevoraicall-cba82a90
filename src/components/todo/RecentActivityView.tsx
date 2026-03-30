@@ -197,6 +197,11 @@ export function RecentActivityView({ selectedDate: externalDate, searchQuery: ex
                   
                   {/* Activity content */}
                   <div className="flex-1 min-w-0 pb-2">
+                    {activity.type === 'import' ? (
+                      <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+                        <span className="text-xs text-muted-foreground">📥 {activity.name}</span>
+                      </div>
+                    ) : (
                     <div className="flex items-start justify-between gap-2 p-2 rounded-lg bg-muted/30 hover:bg-muted/40 transition-colors">
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium truncate">{activity.name}</p>
@@ -239,6 +244,7 @@ export function RecentActivityView({ selectedDate: externalDate, searchQuery: ex
                         </div>
                       )}
                     </div>
+                    )}
                   </div>
                 </div>
               </div>
