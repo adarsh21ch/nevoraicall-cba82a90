@@ -151,16 +151,7 @@ export function ImportExcelDialog({ onImport }: ImportExcelDialogProps) {
     setColumns([]);
     setPreviewData([]);
     setFullData([]);
-      setMapping({
-        name: null,
-        phone: null,
-        phone2: null,
-        address: null,
-        age_or_dob: null,
-        gender: null,
-        instagram: null,
-        profession: null,
-      });
+    setReverseMapping({});
     setError(null);
     setImportProgress(null);
     setPreviewColumnWidths({});
