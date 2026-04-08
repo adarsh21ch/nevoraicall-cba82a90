@@ -48,8 +48,8 @@ const PLAN_FILTER_OPTIONS = [
 const GRANT_OPTIONS = [
   { value: 'pro-30', label: 'Pro 30d', tier: 'pro', days: 30 },
   { value: 'pro-90', label: 'Pro 90d', tier: 'pro', days: 90 },
-  { value: 'pro-120', label: 'Basic 120d', tier: 'pro', days: 120 },
-  { value: 'pro-365', label: 'Basic 1yr', tier: 'pro', days: 365 },
+  { value: 'pro-120', label: 'Pro 120d', tier: 'pro', days: 120 },
+  { value: 'pro-365', label: 'Pro 1yr', tier: 'pro', days: 365 },
   { value: 'premium-30', label: 'Pro 30d', tier: 'premium', days: 30 },
   { value: 'premium-90', label: 'Pro 90d', tier: 'premium', days: 90 },
   { value: 'premium-120', label: 'Pro 120d', tier: 'premium', days: 120 },
@@ -76,7 +76,7 @@ function TierChips({ counts, loading }: { counts: TierCounts; loading: boolean }
       </div>
       <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/30">
         <Crown className="h-3 w-3 text-primary" />
-        <span className="text-xs text-primary">Basic</span>
+        <span className="text-xs text-primary">Pro</span>
         <span className="text-sm font-bold text-primary">{counts.basic}</span>
       </div>
       <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30">
@@ -91,7 +91,7 @@ function TierChips({ counts, loading }: { counts: TierCounts; loading: boolean }
 function TierBadge({ tier, plan }: { tier: string; plan: string }) {
   if (plan !== 'pro') return <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Free</Badge>;
   if (tier === 'premium') return <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-400 border-0 text-[10px] px-1.5 py-0 gap-0.5"><Gem className="h-2.5 w-2.5" />Pro</Badge>;
-  return <Badge className="bg-primary/20 text-primary border-0 text-[10px] px-1.5 py-0 gap-0.5"><Crown className="h-2.5 w-2.5" />Basic</Badge>;
+  return <Badge className="bg-primary/20 text-primary border-0 text-[10px] px-1.5 py-0 gap-0.5"><Crown className="h-2.5 w-2.5" />Pro</Badge>;
 }
 
 function StatusBadge({ user }: { user: EnhancedUser }) {
