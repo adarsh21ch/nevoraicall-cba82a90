@@ -282,7 +282,7 @@ export default function Dashboard() {
         </div>
         
         {/* Table area - flex-1 to fill remaining space, pb for bottom nav */}
-        <div className="flex-1 min-h-0 px-4 pb-48 md:pb-28 lg:pb-20">
+        <div className="flex-1 min-h-0 px-4 pb-48 lg:pb-20">
       {mainTab === 'leads' ? (
         <ProspectTable 
           key={`leads-${tableScrollKey.current}`}
