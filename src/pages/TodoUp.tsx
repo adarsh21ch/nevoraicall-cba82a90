@@ -299,7 +299,7 @@ export default function TodoUp() {
           {viewMode === 'todo-list' && <>
 
               {/* To-Do List */}
-              <div className="bg-card rounded-xl border border-border/40 shadow-sm overflow-hidden">
+              <div className="bg-card rounded-xl border border-border/40 shadow-sm overflow-hidden mt-[10px]">
                 {todosLoading ? <div className="flex justify-center py-8">
                     <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                   </div> : filteredTodos.length === 0 ? <div className="py-12 px-4 text-center">
