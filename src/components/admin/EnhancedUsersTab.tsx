@@ -41,13 +41,13 @@ const TRIAL_DURATION_DAYS = 7;
 const PLAN_FILTER_OPTIONS = [
   { value: 'all', label: 'All Plans' },
   { value: 'free', label: '🆓 Free' },
-  { value: 'pro', label: '⭐ Basic' },
+  { value: 'pro', label: '⭐ Pro' },
   { value: 'premium', label: '💎 Pro' },
 ];
 
 const GRANT_OPTIONS = [
-  { value: 'pro-30', label: 'Basic 30d', tier: 'pro', days: 30 },
-  { value: 'pro-90', label: 'Basic 90d', tier: 'pro', days: 90 },
+  { value: 'pro-30', label: 'Pro 30d', tier: 'pro', days: 30 },
+  { value: 'pro-90', label: 'Pro 90d', tier: 'pro', days: 90 },
   { value: 'pro-120', label: 'Basic 120d', tier: 'pro', days: 120 },
   { value: 'pro-365', label: 'Basic 1yr', tier: 'pro', days: 365 },
   { value: 'premium-30', label: 'Pro 30d', tier: 'premium', days: 30 },
@@ -418,7 +418,7 @@ export function EnhancedUsersTab({ headerPlanFilter }: EnhancedUsersTabProps) {
                             Grant Plan
                           </DropdownMenuSubTrigger>
                           <DropdownMenuSubContent>
-                            <DropdownMenuItem disabled className="text-[11px] font-semibold">⭐ Basic</DropdownMenuItem>
+                            <DropdownMenuItem disabled className="text-[11px] font-semibold">⭐ Pro</DropdownMenuItem>
                             {GRANT_OPTIONS.filter(o => o.tier === 'pro').map(o => (
                               <DropdownMenuItem key={o.value} className="text-xs pl-5" onClick={() => handleGrantPlan(user, o.tier, o.days)}>
                                 {o.days >= 365 ? '1 year' : `${o.days} days`}
