@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
-import { Crown, AlertTriangle, X } from 'lucide-react';
+import { Crown, AlertTriangle, X, Shield, Loader2 } from 'lucide-react';
 import { usePaymentLinks } from '@/hooks/usePaymentLinks';
 import { useRazorpay } from '@/hooks/useRazorpay';
 import { useToast } from '@/hooks/use-toast';
@@ -37,7 +37,6 @@ export function UpgradeModal({
   const isAtLimit = currentLeadCount !== undefined && freeLimit !== undefined
     ? currentLeadCount >= freeLimit : false;
 
-  // All paid plans shown as single "Pro" group
   const proPlans = useMemo(() => {
     return plans
       .filter(p => p.tier !== 'basic')
@@ -84,44 +83,60 @@ export function UpgradeModal({
   const modalDescription = description || (
     isAtLimit
       ? `You've reached the free limit of ${freeLimit ?? ''} prospects. Upgrade to continue.`
-      : 'Choose a duration and unlock all features.'
+      : 'Unlock the full Nevorai workflow'
   );
 
-  const HeaderIcon = (
-    <div className={`mx-auto ${isMobile ? 'w-10 h-10' : 'w-12 h-12'} rounded-full bg-primary/10 flex items-center justify-center`}>
-      {isAtLimit ? (
-        <AlertTriangle className={`${isMobile ? 'h-5 w-5' : 'h-6 w-6'} text-amber-500`} />
-      ) : (
-        <Crown className={`${isMobile ? 'h-5 w-5' : 'h-6 w-6'} text-primary`} />
-      )}
-    </div>
-  );
+  const ModalBody = (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="text-center space-y-1.5">
+        <div className="mx-auto h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
+          {isAtLimit ? (
+            <AlertTriangle className="h-6 w-6 text-amber-500" />
+          ) : (
+            <Crown className="h-6 w-6 text-primary" />
+          )}
+        </div>
+        <h3 className="font-bold text-xl text-foreground tracking-tight">{modalTitle}</h3>
+        <p className="text-sm text-muted-foreground">{modalDescription}</p>
+      </div>
 
-  const PlanCards = plansLoading ? (
-    <div className="h-48 bg-muted animate-pulse rounded-2xl" />
-  ) : proPlans.length > 0 ? (
-    <TierCard
-      tierName="Pro"
-      plans={proPlans}
-      selectedPlanKey={selectedPlanKey}
-      onSelectPlan={setSelectedPlanKey}
-      compact={isMobile}
-    />
-  ) : null;
+      {/* Divider */}
+      <div className="h-px bg-border" />
 
-  const CTAButton = (
-    <div className="space-y-1">
+      {plansLoading ? (
+        <div className="h-40 bg-muted/50 animate-pulse rounded-xl" />
+      ) : proPlans.length > 0 ? (
+        <TierCard
+          tierName="Pro"
+          plans={proPlans}
+          selectedPlanKey={selectedPlanKey}
+          onSelectPlan={setSelectedPlanKey}
+          compact={isMobile}
+        />
+      ) : null}
+
+      {/* CTA */}
       <Button
         onClick={() => selectedPlan && handleUpgrade(selectedPlanKey)}
-        className="w-full h-11 font-semibold text-sm rounded-xl"
+        className="w-full h-12 rounded-xl text-base font-semibold"
+        size="lg"
         disabled={paymentLoading || plansLoading}
       >
-        <Crown className="h-4 w-4 mr-2" />
-        {paymentLoading ? 'Opening payment...' : `Get ${selectedPlan?.name ?? 'Pro'} – ₹${selectedPlan?.price ?? ''}`}
+        {paymentLoading ? (
+          <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Processing...</>
+        ) : (
+          <>Upgrade to Pro</>
+        )}
       </Button>
-      <p className="text-[10px] text-muted-foreground text-center">
-        Secure payment via Razorpay · Cancel anytime
-      </p>
+
+      {/* Trust footer */}
+      <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
+        <Shield className="h-3 w-3" />
+        <span>Secure payment via Razorpay</span>
+        <span className="text-muted-foreground/40">·</span>
+        <span>Cancel anytime</span>
+      </div>
     </div>
   );
 
@@ -129,8 +144,8 @@ export function UpgradeModal({
     return (
       <Drawer open={open} onOpenChange={onClose} dismissible={false}>
         <DrawerContent className="max-h-[98vh] flex flex-col outline-none">
-          <div className="shrink-0 px-4 pt-2 pb-2">
-            <div className="flex items-center justify-between mb-2">
+          <div className="shrink-0 px-4 pt-2 pb-1">
+            <div className="flex items-center justify-between mb-1">
               <div className="w-8" />
               <div className="w-8 h-1 rounded-full bg-muted-foreground/30" />
               <button
@@ -140,17 +155,9 @@ export function UpgradeModal({
                 <X className="h-4 w-4 text-muted-foreground" />
               </button>
             </div>
-            <div className="text-center space-y-0.5">
-              {HeaderIcon}
-              <DrawerTitle className="text-base">{modalTitle}</DrawerTitle>
-              <p className="text-xs text-muted-foreground">{modalDescription}</p>
-            </div>
           </div>
-          <div className="flex-1 overflow-y-auto overscroll-contain px-3 py-1">
-            {PlanCards}
-          </div>
-          <div className="shrink-0 px-4 pt-2 pb-4 border-t border-border/50 bg-card">
-            {CTAButton}
+          <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-6">
+            {ModalBody}
           </div>
         </DrawerContent>
       </Drawer>
@@ -159,18 +166,12 @@ export function UpgradeModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg bg-card border-border p-0 flex flex-col max-h-[90vh]">
-        <DialogHeader className="text-center space-y-2 shrink-0 px-6 pt-5 pb-2">
-          {HeaderIcon}
-          <DialogTitle className="text-lg">{modalTitle}</DialogTitle>
-          <DialogDescription className="text-sm">{modalDescription}</DialogDescription>
+      <DialogContent className="sm:max-w-md bg-card border-border p-6 flex flex-col max-h-[90vh]">
+        <DialogHeader className="sr-only">
+          <DialogTitle>{modalTitle}</DialogTitle>
+          <DialogDescription>{modalDescription}</DialogDescription>
         </DialogHeader>
-        <div className="px-6 py-2 flex-1">
-          {PlanCards}
-        </div>
-        <div className="shrink-0 px-6 pt-2 pb-4 border-t border-border/50 bg-card">
-          {CTAButton}
-        </div>
+        {ModalBody}
       </DialogContent>
     </Dialog>
   );
