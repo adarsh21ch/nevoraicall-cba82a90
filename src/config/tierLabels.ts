@@ -3,6 +3,9 @@
  *
  * Internal DB values (`basic`, `pro`, `premium`) stay unchanged.
  * This file controls ONLY what users see in the UI.
+ *
+ * As of April 2025, the public-facing model is a single "Pro" paid tier.
+ * Internal `pro` and `premium` both display as "Pro".
  */
 
 import { Crown, Gem } from 'lucide-react';
@@ -12,7 +15,7 @@ export type InternalTier = 'basic' | 'pro' | 'premium';
 /** User-facing tier names */
 export const TIER_DISPLAY_NAME: Record<InternalTier, string> = {
   basic: 'Free',
-  pro: 'Basic',
+  pro: 'Pro',
   premium: 'Pro',
 };
 
@@ -27,13 +30,13 @@ export const TIER_ICON: Record<InternalTier, typeof Crown | typeof Gem | null> =
 export const TIER_COLOR: Record<InternalTier, string> = {
   basic: 'muted',
   pro: 'primary',
-  premium: 'amber',
+  premium: 'primary',
 };
 
 /** Admin panel emoji labels */
 export const TIER_ADMIN_LABEL: Record<InternalTier, string> = {
   basic: '🆓 Free',
-  pro: '⭐ Basic',
+  pro: '⭐ Pro',
   premium: '💎 Pro',
 };
 

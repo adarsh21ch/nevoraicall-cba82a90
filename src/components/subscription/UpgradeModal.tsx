@@ -9,7 +9,6 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { useAdminConfig } from '@/hooks/useAdminConfig';
 import { useEffect, useMemo, useState } from 'react';
 import { TierCard } from './TierCard';
-import { getTierDisplayName } from '@/config/tierLabels';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface UpgradeModalProps {
@@ -22,7 +21,7 @@ interface UpgradeModalProps {
   description?: string;
 }
 
-export function UpgradeModal({ 
+export function UpgradeModal({
   open, onClose, currentLeadCount, hasTeamFeatures = false,
   appContext = 'nevorai', title, description,
 }: UpgradeModalProps) {
@@ -38,27 +37,26 @@ export function UpgradeModal({
   const isAtLimit = currentLeadCount !== undefined && freeLimit !== undefined
     ? currentLeadCount >= freeLimit : false;
 
-  const { proPlans, premiumPlans } = useMemo(() => ({
-    proPlans: plans.filter(p => p.tier === 'pro').sort((a, b) => a.sortOrder - b.sortOrder),
-    premiumPlans: plans.filter(p => p.tier === 'premium').sort((a, b) => a.sortOrder - b.sortOrder),
-  }), [plans]);
+  // All paid plans shown as single "Pro" group
+  const proPlans = useMemo(() => {
+    return plans
+      .filter(p => p.tier !== 'basic')
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+  }, [plans]);
 
-  const allPlans = [...proPlans, ...premiumPlans];
-  const defaultKey = proPlans.find(p => p.badgeText)?.plan_key || proPlans[0]?.plan_key || premiumPlans[0]?.plan_key || '';
+  const defaultKey = proPlans.find(p => p.badgeText)?.plan_key || proPlans[0]?.plan_key || '';
   const [selectedPlanKey, setSelectedPlanKey] = useState<string>(defaultKey);
 
   useEffect(() => {
     if (!open) return;
-    const next = proPlans.find(p => p.badgeText)?.plan_key || proPlans[0]?.plan_key || premiumPlans[0]?.plan_key;
+    const next = proPlans.find(p => p.badgeText)?.plan_key || proPlans[0]?.plan_key;
     if (next) setSelectedPlanKey(next);
-  }, [open, proPlans, premiumPlans]);
+  }, [open, proPlans]);
 
-  const selectedPlan = allPlans.find(p => p.plan_key === selectedPlanKey) || allPlans[0];
-  const isPremiumSelected = selectedPlan?.tier === 'premium';
+  const selectedPlan = proPlans.find(p => p.plan_key === selectedPlanKey) || proPlans[0];
 
   const prepareForMobileCheckout = async () => {
     if (!isMobile) return;
-
     onClose();
     await new Promise((resolve) => window.setTimeout(resolve, MOBILE_CHECKOUT_DELAY_MS));
   };
@@ -69,25 +67,24 @@ export function UpgradeModal({
       initiateSubscription({
         planType: planKey,
         beforeOpen: prepareForMobileCheckout,
-        onSuccess: () => { toast({ title: "Subscription Started 🎉", description: "Your recurring subscription has been initiated." }); refetch(); onClose(); },
+        onSuccess: () => { toast({ title: "Pro Plan Activated 🎉", description: "Your subscription has been started." }); refetch(); onClose(); },
         onError: (error) => console.error('Subscription error:', error),
       });
       return;
     }
-    const tierLabel = plan ? getTierDisplayName(plan.tier) : 'Plan';
     initiatePayment({
       planType: planKey,
       beforeOpen: prepareForMobileCheckout,
-      onSuccess: () => { toast({ title: `${tierLabel} Plan Activated 🎉`, description: "All features are now unlocked." }); refetch(); onClose(); },
+      onSuccess: () => { toast({ title: "Pro Plan Activated 🎉", description: "All features are now unlocked." }); refetch(); onClose(); },
       onError: (error) => console.error('Payment error:', error),
     });
   };
 
-  const modalTitle = title || (isAtLimit ? 'Lead Limit Reached' : 'Upgrade Your Plan');
+  const modalTitle = title || (isAtLimit ? 'Lead Limit Reached' : 'Upgrade to Pro');
   const modalDescription = description || (
-    isAtLimit 
+    isAtLimit
       ? `You've reached the free limit of ${freeLimit ?? ''} prospects. Upgrade to continue.`
-      : 'Compare plans and choose what works best for you.'
+      : 'Choose a duration and unlock all features.'
   );
 
   const HeaderIcon = (
@@ -101,26 +98,22 @@ export function UpgradeModal({
   );
 
   const PlanCards = plansLoading ? (
-    <div className={`${isMobile ? 'space-y-3' : 'grid grid-cols-2 gap-4'}`}>
-      <div className="h-48 bg-muted animate-pulse rounded-2xl" />
-      <div className="h-48 bg-muted animate-pulse rounded-2xl" />
-    </div>
-  ) : (
-    <div className={`${isMobile ? 'space-y-3' : 'grid grid-cols-2 gap-4'}`}>
-      {proPlans.length > 0 && (
-        <TierCard tierName="Basic" plans={proPlans} selectedPlanKey={selectedPlanKey} onSelectPlan={setSelectedPlanKey} compact={isMobile} />
-      )}
-      {premiumPlans.length > 0 && (
-        <TierCard tierName="Pro" plans={premiumPlans} isPremium selectedPlanKey={selectedPlanKey} onSelectPlan={setSelectedPlanKey} compact={isMobile} />
-      )}
-    </div>
-  );
+    <div className="h-48 bg-muted animate-pulse rounded-2xl" />
+  ) : proPlans.length > 0 ? (
+    <TierCard
+      tierName="Pro"
+      plans={proPlans}
+      selectedPlanKey={selectedPlanKey}
+      onSelectPlan={setSelectedPlanKey}
+      compact={isMobile}
+    />
+  ) : null;
 
   const CTAButton = (
     <div className="space-y-1">
-      <Button 
-        onClick={() => selectedPlan && handleUpgrade(selectedPlanKey)} 
-        className={`w-full h-11 font-semibold text-sm rounded-xl ${isPremiumSelected ? 'bg-amber-500 hover:bg-amber-600 text-white' : ''}`}
+      <Button
+        onClick={() => selectedPlan && handleUpgrade(selectedPlanKey)}
+        className="w-full h-11 font-semibold text-sm rounded-xl"
         disabled={paymentLoading || plansLoading}
       >
         <Crown className="h-4 w-4 mr-2" />
@@ -136,12 +129,11 @@ export function UpgradeModal({
     return (
       <Drawer open={open} onOpenChange={onClose} dismissible={false}>
         <DrawerContent className="max-h-[98vh] flex flex-col outline-none">
-          {/* Compact header */}
           <div className="shrink-0 px-4 pt-2 pb-2">
             <div className="flex items-center justify-between mb-2">
               <div className="w-8" />
               <div className="w-8 h-1 rounded-full bg-muted-foreground/30" />
-              <button 
+              <button
                 onClick={onClose}
                 className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
               >
@@ -154,13 +146,9 @@ export function UpgradeModal({
               <p className="text-xs text-muted-foreground">{modalDescription}</p>
             </div>
           </div>
-
-          {/* Plans - single screen, scrollable only if needed */}
           <div className="flex-1 overflow-y-auto overscroll-contain px-3 py-1">
             {PlanCards}
           </div>
-
-          {/* CTA */}
           <div className="shrink-0 px-4 pt-2 pb-4 border-t border-border/50 bg-card">
             {CTAButton}
           </div>
@@ -171,20 +159,15 @@ export function UpgradeModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-3xl bg-card border-border p-0 flex flex-col max-h-[90vh]">
-        {/* Header */}
+      <DialogContent className="sm:max-w-lg bg-card border-border p-0 flex flex-col max-h-[90vh]">
         <DialogHeader className="text-center space-y-2 shrink-0 px-6 pt-5 pb-2">
           {HeaderIcon}
           <DialogTitle className="text-lg">{modalTitle}</DialogTitle>
           <DialogDescription className="text-sm">{modalDescription}</DialogDescription>
         </DialogHeader>
-
-        {/* Plan cards - fits in one view */}
         <div className="px-6 py-2 flex-1">
           {PlanCards}
         </div>
-
-        {/* CTA */}
         <div className="shrink-0 px-6 pt-2 pb-4 border-t border-border/50 bg-card">
           {CTAButton}
         </div>
