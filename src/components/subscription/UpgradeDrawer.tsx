@@ -1,4 +1,4 @@
-import { Crown, Sparkles, Tag, Loader2 } from 'lucide-react';
+import { Crown, Sparkles, Tag, Loader2, Shield, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -29,7 +29,6 @@ export function UpgradeDrawer({ variant = 'default', triggerText }: UpgradeDrawe
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
 
-  // All paid plans shown as "Pro" (filter out funnels-only plans)
   const proPlans = useMemo(() => {
     return plans
       .filter(p => !p.plan_key.startsWith('funnels_') && p.tier !== 'basic')
@@ -39,7 +38,6 @@ export function UpgradeDrawer({ variant = 'default', triggerText }: UpgradeDrawe
   const defaultKey = proPlans.find(p => p.badgeText)?.plan_key || proPlans[0]?.plan_key || '';
   const [selectedPlanKey, setSelectedPlanKey] = useState<string>(defaultKey);
 
-  // Coupon code state
   const [couponCode, setCouponCode] = useState('');
   const [validatingCoupon, setValidatingCoupon] = useState(false);
   const [appliedOffer, setAppliedOffer] = useState<Offer | null>(null);
@@ -154,30 +152,31 @@ export function UpgradeDrawer({ variant = 'default', triggerText }: UpgradeDrawe
   const buttonText = triggerText || 'Upgrade Now';
 
   const TriggerButton = variant === 'compact' ? (
-    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-500/20">
+    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs font-medium text-[hsl(30,85%,45%)] dark:text-[hsl(36,90%,65%)] hover:bg-[hsl(36,90%,55%,0.1)]">
       {buttonText}
     </Button>
   ) : variant === 'prominent' ? (
-    <button className="w-full rounded-lg px-3 py-1.5 bg-gradient-to-r from-amber-500/10 via-amber-400/5 to-amber-500/10 border border-amber-500/30 flex items-center gap-2 transition-all duration-200 hover:border-amber-500/50 active:scale-[0.99]">
-      <Crown className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-      <span className="font-medium text-xs text-amber-700 dark:text-amber-300">{buttonText}</span>
-      <Sparkles className="h-3 w-3 text-amber-500/50 ml-auto shrink-0" />
+    <button className="w-full rounded-xl px-3 py-2 bg-gradient-to-r from-[hsl(36,90%,55%,0.12)] via-[hsl(30,85%,52%,0.06)] to-[hsl(24,80%,48%,0.12)] border border-[hsl(30,85%,52%,0.3)] flex items-center gap-2 transition-all duration-200 hover:border-[hsl(30,85%,52%,0.5)] hover:shadow-sm active:scale-[0.99]">
+      <Crown className="h-3.5 w-3.5 text-[hsl(30,85%,52%)] shrink-0" />
+      <span className="font-semibold text-xs text-[hsl(28,85%,40%)] dark:text-[hsl(36,90%,70%)]">{buttonText}</span>
+      <Sparkles className="h-3 w-3 text-[hsl(36,90%,55%,0.6)] ml-auto shrink-0" />
     </button>
   ) : (
-    <Button variant="outline" size="sm" className="gap-2">
+    <Button variant="outline" size="sm" className="gap-2 border-[hsl(30,85%,52%,0.3)] text-[hsl(28,85%,42%)] dark:text-[hsl(36,90%,65%)] hover:bg-[hsl(36,90%,55%,0.08)]">
       <Crown className="h-4 w-4" />
       {buttonText}
     </Button>
   );
 
   const PlanContent = (
-    <div className="space-y-4 p-1">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="p-2 rounded-xl bg-primary/20">
-          <Sparkles className="h-6 w-6 text-primary" />
+    <div className="space-y-5 p-1">
+      {/* Premium header */}
+      <div className="flex items-center gap-3">
+        <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-[hsl(36,90%,55%)] to-[hsl(24,80%,45%)] flex items-center justify-center shadow-lg shadow-[hsl(30,85%,52%,0.3)]">
+          <Zap className="h-5 w-5 text-white" />
         </div>
         <div>
-          <h3 className="font-bold text-lg">Upgrade to Pro</h3>
+          <h3 className="font-bold text-lg text-foreground">Upgrade to Pro</h3>
           <p className="text-xs text-muted-foreground">Choose a duration that works for you</p>
         </div>
       </div>
@@ -195,9 +194,9 @@ export function UpgradeDrawer({ variant = 'default', triggerText }: UpgradeDrawe
 
       {/* Coupon Code Section */}
       {hasOffersForPlan && (
-        <div className="pt-2 border-t">
+        <div className="pt-1">
           {appliedOffer ? (
-            <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+            <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950/30 rounded-xl border border-green-200 dark:border-green-800">
               <div className="flex items-center gap-2">
                 <Tag className="h-4 w-4 text-green-600" />
                 <span className="text-sm font-medium text-green-700 dark:text-green-400">
@@ -209,10 +208,10 @@ export function UpgradeDrawer({ variant = 'default', triggerText }: UpgradeDrawe
           ) : (
             <div className="space-y-2">
               {offersForSelectedPlan[0] && selectedPlan && (
-                <div className="flex items-start gap-2 p-2 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
-                  <Sparkles className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                  <p className="text-xs text-amber-800 dark:text-amber-300">
-                    🎁 Use <span className="font-bold">{offersForSelectedPlan[0].promo_code}</span> and get {selectedPlan.name} at just <span className="font-bold">₹{Math.round(selectedPlan.price * (1 - offersForSelectedPlan[0].discount_value / 100))}</span>!
+                <div className="flex items-start gap-2 p-2.5 bg-[hsl(36,90%,55%,0.06)] rounded-xl border border-[hsl(30,85%,52%,0.2)]">
+                  <Sparkles className="h-4 w-4 text-[hsl(30,85%,52%)] shrink-0 mt-0.5" />
+                  <p className="text-xs text-[hsl(28,85%,35%)] dark:text-[hsl(36,90%,70%)]">
+                    🎁 Use <span className="font-bold">{offersForSelectedPlan[0].promo_code}</span> and get Pro at just <span className="font-bold">₹{Math.round(selectedPlan.price * (1 - offersForSelectedPlan[0].discount_value / 100))}</span>!
                   </p>
                 </div>
               )}
@@ -221,10 +220,10 @@ export function UpgradeDrawer({ variant = 'default', triggerText }: UpgradeDrawe
                   placeholder="Enter coupon code"
                   value={couponCode}
                   onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(null); }}
-                  className="flex-1 h-9 text-sm uppercase"
+                  className="flex-1 h-9 text-sm uppercase rounded-xl"
                   onKeyDown={(e) => e.key === 'Enter' && validateCoupon()}
                 />
-                <Button variant="outline" size="sm" onClick={validateCoupon} disabled={validatingCoupon || !couponCode.trim()} className="h-9">
+                <Button variant="outline" size="sm" onClick={validateCoupon} disabled={validatingCoupon || !couponCode.trim()} className="h-9 rounded-xl">
                   {validatingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
                 </Button>
               </div>
@@ -234,21 +233,26 @@ export function UpgradeDrawer({ variant = 'default', triggerText }: UpgradeDrawe
         </div>
       )}
 
-      <Button
+      {/* CTA Button */}
+      <button
         onClick={() => handleUpgrade(selectedPlanKey)}
-        className="w-full h-12 text-base font-semibold bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-600/30"
         disabled={paymentLoading || plansLoading || !selectedPlan}
+        className="w-full h-12 rounded-xl text-base font-bold text-white bg-gradient-to-r from-[hsl(36,90%,55%)] via-[hsl(30,85%,50%)] to-[hsl(24,80%,45%)] shadow-lg shadow-[hsl(30,85%,52%,0.35)] hover:shadow-xl hover:shadow-[hsl(30,85%,52%,0.4)] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
       >
         {paymentLoading ? 'Opening payment...' : selectedPlan ? (
-          <><Crown className="h-5 w-5 mr-2" />Get Pro – ₹{getDisplayPrice(selectedPlan)}</>
+          <><Crown className="h-5 w-5" />Get Pro – ₹{getDisplayPrice(selectedPlan)}</>
         ) : (
-          <><Crown className="h-5 w-5 mr-2" />Upgrade Now</>
+          <><Crown className="h-5 w-5" />Upgrade Now</>
         )}
-      </Button>
+      </button>
 
-      <p className="text-xs text-center text-muted-foreground">
-        Secure payment via Razorpay • Cancel anytime
-      </p>
+      {/* Trust signals */}
+      <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
+        <Shield className="h-3 w-3" />
+        <span>Secure payment via Razorpay</span>
+        <span className="text-muted-foreground/40">•</span>
+        <span>Cancel anytime</span>
+      </div>
     </div>
   );
 
