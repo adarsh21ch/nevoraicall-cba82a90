@@ -24,6 +24,7 @@ interface MobileProspectCardProps {
   onDelete: (id: string) => Promise<boolean>;
   isLastContacted?: boolean;
   onMarkLastContacted?: () => void;
+  isAllSheet?: boolean;
 }
 
 export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDelete, isLastContacted = false, onMarkLastContacted }: MobileProspectCardProps) {

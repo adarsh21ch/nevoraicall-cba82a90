@@ -102,7 +102,7 @@ export function SheetTabs({
     }
   };
 
-  // Render menu for "All" tab
+  // Render menu for "All" tab - NO delete options (All is view-only aggregation)
   const renderAllTabMenu = () =>
   <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -119,17 +119,6 @@ export function SheetTabs({
         <DropdownMenuItem onClick={() => onExportSheet?.(null)}>
           <Download className="h-3.5 w-3.5 mr-2" />
           Download All
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleSelectAndDelete(null)}>
-          <CheckSquare className="h-3.5 w-3.5 mr-2" />
-          Select & Delete
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-        onClick={() => handleDeleteAllInSheet(null, 'All')}
-        className="text-destructive focus:text-destructive">
-          <Trash className="h-3.5 w-3.5 mr-2" />
-          Delete all rows
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>;
