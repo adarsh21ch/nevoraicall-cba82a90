@@ -1,40 +1,46 @@
 
 
-## Flip Column Mapping UI
+# Admin: Restore Deleted Leads by User Email
 
-The proposed approach — showing Excel column headers on the left and letting users pick which app field each maps to — is the better UX pattern. It's how most modern import tools work (Mailchimp, HubSpot, Airtable). Users recognize *their* data and assign meaning to it, rather than hunting through dropdowns for their column names.
+## Context
 
-### Current Flow
-```text
-Name *        → [dropdown: Col A, Col B, Col C...]
-Phone 1 *     → [dropdown: Col A, Col B, Col C...]
-Address       → [dropdown: Col A, Col B, Col C...]
-```
+The app uses soft-delete (`deleted_at` timestamp) for prospects. Currently, 1,875 soft-deleted leads exist in the database. Users can only see their own deleted leads via the "Recently Deleted" drawer in Profile. There is no admin-level tool to find and restore a user's deleted data.
 
-### New Flow
-```text
-"John Doe"      → [dropdown: Name, Phone 1, Phone 2, Address, Age/DOB, Gender, Instagram, Profession, Skip]
-"9876543210"     → [dropdown: Name, Phone 1, Phone 2, Address, ...]
-"Mumbai"         → [dropdown: Name, Phone 1, Phone 2, Address, ...]
-```
+**Important limitation**: Leads that were hard-deleted before the soft-delete system was implemented are permanently gone and cannot be recovered.
 
-Each row shows the first-row sample value (from the Excel file) on the left. The dropdown on the right contains the app fields (Name, Phone 1, etc.) plus a "Skip" option. This way users see their actual data and decide what it means.
+## What We Will Build
 
-### Changes
+A new **"Data Recovery"** section in the Admin Panel that allows admins to:
 
-**File: `src/components/prospects/ImportExcelDialog.tsx`**
+1. Search for a user by email
+2. View all their soft-deleted leads (with `deleted_at` set)
+3. Restore individual leads or bulk-restore all deleted leads for that user
+4. See metadata: lead name, phone, sheet, deletion date, days remaining before 30-day expiry
 
-1. Reverse the mapping logic: instead of `ColumnMapping` (field → column), use a `reverseMapping` (column → field) where each Excel column maps to an app field or "skip"
-2. Left side: render each Excel column's first-row sample value as a label
-3. Right side: dropdown with app field options (Name, Phone 1, Phone 2, Address, Age/DOB, Gender, Instagram, Profession, Skip)
-4. Auto-detect: try to pre-match columns by fuzzy-matching header text (e.g. if column contains "name" → auto-select Name)
-5. Convert reverse mapping back to `ColumnMapping` format before calling `handleImport`
-6. Ensure each app field can only be selected once (grey out already-assigned fields or show a checkmark)
+## Plan
+
+### Step 1: Create AdminDataRecovery component
+
+New file: `src/components/admin/AdminDataRecovery.tsx`
+
+- **Search bar**: Input field for user email, search button
+- On search: query `profiles` table to find user_id by email, then query `prospects` where `user_id = X AND deleted_at IS NOT NULL`
+- **Results table**: Shows lead name, phone (masked), sheet_id, deleted_at, days remaining
+- **Actions per row**: "Restore" button (sets `deleted_at = null`)
+- **Bulk action**: "Restore All" button to restore all deleted leads for that user
+- Confirmation dialog before bulk restore
+- Success/error toasts
+
+### Step 2: Add "Recovery" tab to Admin page
+
+In `src/pages/Admin.tsx`:
+- Add a new tab "Recovery" with a database/restore icon
+- Render `AdminDataRecovery` inside that tab
 
 ### Technical Details
 
-- The reverse mapping state: `Record<string, keyof ColumnMapping | 'skip' | null>`
-- Auto-detect logic: simple lowercase `.includes()` checks on column header text
-- Validation: ensure at least Name and Phone 1 are mapped before enabling Import button
-- The preview table above remains unchanged
+- Uses existing Supabase client with admin RLS bypass (admin check already in place)
+- No database migration needed — queries existing `prospects` table
+- Decryption handled via `useEncryption` hook for displaying lead names/phones
+- All restore actions logged via `logAdminAction` for audit trail
 
