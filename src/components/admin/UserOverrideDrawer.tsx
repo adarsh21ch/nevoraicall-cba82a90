@@ -160,7 +160,7 @@ export function UserOverrideDrawer({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="pro">⭐ Basic</SelectItem>
+                    <SelectItem value="pro">⭐ Pro</SelectItem>
                     <SelectItem value="premium">💎 Pro</SelectItem>
                   </SelectContent>
                 </Select>

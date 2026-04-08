@@ -9,7 +9,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useState, useMemo } from 'react';
 import { TierCard } from '@/components/subscription/TierCard';
-import { getTierDisplayName } from '@/config/tierLabels';
 
 interface FunnelsUpgradeDrawerProps {
   triggerText?: string;
@@ -27,34 +26,31 @@ export function FunnelsUpgradeDrawer({ triggerText, trigger, variant = 'default'
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
 
-  const { basicPlans, proPlans } = useMemo(() => ({
-    basicPlans: plans.filter(p => p.tier === 'pro').sort((a, b) => a.sortOrder - b.sortOrder),
-    proPlans: plans.filter(p => p.tier === 'premium').sort((a, b) => a.sortOrder - b.sortOrder),
-  }), [plans]);
+  // All paid plans as single "Pro" group
+  const proPlans = useMemo(() => {
+    return plans
+      .filter(p => p.tier !== 'basic')
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+  }, [plans]);
 
-  const allPlans = [...basicPlans, ...proPlans];
-  // Default to pro for funnel upgrade context
-  const defaultKey = proPlans[0]?.plan_key || basicPlans.find(p => p.badgeText)?.plan_key || basicPlans[0]?.plan_key || '';
+  const defaultKey = proPlans.find(p => p.badgeText)?.plan_key || proPlans[0]?.plan_key || '';
   const [selectedPlanKey, setSelectedPlanKey] = useState<string>(defaultKey);
 
-  const selectedPlan = allPlans.find(p => p.plan_key === selectedPlanKey) || allPlans[0];
-  const isProSelected = selectedPlan?.tier === 'premium';
+  const selectedPlan = proPlans.find(p => p.plan_key === selectedPlanKey) || proPlans[0];
 
   const prepareForMobileCheckout = async () => {
     if (!isMobile) return;
-
     setOpen(false);
     await new Promise((resolve) => window.setTimeout(resolve, MOBILE_CHECKOUT_DELAY_MS));
   };
 
   const handleUpgrade = (planKey: string) => {
     const plan = plans.find(p => p.plan_key === planKey);
-    const tierLabel = plan ? getTierDisplayName(plan.tier) : 'Plan';
     if (plan?.billing_type === 'recurring') {
       initiateSubscription({
         planType: planKey,
         beforeOpen: prepareForMobileCheckout,
-        onSuccess: () => { toast({ title: `${tierLabel} Plan Activated 🎉`, description: "All features including Funnels are now unlocked!" }); refetch(); setOpen(false); },
+        onSuccess: () => { toast({ title: "Pro Plan Activated 🎉", description: "All features including Funnels are now unlocked!" }); refetch(); setOpen(false); },
         onError: (error) => console.error('Subscription error:', error),
       });
       return;
@@ -62,7 +58,7 @@ export function FunnelsUpgradeDrawer({ triggerText, trigger, variant = 'default'
     initiatePayment({
       planType: planKey,
       beforeOpen: prepareForMobileCheckout,
-      onSuccess: () => { toast({ title: `${tierLabel} Plan Activated 🎉`, description: "All features including Funnels are now unlocked!" }); refetch(); setOpen(false); },
+      onSuccess: () => { toast({ title: "Pro Plan Activated 🎉", description: "All features including Funnels are now unlocked!" }); refetch(); setOpen(false); },
       onError: (error) => console.error('Payment error:', error),
     });
   };
@@ -95,24 +91,19 @@ export function FunnelsUpgradeDrawer({ triggerText, trigger, variant = 'default'
       </div>
 
       {plansLoading ? (
-        <div className="space-y-3">
-          <div className="h-40 bg-muted animate-pulse rounded-xl" />
-          <div className="h-40 bg-muted animate-pulse rounded-xl" />
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {basicPlans.length > 0 && (
-            <TierCard tierName="Basic" plans={basicPlans} selectedPlanKey={selectedPlanKey} onSelectPlan={setSelectedPlanKey} />
-          )}
-          {proPlans.length > 0 && (
-            <TierCard tierName="Pro" plans={proPlans} isPremium selectedPlanKey={selectedPlanKey} onSelectPlan={setSelectedPlanKey} />
-          )}
-        </div>
-      )}
+        <div className="h-40 bg-muted animate-pulse rounded-xl" />
+      ) : proPlans.length > 0 ? (
+        <TierCard
+          tierName="Pro"
+          plans={proPlans}
+          selectedPlanKey={selectedPlanKey}
+          onSelectPlan={setSelectedPlanKey}
+        />
+      ) : null}
 
-      <Button 
+      <Button
         onClick={() => handleUpgrade(selectedPlanKey)}
-        className={`w-full h-12 text-base font-semibold shadow-lg ${isProSelected ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/30' : 'shadow-primary/30'}`}
+        className="w-full h-12 text-base font-semibold shadow-lg shadow-primary/30"
         disabled={paymentLoading || plansLoading || !selectedPlan}
       >
         {paymentLoading ? (
@@ -123,7 +114,7 @@ export function FunnelsUpgradeDrawer({ triggerText, trigger, variant = 'default'
           <><Crown className="h-5 w-5 mr-2" />Upgrade Now</>
         )}
       </Button>
-      
+
       <p className="text-xs text-center text-muted-foreground">
         Secure payment via Razorpay • Cancel anytime
       </p>
@@ -136,7 +127,7 @@ export function FunnelsUpgradeDrawer({ triggerText, trigger, variant = 'default'
         <DrawerTrigger asChild>{TriggerButton}</DrawerTrigger>
         <DrawerContent className="px-4 pb-8">
           <DrawerHeader className="px-0">
-            <DrawerTitle className="sr-only">Upgrade Plans</DrawerTitle>
+            <DrawerTitle className="sr-only">Upgrade to Pro</DrawerTitle>
           </DrawerHeader>
           {PlanContent}
         </DrawerContent>
@@ -149,7 +140,7 @@ export function FunnelsUpgradeDrawer({ triggerText, trigger, variant = 'default'
       <SheetTrigger asChild>{TriggerButton}</SheetTrigger>
       <SheetContent side="right" className="w-[400px] sm:w-[450px]">
         <SheetHeader>
-          <SheetTitle className="sr-only">Upgrade Plans</SheetTitle>
+          <SheetTitle className="sr-only">Upgrade to Pro</SheetTitle>
         </SheetHeader>
         {PlanContent}
       </SheetContent>
