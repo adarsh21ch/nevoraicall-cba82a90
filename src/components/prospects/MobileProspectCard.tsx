@@ -27,7 +27,7 @@ interface MobileProspectCardProps {
   isAllSheet?: boolean;
 }
 
-export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDelete, isLastContacted = false, onMarkLastContacted }: MobileProspectCardProps) {
+export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDelete, isLastContacted = false, onMarkLastContacted, isAllSheet = false }: MobileProspectCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   // Optimistic state for instant UI updates
   const [optimisticAction, setOptimisticAction] = useState<ExtendedActionTaken | null>(null);
