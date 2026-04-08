@@ -240,7 +240,7 @@ export function UpgradeDrawer({ variant = 'default', triggerText }: UpgradeDrawe
         disabled={paymentLoading || plansLoading || !selectedPlan}
       >
         {paymentLoading ? 'Opening payment...' : selectedPlan ? (
-          <><Crown className="h-5 w-5 mr-2" />Get {selectedPlan.displayName || selectedPlan.name} – ₹{getDisplayPrice(selectedPlan)}</>
+          <><Crown className="h-5 w-5 mr-2" />Get Pro – ₹{getDisplayPrice(selectedPlan)}</>
         ) : (
           <><Crown className="h-5 w-5 mr-2" />Upgrade Now</>
         )}
