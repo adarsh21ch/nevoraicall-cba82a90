@@ -1,4 +1,4 @@
-import { Crown, Tag, Loader2, Shield, Lock } from 'lucide-react';
+import { Crown, Sparkles, Tag, Loader2, Shield, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -152,38 +152,37 @@ export function UpgradeDrawer({ variant = 'default', triggerText }: UpgradeDrawe
   const buttonText = triggerText || 'Upgrade Now';
 
   const TriggerButton = variant === 'compact' ? (
-    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs font-medium text-primary hover:bg-primary/5">
+    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs font-medium text-[hsl(30,85%,45%)] dark:text-[hsl(36,90%,65%)] hover:bg-[hsl(36,90%,55%,0.1)]">
       {buttonText}
     </Button>
   ) : variant === 'prominent' ? (
-    <button className="w-full rounded-xl px-3 py-2.5 bg-primary/5 border border-primary/15 flex items-center gap-2 transition-all duration-200 hover:bg-primary/8 hover:border-primary/25 active:scale-[0.99]">
-      <Crown className="h-4 w-4 text-primary shrink-0" />
-      <span className="font-semibold text-sm text-foreground">{buttonText}</span>
-      <Lock className="h-3 w-3 text-muted-foreground ml-auto shrink-0" />
+    <button className="w-full rounded-xl px-3 py-2 bg-gradient-to-r from-[hsl(36,90%,55%,0.12)] via-[hsl(30,85%,52%,0.06)] to-[hsl(24,80%,48%,0.12)] border border-[hsl(30,85%,52%,0.3)] flex items-center gap-2 transition-all duration-200 hover:border-[hsl(30,85%,52%,0.5)] hover:shadow-sm active:scale-[0.99]">
+      <Crown className="h-3.5 w-3.5 text-[hsl(30,85%,52%)] shrink-0" />
+      <span className="font-semibold text-xs text-[hsl(28,85%,40%)] dark:text-[hsl(36,90%,70%)]">{buttonText}</span>
+      <Sparkles className="h-3 w-3 text-[hsl(36,90%,55%,0.6)] ml-auto shrink-0" />
     </button>
   ) : (
-    <Button variant="outline" size="sm" className="gap-2 text-foreground hover:bg-primary/5">
-      <Crown className="h-4 w-4 text-primary" />
+    <Button variant="outline" size="sm" className="gap-2 border-[hsl(30,85%,52%,0.3)] text-[hsl(28,85%,42%)] dark:text-[hsl(36,90%,65%)] hover:bg-[hsl(36,90%,55%,0.08)]">
+      <Crown className="h-4 w-4" />
       {buttonText}
     </Button>
   );
 
   const PlanContent = (
-    <div className="space-y-6 px-1">
-      {/* Header */}
-      <div className="text-center space-y-1.5 pt-2">
-        <div className="mx-auto h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
-          <Crown className="h-6 w-6 text-primary" />
+    <div className="space-y-5 p-1">
+      {/* Premium header */}
+      <div className="flex items-center gap-3">
+        <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-[hsl(36,90%,55%)] to-[hsl(24,80%,45%)] flex items-center justify-center shadow-lg shadow-[hsl(30,85%,52%,0.3)]">
+          <Zap className="h-5 w-5 text-white" />
         </div>
-        <h3 className="font-bold text-xl text-foreground tracking-tight">Upgrade to Pro</h3>
-        <p className="text-sm text-muted-foreground">Unlock the full Nevorai workflow</p>
+        <div>
+          <h3 className="font-bold text-lg text-foreground">Upgrade to Pro</h3>
+          <p className="text-xs text-muted-foreground">Choose a duration that works for you</p>
+        </div>
       </div>
 
-      {/* Divider */}
-      <div className="h-px bg-border" />
-
       {plansLoading ? (
-        <div className="h-40 bg-muted/50 animate-pulse rounded-xl" />
+        <div className="h-40 bg-muted animate-pulse rounded-xl" />
       ) : proPlans.length > 0 ? (
         <TierCard
           tierName="Pro"
@@ -195,7 +194,7 @@ export function UpgradeDrawer({ variant = 'default', triggerText }: UpgradeDrawe
 
       {/* Coupon Code Section */}
       {hasOffersForPlan && (
-        <div>
+        <div className="pt-1">
           {appliedOffer ? (
             <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950/30 rounded-xl border border-green-200 dark:border-green-800">
               <div className="flex items-center gap-2">
@@ -208,43 +207,50 @@ export function UpgradeDrawer({ variant = 'default', triggerText }: UpgradeDrawe
             </div>
           ) : (
             <div className="space-y-2">
+              {offersForSelectedPlan[0] && selectedPlan && (
+                <div className="flex items-start gap-2 p-2.5 bg-[hsl(36,90%,55%,0.06)] rounded-xl border border-[hsl(30,85%,52%,0.2)]">
+                  <Sparkles className="h-4 w-4 text-[hsl(30,85%,52%)] shrink-0 mt-0.5" />
+                  <p className="text-xs text-[hsl(28,85%,35%)] dark:text-[hsl(36,90%,70%)]">
+                    🎁 Use <span className="font-bold">{offersForSelectedPlan[0].promo_code}</span> and get Pro at just <span className="font-bold">₹{Math.round(selectedPlan.price * (1 - offersForSelectedPlan[0].discount_value / 100))}</span>!
+                  </p>
+                </div>
+              )}
               <div className="flex gap-2">
                 <Input
-                  placeholder="Have a coupon code?"
+                  placeholder="Enter coupon code"
                   value={couponCode}
                   onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(null); }}
-                  className="flex-1 h-10 text-sm uppercase rounded-xl border-border"
+                  className="flex-1 h-9 text-sm uppercase rounded-xl"
                   onKeyDown={(e) => e.key === 'Enter' && validateCoupon()}
                 />
-                <Button variant="outline" size="sm" onClick={validateCoupon} disabled={validatingCoupon || !couponCode.trim()} className="h-10 px-4 rounded-xl">
+                <Button variant="outline" size="sm" onClick={validateCoupon} disabled={validatingCoupon || !couponCode.trim()} className="h-9 rounded-xl">
                   {validatingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
                 </Button>
               </div>
-              {couponError && <p className="text-xs text-destructive pl-1">{couponError}</p>}
+              {couponError && <p className="text-xs text-destructive">{couponError}</p>}
             </div>
           )}
         </div>
       )}
 
       {/* CTA Button */}
-      <Button
+      <button
         onClick={() => handleUpgrade(selectedPlanKey)}
         disabled={paymentLoading || plansLoading || !selectedPlan}
-        className="w-full h-12 rounded-xl text-base font-semibold"
-        size="lg"
+        className="w-full h-12 rounded-xl text-base font-bold text-white bg-gradient-to-r from-[hsl(36,90%,55%)] via-[hsl(30,85%,50%)] to-[hsl(24,80%,45%)] shadow-lg shadow-[hsl(30,85%,52%,0.35)] hover:shadow-xl hover:shadow-[hsl(30,85%,52%,0.4)] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
       >
-        {paymentLoading ? (
-          <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Processing...</>
+        {paymentLoading ? 'Opening payment...' : selectedPlan ? (
+          <><Crown className="h-5 w-5" />Get Pro – ₹{getDisplayPrice(selectedPlan)}</>
         ) : (
-          <>Upgrade to Pro</>
+          <><Crown className="h-5 w-5" />Upgrade Now</>
         )}
-      </Button>
+      </button>
 
-      {/* Trust footer */}
-      <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground pb-2">
+      {/* Trust signals */}
+      <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
         <Shield className="h-3 w-3" />
         <span>Secure payment via Razorpay</span>
-        <span className="text-muted-foreground/40">·</span>
+        <span className="text-muted-foreground/40">•</span>
         <span>Cancel anytime</span>
       </div>
     </div>
@@ -254,8 +260,8 @@ export function UpgradeDrawer({ variant = 'default', triggerText }: UpgradeDrawe
     return (
       <Drawer open={open} onOpenChange={setOpen}>
         <DrawerTrigger asChild>{TriggerButton}</DrawerTrigger>
-        <DrawerContent className="px-4 pb-6">
-          <DrawerHeader className="px-0 pb-0">
+        <DrawerContent className="px-4 pb-8">
+          <DrawerHeader className="px-0">
             <DrawerTitle className="sr-only">Upgrade to Pro</DrawerTitle>
           </DrawerHeader>
           {PlanContent}
@@ -267,7 +273,7 @@ export function UpgradeDrawer({ variant = 'default', triggerText }: UpgradeDrawe
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>{TriggerButton}</SheetTrigger>
-      <SheetContent side="right" className="w-[400px] sm:w-[440px]">
+      <SheetContent side="right" className="w-[400px] sm:w-[450px]">
         <SheetHeader>
           <SheetTitle className="sr-only">Upgrade to Pro</SheetTitle>
         </SheetHeader>
