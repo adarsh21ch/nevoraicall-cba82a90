@@ -808,6 +808,11 @@ export function ProspectTable({
 
   // Delete with undo support - show snackbar with UNDO on mobile
   const handleDeleteWithUndo = async (id: string) => {
+    // Block deletion from "All" sheet
+    if (!selectedSheetId) {
+      toast.info('To delete a lead, go to its specific sheet first.');
+      return false;
+    }
     const prospect = prospects.find(p => p.id === id);
     if (!prospect) return false;
     const result = await onDelete(id);
@@ -816,11 +821,9 @@ export function ProspectTable({
         type: 'delete_prospect',
         data: prospect
       });
-      // Close expanded row if it was the deleted one
       if (expandedRowId === id) {
         setExpandedRowId(null);
       }
-      // Show snackbar with undo option
       toast.success(`Deleted ${prospect.name}`, {
         action: {
           label: 'UNDO',
