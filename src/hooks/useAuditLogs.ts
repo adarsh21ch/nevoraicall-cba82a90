@@ -27,14 +27,20 @@ export function useAuditLogs(options: UseAuditLogsOptions = {}) {
   return useQuery({
     queryKey: ['admin-audit-logs', limit, offset, actionType, targetType],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('admin_get_audit_logs', {
+      // Build args object, only including non-null values to avoid type issues
+      const args: Record<string, any> = {
         p_limit: limit,
         p_offset: offset,
-        p_action_type: actionType,
-        p_target_type: targetType,
-      });
+      };
+      if (actionType) args.p_action_type = actionType;
+      if (targetType) args.p_target_type = targetType;
 
-      if (error) throw error;
+      const { data, error } = await supabase.rpc('admin_get_audit_logs', args as any);
+
+      if (error) {
+        console.error('[AuditLogs] RPC error:', error.message, error.details, error.hint);
+        throw new Error(error.message || 'Failed to fetch audit logs');
+      }
 
       const logs: AuditLog[] = (data || []).map((row: any) => ({
         id: row.id,
@@ -49,13 +55,12 @@ export function useAuditLogs(options: UseAuditLogsOptions = {}) {
         created_at: row.created_at,
       }));
 
-      // Handle empty results gracefully
       const totalCount = data && data.length > 0 ? (data[0]?.total_count || 0) : 0;
 
       return { logs, totalCount };
     },
-    staleTime: 30000, // 30 seconds
-    retry: 1, // Only retry once on failure
+    staleTime: 30000,
+    retry: 2,
   });
 }
 
