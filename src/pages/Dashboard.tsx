@@ -361,8 +361,8 @@ export default function Dashboard() {
 
       <BottomNav />
 
-      {/* Onboarding Overlay */}
-      <OnboardingOverlay />
+
+
 
       {/* Filter Tag Setup Dialog */}
       <FilterTagSetupDialog open={showFilterSetup} onOpenChange={setShowFilterSetup} onComplete={markSetupDone} />
