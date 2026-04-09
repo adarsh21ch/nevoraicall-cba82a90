@@ -345,5 +345,10 @@ export default function Home() {
       
       {/* Trial Expired Modal - shows when trial ends in trial-only mode */}
       <TrialExpiredModal />
+
+      {/* WhatsApp Community Popup - shown once after signup */}
+      {showWaPopup && (
+        <WhatsAppCommunityPopup onDismiss={() => setShowWaPopup(false)} />
+      )}
     </div>;
 }
