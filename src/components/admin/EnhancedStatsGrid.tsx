@@ -53,7 +53,7 @@ function MiniStat({
     >
       <div className="shrink-0 text-muted-foreground">{icon}</div>
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] text-muted-foreground truncate">{label}</p>
+        <p className="text-[10px] text-muted-foreground leading-tight">{label}</p>
         <p className="text-sm font-bold leading-tight">{value}</p>
       </div>
       {subValue && (

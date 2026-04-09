@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useAuditLogs, AuditLog } from '@/hooks/useAuditLogs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Loader2, ChevronLeft, ChevronRight, History, ChevronDown, ChevronUp } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Loader2, ChevronLeft, ChevronRight, History, ChevronDown, ChevronUp, Settings, UserX, UserCheck, Plus, Edit, Trash2, Shield, Bell } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 
 const ACTION_TYPES = [
@@ -33,6 +33,16 @@ const TARGET_TYPES = [
   { value: 'offer', label: 'Offers' },
 ];
 
+function getActionIcon(actionType: string) {
+  if (actionType.includes('created')) return <Plus className="h-3.5 w-3.5 text-green-600" />;
+  if (actionType.includes('deleted') || actionType.includes('revoked')) return <Trash2 className="h-3.5 w-3.5 text-destructive" />;
+  if (actionType.includes('updated')) return <Edit className="h-3.5 w-3.5 text-blue-500" />;
+  if (actionType.includes('suspended')) return <UserX className="h-3.5 w-3.5 text-destructive" />;
+  if (actionType.includes('unsuspended') || actionType.includes('granted')) return <UserCheck className="h-3.5 w-3.5 text-green-600" />;
+  if (actionType.includes('override')) return <Shield className="h-3.5 w-3.5 text-amber-500" />;
+  return <Settings className="h-3.5 w-3.5 text-muted-foreground" />;
+}
+
 function getActionColor(actionType: string): 'default' | 'secondary' | 'destructive' | 'outline' {
   if (actionType.includes('created') || actionType.includes('granted')) return 'default';
   if (actionType.includes('deleted') || actionType.includes('suspended') || actionType.includes('revoked')) return 'destructive';
@@ -46,16 +56,44 @@ function ExpandableDetails({ log }: { log: AuditLog }) {
 
   return (
     <>
-      <Button variant="ghost" size="sm" className="h-5 text-[10px] px-1" onClick={() => setExpanded(!expanded)}>
-        {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+      <Button variant="ghost" size="sm" className="h-5 text-[10px] px-1 mt-0.5" onClick={() => setExpanded(!expanded)}>
+        {expanded ? <ChevronUp className="h-3 w-3 mr-0.5" /> : <ChevronDown className="h-3 w-3 mr-0.5" />}
+        {expanded ? 'Hide' : 'Details'}
       </Button>
       {expanded && (
-        <div className="mt-1 p-2 bg-muted rounded text-[10px] font-mono max-w-[300px] overflow-x-auto">
-          {log.old_value && <div className="mb-1"><span className="text-destructive">- </span><pre className="whitespace-pre-wrap inline">{JSON.stringify(log.old_value, null, 2)}</pre></div>}
-          {log.new_value && <div><span className="text-green-600">+ </span><pre className="whitespace-pre-wrap inline">{JSON.stringify(log.new_value, null, 2)}</pre></div>}
+        <div className="mt-1.5 p-2.5 bg-muted/60 rounded-lg text-[10px] font-mono space-y-1 border border-border/30">
+          {log.old_value && (
+            <div>
+              <span className="text-destructive font-semibold">Before: </span>
+              <pre className="whitespace-pre-wrap inline text-muted-foreground">{JSON.stringify(log.old_value, null, 2)}</pre>
+            </div>
+          )}
+          {log.new_value && (
+            <div>
+              <span className="text-green-600 font-semibold">After: </span>
+              <pre className="whitespace-pre-wrap inline text-muted-foreground">{JSON.stringify(log.new_value, null, 2)}</pre>
+            </div>
+          )}
         </div>
       )}
     </>
+  );
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="flex items-start gap-3 p-3 rounded-lg border border-border/30 bg-card">
+          <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-3.5 w-3/4" />
+            <Skeleton className="h-3 w-1/2" />
+            <Skeleton className="h-2.5 w-1/3" />
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -80,6 +118,9 @@ export function AuditLogViewer() {
         <div className="flex items-center gap-2">
           <History className="h-5 w-5" />
           <h2 className="text-lg font-semibold">Audit Log</h2>
+          {data?.totalCount !== undefined && (
+            <Badge variant="secondary" className="text-[10px]">{data.totalCount} entries</Badge>
+          )}
         </div>
       </div>
 
@@ -107,62 +148,49 @@ export function AuditLogViewer() {
         </Select>
       </div>
 
-      {/* Table */}
+      {/* Content */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        </div>
+        <LoadingSkeleton />
       ) : error ? (
-        <Card className="p-6 text-center space-y-2">
-          <p className="text-sm text-muted-foreground">Failed to load audit logs</p>
+        <Card className="p-6 text-center space-y-3 border-destructive/20 bg-destructive/5">
+          <div className="text-destructive text-sm font-medium">Failed to load audit logs</div>
+          <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+            {error instanceof Error ? error.message : 'An unknown error occurred. Check that admin role is configured correctly.'}
+          </p>
           <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
         </Card>
+      ) : data?.logs.length === 0 ? (
+        <Card className="p-8 text-center border-border/30">
+          <History className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+          <p className="text-sm text-muted-foreground">No audit logs found</p>
+          <p className="text-xs text-muted-foreground/60 mt-1">Actions performed in the admin panel will appear here</p>
+        </Card>
       ) : (
-        <div className="rounded-lg border border-border/50 bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="text-[11px]">Time</TableHead>
-                <TableHead className="text-[11px]">Admin</TableHead>
-                <TableHead className="text-[11px]">Action</TableHead>
-                <TableHead className="text-[11px]">Target</TableHead>
-                <TableHead className="text-[11px]">Description</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data?.logs.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground text-sm">
-                    No audit logs found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                data?.logs.map((log) => (
-                  <TableRow key={log.id}>
-                    <TableCell className="py-2 px-3 text-[11px] text-muted-foreground whitespace-nowrap">
-                      <div>{format(new Date(log.created_at), 'MMM d, HH:mm')}</div>
-                      <div className="text-[10px]">{formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}</div>
-                    </TableCell>
-                    <TableCell className="py-2 px-3 text-[11px] max-w-[120px] truncate">
-                      {log.admin_email || 'Unknown'}
-                    </TableCell>
-                    <TableCell className="py-2 px-3">
-                      <Badge variant={getActionColor(log.action_type)} className="text-[10px]">
-                        {log.action_type.replace(/_/g, ' ')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="py-2 px-3">
-                      <Badge variant="outline" className="text-[10px]">{log.target_type}</Badge>
-                    </TableCell>
-                    <TableCell className="py-2 px-3">
-                      <p className="text-xs truncate max-w-[200px]">{log.description}</p>
-                      <ExpandableDetails log={log} />
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+        <div className="space-y-2">
+          {data?.logs.map((log) => (
+            <div key={log.id} className="flex items-start gap-3 p-3 rounded-xl border border-border/30 bg-card hover:bg-muted/30 transition-colors">
+              {/* Action Icon */}
+              <div className="mt-0.5 p-1.5 rounded-full bg-muted/60 shrink-0">
+                {getActionIcon(log.action_type)}
+              </div>
+              
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant={getActionColor(log.action_type)} className="text-[10px]">
+                    {log.action_type.replace(/_/g, ' ')}
+                  </Badge>
+                  <Badge variant="outline" className="text-[9px]">{log.target_type}</Badge>
+                </div>
+                <p className="text-xs mt-1 text-foreground leading-relaxed">{log.description}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  by {log.admin_email || 'Unknown'} · {format(new Date(log.created_at), 'MMM d, yyyy \'at\' h:mm a')}
+                  <span className="ml-1 opacity-60">({formatDistanceToNow(new Date(log.created_at), { addSuffix: true })})</span>
+                </p>
+                <ExpandableDetails log={log} />
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
