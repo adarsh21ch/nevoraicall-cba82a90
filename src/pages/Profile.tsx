@@ -215,6 +215,8 @@ export default function Profile() {
   
   const { canAccess: canAccessAI } = useFeatureAccess('ai_assistant');
   const { pendingCount } = useSharedLeads();
+  const { restartTour } = useOnboarding();
+  const [showRestartTour, setShowRestartTour] = useState(false);
 
   // Handle SSO redirect to nevorai.com pages
   const handleSSORedirect = useCallback(async (targetUrl: string) => {
