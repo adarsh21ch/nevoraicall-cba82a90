@@ -13,10 +13,11 @@ export function SignupTrendChart({ data }: SignupTrendChartProps) {
   }));
 
   const maxCount = Math.max(...data.map(d => d.count), 1);
+  const peakDay = data.reduce((max, d) => d.count > max.count ? d : max, data[0]);
 
   return (
-    <div className="rounded-xl bg-card border border-border/50 p-4">
-      <h4 className="text-sm font-medium mb-3">Daily Signups (Last 14 Days)</h4>
+    <div className="rounded-2xl bg-card border border-border/50 p-4">
+      <h4 className="text-sm font-bold font-heading mb-1">Daily Signups — Last 14 Days</h4>
       <div className="h-48">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
@@ -44,7 +45,7 @@ export function SignupTrendChart({ data }: SignupTrendChartProps) {
               contentStyle={{ 
                 backgroundColor: 'hsl(var(--card))',
                 border: '1px solid hsl(var(--border))',
-                borderRadius: '8px',
+                borderRadius: '12px',
                 fontSize: '12px'
               }}
               labelStyle={{ color: 'hsl(var(--foreground))' }}
@@ -61,6 +62,11 @@ export function SignupTrendChart({ data }: SignupTrendChartProps) {
           </AreaChart>
         </ResponsiveContainer>
       </div>
+      {peakDay && (
+        <p className="text-[11px] text-muted-foreground mt-2">
+          Peak day: {format(parseISO(peakDay.date), 'MMM d')} — {peakDay.count} signups
+        </p>
+      )}
     </div>
   );
 }
