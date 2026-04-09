@@ -33,6 +33,20 @@ export interface Profile {
   upline_email: string | null;
   /** User's email address for display */
   email: string | null;
+  /** WhatsApp / phone number for outreach */
+  phone_number: string | null;
+  /** How user found the app */
+  signup_source: string | null;
+  /** Whether onboarding flow is completed */
+  onboarding_completed: boolean;
+  /** Current onboarding step (0-5) */
+  onboarding_step: number;
+  /** Whether the WA community popup was shown */
+  whatsapp_popup_shown: boolean;
+  /** Whether user joined the WA community */
+  whatsapp_community_joined: boolean;
+  /** When user joined WA community */
+  whatsapp_joined_at: string | null;
 }
 
 export interface ProfileUpdate {
