@@ -102,6 +102,13 @@ export function GrowthMetricCards({ analytics }: GrowthMetricCardsProps) {
       <ProUserDrawer
         open={paidDrawerOpen}
         onOpenChange={setPaidDrawerOpen}
+        users={(proUsers || []).map(u => ({
+          user_id: u.user_id, display_name: u.display_name, email: u.email, neverai_id: u.neverai_id,
+          plan: u.plan, subscribed_at: u.subscribed_at, expires_at: u.expires_at,
+          is_admin_override: u.is_admin_override, is_expired: u.is_expired,
+          days_remaining: u.days_remaining, payment_amount: u.payment_amount,
+        }))}
+        loading={proLoading}
       />
       {freeDrawerOpen && (
         <FreeUserDrawer
