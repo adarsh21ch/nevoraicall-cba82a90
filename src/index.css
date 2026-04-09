@@ -508,6 +508,11 @@ html {
     animation: confetti-fall linear forwards;
   }
 
+  @keyframes onb-pulse {
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.02); }
+  }
+
   @keyframes onboarding-pulse-ring {
     0%, 100% { box-shadow: 0 0 0 3px #2563EB; }
     50% { box-shadow: 0 0 0 10px rgba(37,99,235,0.22); }
