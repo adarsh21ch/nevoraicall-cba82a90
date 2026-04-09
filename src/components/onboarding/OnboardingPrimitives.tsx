@@ -1,55 +1,80 @@
 import { ReactNode, useEffect, useState, useRef } from 'react';
 
-/* ─── 4-Panel Overlay ─── */
-interface FourPanelOverlayProps {
-  targetRect: DOMRect | null;
+/* ─── Blue Highlight Box (no overlay, user can interact freely) ─── */
+export function HighlightBox({ targetRect }: { targetRect: DOMRect | null }) {
+  if (!targetRect) return null;
+
+  const pad = 6;
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: targetRect.top - pad,
+        left: targetRect.left - pad,
+        width: targetRect.width + pad * 2,
+        height: targetRect.height + pad * 2,
+        borderRadius: 12,
+        border: '2.5px solid #2563EB',
+        boxShadow: '0 0 0 4px rgba(37,99,235,0.18), 0 0 24px 4px rgba(37,99,235,0.10)',
+        zIndex: 9998,
+        pointerEvents: 'none',
+        transition: 'all 0.25s cubic-bezier(.4,0,.2,1)',
+      }}
+    >
+      {/* Pulsing corners for attention */}
+      <div style={{
+        position: 'absolute', inset: -3, borderRadius: 14,
+        border: '2px solid rgba(37,99,235,0.35)',
+        animation: 'onb-pulse 1.8s ease-in-out infinite',
+      }} />
+    </div>
+  );
 }
 
-export function FourPanelOverlay({ targetRect }: FourPanelOverlayProps) {
-  const panelStyle: React.CSSProperties = {
-    position: 'fixed',
-    background: 'rgba(0,0,0,0.55)',
-    zIndex: 9000,
-    pointerEvents: 'all',
-    transition: 'all 0.2s ease',
-  };
+/* ─── Subtle dimming (very light, doesn't block interaction) ─── */
+export function LightDimOverlay({ targetRect }: { targetRect: DOMRect | null }) {
+  if (!targetRect) return null;
 
-  // If no target found, show full-screen overlay with no cutout
-  if (!targetRect) {
-    return <div style={{ ...panelStyle, top: 0, left: 0, width: '100vw', height: '100vh' }} />;
-  }
-
+  // Use a CSS clip-path to cut out the target area
   const pad = 8;
   const t = targetRect.top - pad;
   const l = targetRect.left - pad;
   const w = targetRect.width + pad * 2;
   const h = targetRect.height + pad * 2;
+  const r = 12;
 
   return (
-    <>
-      <div style={{ ...panelStyle, top: 0, left: 0, width: '100vw', height: Math.max(0, t) }} />
-      <div style={{ ...panelStyle, top: t + h, left: 0, width: '100vw', height: `calc(100vh - ${t + h}px)` }} />
-      <div style={{ ...panelStyle, top: t, left: 0, width: Math.max(0, l), height: h }} />
-      <div style={{ ...panelStyle, top: t, left: l + w, width: `calc(100vw - ${l + w}px)`, height: h }} />
-    </>
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.25)',
+        zIndex: 9000,
+        pointerEvents: 'none',
+        transition: 'all 0.25s ease',
+        clipPath: `polygon(
+          0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%,
+          ${l}px ${t + r}px,
+          ${l + r}px ${t}px,
+          ${l + w - r}px ${t}px,
+          ${l + w}px ${t + r}px,
+          ${l + w}px ${t + h - r}px,
+          ${l + w - r}px ${t + h}px,
+          ${l + r}px ${t + h}px,
+          ${l}px ${t + h - r}px,
+          ${l}px ${t + r}px
+        )`,
+      }}
+    />
   );
 }
 
-/* ─── Target Highlighter ─── */
+/* ─── Target Highlighter Hook ─── */
 export function useTargetHighlight(selector: string | null, active: boolean) {
   const [rect, setRect] = useState<DOMRect | null>(null);
-  const prevElRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!selector || !active) {
-      if (prevElRef.current) {
-        prevElRef.current.style.removeProperty('position');
-        prevElRef.current.style.removeProperty('z-index');
-        prevElRef.current.style.removeProperty('pointer-events');
-        prevElRef.current.style.removeProperty('box-shadow');
-        prevElRef.current.style.removeProperty('border-radius');
-        prevElRef.current = null;
-      }
       setRect(null);
       return;
     }
@@ -57,24 +82,10 @@ export function useTargetHighlight(selector: string | null, active: boolean) {
     const update = () => {
       const el = document.querySelector(selector) as HTMLElement | null;
       if (el) {
-        if (prevElRef.current && prevElRef.current !== el) {
-          prevElRef.current.style.removeProperty('position');
-          prevElRef.current.style.removeProperty('z-index');
-          prevElRef.current.style.removeProperty('pointer-events');
-          prevElRef.current.style.removeProperty('box-shadow');
-          prevElRef.current.style.removeProperty('border-radius');
-        }
-        el.style.position = 'relative';
-        el.style.zIndex = '9999';
-        el.style.pointerEvents = 'all';
-        el.style.boxShadow = '0 0 0 3px #2563EB, 0 0 0 8px rgba(37,99,235,0.25)';
-        el.style.borderRadius = '10px';
-        prevElRef.current = el;
-
         const r = el.getBoundingClientRect();
         setRect(r);
-
-        if (r.top < 0 || r.bottom > window.innerHeight) {
+        // Scroll into view if needed
+        if (r.top < 80 || r.bottom > window.innerHeight - 20) {
           el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       } else {
@@ -83,7 +94,7 @@ export function useTargetHighlight(selector: string | null, active: boolean) {
     };
 
     update();
-    const interval = setInterval(update, 400);
+    const interval = setInterval(update, 500);
     window.addEventListener('scroll', update, true);
     window.addEventListener('resize', update);
 
@@ -91,125 +102,122 @@ export function useTargetHighlight(selector: string | null, active: boolean) {
       clearInterval(interval);
       window.removeEventListener('scroll', update, true);
       window.removeEventListener('resize', update);
-      if (prevElRef.current) {
-        prevElRef.current.style.removeProperty('position');
-        prevElRef.current.style.removeProperty('z-index');
-        prevElRef.current.style.removeProperty('pointer-events');
-        prevElRef.current.style.removeProperty('box-shadow');
-        prevElRef.current.style.removeProperty('border-radius');
-        prevElRef.current = null;
-      }
     };
   }, [selector, active]);
 
   return rect;
 }
 
-/* ─── Tooltip Card ─── */
-interface TooltipCardProps {
-  targetRect: DOMRect | null;
+/* ─── Top Tooltip Banner ─── */
+interface TopTooltipProps {
   step: number;
   totalSteps: number;
   icon: ReactNode;
   title: string;
   description: string;
+  actionHint?: string;
   onGotIt: () => void;
   onSkip: () => void;
-  gotItLabel?: string;
-  skipLabel?: string;
   isLastStep?: boolean;
 }
 
-export function OnboardingTooltip({
-  targetRect, step, totalSteps, icon, title, description,
-  onGotIt, onSkip, gotItLabel, skipLabel, isLastStep,
-}: TooltipCardProps) {
+export function TopTooltipBanner({
+  step, totalSteps, icon, title, description, actionHint,
+  onGotIt, onSkip, isLastStep,
+}: TopTooltipProps) {
   const progress = (step / totalSteps) * 100;
-  const buttonLabel = isLastStep ? 'Finish Tour →' : (gotItLabel || 'Got it →');
-
-  // Calculate position
-  let posStyle: React.CSSProperties;
-  if (targetRect) {
-    const vh = window.innerHeight;
-    const above = targetRect.bottom > vh * 0.6;
-    const targetCenter = targetRect.left + targetRect.width / 2;
-    const left = Math.max(12, Math.min(targetCenter - 160, window.innerWidth - 332));
-    if (above) {
-      posStyle = { bottom: `${vh - targetRect.top + 20}px`, left };
-    } else {
-      posStyle = { top: targetRect.bottom + 20, left };
-    }
-  } else {
-    // Fallback: center on screen
-    posStyle = { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
-  }
+  const buttonLabel = isLastStep ? '🎉 Finish Tour' : 'Got it →';
 
   return (
     <div
-      className="animate-in fade-in duration-150"
+      className="animate-in slide-in-from-top-2 fade-in duration-200"
       style={{
         position: 'fixed',
-        zIndex: 10000,
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 10001,
         pointerEvents: 'all',
-        maxWidth: 320,
-        width: 320,
-        ...posStyle,
       }}
     >
-      <div
-        style={{
-          background: 'white',
-          borderRadius: 14,
-          padding: '16px 18px',
-          border: '0.5px solid rgba(0,0,0,0.1)',
-          boxShadow: '0 4px 24px rgba(0,0,0,0.18)',
-        }}
-      >
-        <div className="space-y-1.5 mb-3">
-          <span style={{ fontSize: 11, color: '#888', fontWeight: 500 }}>Step {step} of {totalSteps}</span>
-          <div style={{ height: 3, borderRadius: 2, background: '#eee', overflow: 'hidden' }}>
-            <div style={{ height: '100%', borderRadius: 2, background: '#2563EB', width: `${progress}%`, transition: 'width 0.4s ease' }} />
-          </div>
+      {/* Progress bar at very top */}
+      <div style={{ height: 3, background: '#e5e7eb' }}>
+        <div style={{
+          height: '100%', background: '#2563EB',
+          width: `${progress}%`, transition: 'width 0.4s ease',
+          borderRadius: '0 2px 2px 0',
+        }} />
+      </div>
+
+      <div style={{
+        background: 'white',
+        borderBottom: '1px solid rgba(0,0,0,0.08)',
+        boxShadow: '0 2px 16px rgba(0,0,0,0.08)',
+        padding: '12px 16px 14px',
+      }}>
+        {/* Step counter + skip */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <span style={{
+            fontSize: 11, fontWeight: 600, color: '#2563EB',
+            background: '#EFF6FF', padding: '3px 10px', borderRadius: 20,
+          }}>
+            Step {step} of {totalSteps}
+          </span>
+          <button
+            onClick={(e) => { e.stopPropagation(); onSkip(); }}
+            style={{
+              fontSize: 12, color: '#999', background: 'none',
+              border: 'none', cursor: 'pointer', padding: '2px 6px',
+            }}
+          >
+            Skip →
+          </button>
         </div>
-        <div className="flex items-center gap-2 mb-1.5">
-          <span style={{ fontSize: 20 }}>{icon}</span>
-          <span style={{ fontSize: 15, fontWeight: 500, color: '#111' }}>{title}</span>
+
+        {/* Title row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+          <span style={{ fontSize: 18 }}>{icon}</span>
+          <span style={{ fontSize: 15, fontWeight: 600, color: '#111' }}>{title}</span>
         </div>
-        <p style={{ fontSize: 13, color: '#666', lineHeight: 1.6, marginBottom: 12 }}>{description}</p>
+
+        {/* Description */}
+        <p style={{ fontSize: 13, color: '#555', lineHeight: 1.55, margin: '0 0 4px 0' }}>
+          {description}
+        </p>
+
+        {/* Action hint */}
+        {actionHint && (
+          <p style={{
+            fontSize: 12, color: '#2563EB', fontWeight: 500,
+            margin: '2px 0 0', display: 'flex', alignItems: 'center', gap: 4,
+          }}>
+            👆 {actionHint}
+          </p>
+        )}
+
+        {/* Got it button */}
         <button
           onClick={(e) => { e.stopPropagation(); onGotIt(); }}
           style={{
-            width: '100%', height: 40, borderRadius: 10, background: '#2563EB',
-            color: 'white', fontWeight: 600, fontSize: 14, border: 'none', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            marginTop: 10,
+            width: '100%',
+            height: 38,
+            borderRadius: 10,
+            background: '#2563EB',
+            color: 'white',
+            fontWeight: 600,
+            fontSize: 14,
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
           }}
         >
           {buttonLabel}
         </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); onSkip(); }}
-          style={{
-            marginTop: 8, fontSize: 12, color: '#999', background: 'none',
-            border: 'none', cursor: 'pointer', padding: 0,
-          }}
-        >
-          {skipLabel || 'Skip this step'}
-        </button>
       </div>
-    </div>
-  );
-}
-
-/* ─── Step Pill ─── */
-export function StepPill({ step, total }: { step: number; total: number }) {
-  return (
-    <div style={{
-      position: 'fixed', top: 8, left: '50%', transform: 'translateX(-50%)',
-      zIndex: 10001, background: '#2563EB', color: 'white',
-      fontSize: 11, fontWeight: 700, padding: '4px 12px',
-      borderRadius: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-    }}>
-      Step {step} / {total}
     </div>
   );
 }
