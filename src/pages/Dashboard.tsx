@@ -6,6 +6,8 @@ import { useProspectsQuery } from '@/hooks/useProspectsQuery';
 import { useSheets } from '@/hooks/useSheets';
 import { useTrackingFormatContext } from '@/contexts/TrackingFormatContext';
 import { BottomNav } from '@/components/layout/BottomNav';
+import { OnboardingOverlay } from '@/components/onboarding/OnboardingOverlay';
+import { LeadLimitCounter } from '@/components/subscription/LeadLimitCounter';
 
 import { ProspectTable } from '@/components/prospects/ProspectTable';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
@@ -280,6 +282,9 @@ export default function Dashboard() {
           <TrialBanner tabId="dashboard" />
           <UpgradeButton tabId="dashboard" variant="prominent" />
         </div>
+
+        {/* Lead limit counter for free users */}
+        <LeadLimitCounter />
         
         {/* Table area - flex-1 to fill remaining space, pb for bottom nav */}
         <div className="flex-1 min-h-0 px-4 pb-48 lg:pb-20">
@@ -355,6 +360,9 @@ export default function Dashboard() {
       </main>
 
       <BottomNav />
+
+      {/* Onboarding Overlay */}
+      <OnboardingOverlay />
 
       {/* Filter Tag Setup Dialog */}
       <FilterTagSetupDialog open={showFilterSetup} onOpenChange={setShowFilterSetup} onComplete={markSetupDone} />
