@@ -486,6 +486,8 @@ export default function Profile() {
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </button>
 
+          </div>{/* end data-onboarding="profile-tools" */}
+
           {/* Tracking Format - Full page */}
           <button
             onClick={() => navigate('/tracking-format')}
