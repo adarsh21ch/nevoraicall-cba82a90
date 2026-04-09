@@ -6,9 +6,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 /** Default free tier limit - overridden by feature registry */
-export const FREE_LIFETIME_LEAD_LIMIT = 200;
+export const FREE_LIFETIME_LEAD_LIMIT = 100;
 /** Default warning threshold - overridden by admin config */
-export const LEAD_WARNING_THRESHOLD = 190;
+export const LEAD_WARNING_THRESHOLD = 80;
 
 /**
  * Hook to check lifetime lead limits for free users.
