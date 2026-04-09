@@ -213,12 +213,12 @@ export function StepBanner({
 
   return (
     <div
-      className="animate-in slide-in-from-top-2 fade-in duration-200"
+      className="animate-in slide-in-from-bottom-4 fade-in duration-300"
       style={{
         position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
+        bottom: 80,
+        left: 12,
+        right: 12,
         zIndex: 10001,
         pointerEvents: 'all',
       }}
