@@ -326,6 +326,7 @@ export const ProspectRow = memo(function ProspectRow({
         style={rowStyle}
         {...(dragHandleProps?.attributes || {})}
         {...rowDragListeners}
+        {...(index === 1 ? { 'data-onboarding': 'lead-row-1' } : {})}
         className={cn(
           "group transition-colors duration-100 border-b border-border/20", 
           bgColor,
