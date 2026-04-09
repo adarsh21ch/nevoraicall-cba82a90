@@ -1,12 +1,12 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { useProfile } from '@/hooks/useProfile';
 import { ArrowRight, Phone, User, Tag, Filter, RefreshCw, Users, BarChart2, Calendar, PlusCircle, Upload } from 'lucide-react';
 import {
-  FourPanelOverlay,
-  OnboardingTooltip,
-  StepPill,
+  HighlightBox,
+  LightDimOverlay,
+  TopTooltipBanner,
   Confetti,
   useTargetHighlight,
 } from './OnboardingPrimitives';
@@ -16,105 +16,99 @@ interface StepDef {
   icon: React.ReactNode;
   title: string;
   description: string;
+  actionHint?: string;
   selector: string;
   navigateTo: string;
-  trigger: 'click' | 'delay' | 'gotit';
-  delayMs?: number;
-  skipLabel?: string;
-  gotItLabel?: string;
 }
 
 const STEPS: Record<number, StepDef> = {
   1: {
     icon: <Phone className="h-5 w-5 text-[#2563EB]" />,
     title: 'Your Calling Workspace',
-    description: 'This is where you manage all your prospects. Every row is one person. Tap any row to open their profile.',
+    description: 'This is where you manage all your prospects. Every row is one person you can call and track.',
+    actionHint: 'Try scrolling through your lead list below',
     selector: '[data-onboarding="lead-list"]',
     navigateTo: '/dashboard',
-    trigger: 'gotit',
   },
   2: {
     icon: <User className="h-5 w-5 text-[#2563EB]" />,
     title: 'Open a Prospect',
-    description: 'Tap this prospect to open their full profile, call history, and notes.',
+    description: 'Tap any prospect row to see their full profile, call history, and notes.',
+    actionHint: 'Try tapping a prospect — then press Got it',
     selector: '[data-onboarding="lead-row-1"]',
     navigateTo: '/dashboard',
-    trigger: 'click',
   },
   3: {
     icon: <Tag className="h-5 w-5 text-[#2563EB]" />,
     title: 'Update Their Status',
-    description: 'After every call, update the status here — Interested, Follow-up, Not Interested, Video Send, and more.',
+    description: 'After each call, update the response — Interested, Follow-up, Not Interested, etc.',
+    actionHint: 'Try selecting a response tag, then press Got it',
     selector: '[data-onboarding="response-select"]',
     navigateTo: '/dashboard',
-    trigger: 'click',
   },
   4: {
     icon: <Filter className="h-5 w-5 text-[#2563EB]" />,
     title: 'Filter Your Prospects',
-    description: 'Use Retargeting to filter prospects by their stage. Tap it to explore all filter options.',
+    description: 'Use Retargeting to filter prospects by their stage or status.',
+    actionHint: 'Try tapping Retargeting to explore filters',
     selector: '[data-onboarding="retargeting-btn"]',
     navigateTo: '/dashboard',
-    trigger: 'click',
   },
   5: {
     icon: <RefreshCw className="h-5 w-5 text-[#2563EB]" />,
-    title: 'Open Follow-Up',
-    description: "Now let's explore your Follow-Up dashboard. Tap Follow-Up in the menu below.",
+    title: 'Go to Follow-Up',
+    description: 'The Follow-Up tab shows your daily activity feed and prospect overview.',
+    actionHint: 'Tap Follow-Up in the bottom menu',
     selector: '[data-onboarding="nav-followup"]',
     navigateTo: '/dashboard',
-    trigger: 'click',
   },
   6: {
     icon: <Users className="h-5 w-5 text-[#2563EB]" />,
     title: 'See Prospects by Stage',
-    description: 'Tap Prospects to see all your leads organized by their current tag or stage.',
+    description: 'Tap "Prospects" tab to see all your leads organized by their current stage.',
+    actionHint: 'Tap the Prospects tab above',
     selector: '[data-onboarding="prospects-tab"]',
     navigateTo: '/listup',
-    trigger: 'click',
   },
   7: {
     icon: <Tag className="h-5 w-5 text-[#2563EB]" />,
     title: 'Filter by Tag',
     description: 'Tap any tag to instantly see prospects at that stage. Try Enrolment or Interested.',
+    actionHint: 'Try tapping a tag to filter',
     selector: '[data-onboarding="tag-filter-row"]',
     navigateTo: '/listup',
-    trigger: 'click',
   },
   8: {
     icon: <BarChart2 className="h-5 w-5 text-[#2563EB]" />,
-    title: 'Check Your Numbers',
-    description: 'See your daily performance stats. Tap TrackUp in the menu below.',
+    title: 'Open TrackUp',
+    description: 'TrackUp shows your daily performance numbers and tracking history.',
+    actionHint: 'Tap TrackUp in the bottom menu',
     selector: '[data-onboarding="nav-trackup"]',
     navigateTo: '/listup',
-    trigger: 'click',
   },
   9: {
     icon: <Calendar className="h-5 w-5 text-[#2563EB]" />,
-    title: 'Your Daily Activity Tracker',
-    description: 'This grid tracks Leads, Responses, Not Picked, Video Sends, and Enrolments day by day — updated automatically.',
+    title: 'Your Daily Tracker',
+    description: 'This grid tracks Leads, Responses, Video Sends, and Enrolments — updated automatically every day.',
+    actionHint: 'Explore the tracking table below',
     selector: '[data-onboarding="trackup-table"]',
     navigateTo: '/tracking',
-    trigger: 'delay',
-    delayMs: 5000,
-    gotItLabel: 'Got it →',
   },
   10: {
     icon: <PlusCircle className="h-5 w-5 text-[#2563EB]" />,
     title: 'Create Your Own Sheet',
-    description: "You've been using demo data. Now create YOUR sheet — tap + Add Sheet, name it, and start adding real prospects.",
+    description: "You've been using demo data. Create YOUR sheet — tap + Add Sheet, name it, and start adding real leads.",
+    actionHint: 'Tap the + Add Sheet button',
     selector: '[data-onboarding="add-sheet-btn"]',
     navigateTo: '/dashboard',
-    trigger: 'click',
   },
   11: {
     icon: <Upload className="h-5 w-5 text-[#2563EB]" />,
-    title: 'Add Your First Real Lead',
-    description: "Import contacts from a file, or add your first lead manually. This is your real CRM — let's fill it up.",
+    title: 'Add Your First Lead',
+    description: "Import contacts from a file, or add your first lead manually. This is your real CRM!",
+    actionHint: 'Tap Import to add leads from a file',
     selector: '[data-onboarding="import-btn"]',
     navigateTo: '/dashboard',
-    trigger: 'click',
-    skipLabel: 'Skip — You can add leads anytime from the Calling tab.',
   },
 };
 
@@ -140,57 +134,11 @@ export function OnboardingOverlay() {
   useEffect(() => {
     if (!isOnboarding || !stepDef) return;
     if (location.pathname !== stepDef.navigateTo) {
-      console.log('[Onboarding] navigating to', stepDef.navigateTo);
       navigate(stepDef.navigateTo);
     }
   }, [currentStep, isOnboarding]);
 
-  // Auto-advance for delay triggers
-  useEffect(() => {
-    if (!isOnboarding || !stepDef || stepDef.trigger !== 'delay') return;
-    const timer = setTimeout(() => {
-      if (!advancingRef.current) {
-        advancingRef.current = true;
-        advanceStep().finally(() => { advancingRef.current = false; });
-      }
-    }, stepDef.delayMs || 5000);
-    return () => clearTimeout(timer);
-  }, [currentStep, isOnboarding, stepDef]);
-
-  // Click triggers — listen for click on target element
-  useEffect(() => {
-    if (!isOnboarding || !stepDef) return;
-    if (stepDef.trigger !== 'click') return;
-
-    let cleanup: (() => void) | null = null;
-    let stopped = false;
-
-    const poll = setInterval(() => {
-      if (stopped) return;
-      const el = document.querySelector(stepDef.selector);
-      if (el) {
-        clearInterval(poll);
-        const handler = () => {
-          if (!advancingRef.current) {
-            advancingRef.current = true;
-            setTimeout(() => {
-              advanceStep().finally(() => { advancingRef.current = false; });
-            }, 400);
-          }
-        };
-        el.addEventListener('click', handler, { once: true, capture: true });
-        cleanup = () => el.removeEventListener('click', handler, true);
-      }
-    }, 300);
-
-    return () => {
-      stopped = true;
-      clearInterval(poll);
-      cleanup?.();
-    };
-  }, [currentStep, isOnboarding, stepDef]);
-
-  // Handle Got It
+  // Handle Got It — ONLY way to advance (no auto-advance)
   const handleGotIt = useCallback(async () => {
     if (advancingRef.current) return;
     advancingRef.current = true;
@@ -239,7 +187,7 @@ export function OnboardingOverlay() {
               You're all set, {firstName}! 🎉
             </h1>
             <p style={{ fontSize: 14, color: '#666', maxWidth: 280, margin: '0 auto', lineHeight: 1.6 }}>
-              You now know Nevora AI inside out. Your leads are ready. Time to start calling and building your team.
+              You now know Nevora AI inside out. Your leads are ready. Time to start calling!
             </p>
             <button
               onClick={() => { setShowCompletion(false); navigate('/dashboard'); }}
@@ -277,7 +225,7 @@ export function OnboardingOverlay() {
           <img src={nevoraLogo} alt="Nevora AI" className="w-16 h-16 rounded-2xl shadow-lg mx-auto" />
           <h1 style={{ fontSize: 20, fontWeight: 800, color: '#111' }}>Welcome to Nevora AI! 👋</h1>
           <p style={{ fontSize: 14, color: '#666' }}>
-            Let's take a 2-minute tour so you understand every feature. You can skip any step.
+            Let's take a quick tour so you understand every feature. You can skip any step.
           </p>
           <button
             onClick={() => startTour()}
@@ -295,24 +243,27 @@ export function OnboardingOverlay() {
     );
   }
 
-  // Steps 1-11
+  // Steps 1-11: Top banner + blue highlight box
   if (!stepDef || !isOnboarding) return null;
 
   return (
     <>
-      <StepPill step={currentStep} total={11} />
-      <FourPanelOverlay targetRect={targetRect} />
-      <OnboardingTooltip
-        targetRect={targetRect}
+      {/* Light dim behind everything (doesn't block clicks) */}
+      <LightDimOverlay targetRect={targetRect} />
+
+      {/* Blue highlight box around target */}
+      <HighlightBox targetRect={targetRect} />
+
+      {/* Top tooltip banner with explanation + Got it button */}
+      <TopTooltipBanner
         step={currentStep}
         totalSteps={11}
         icon={stepDef.icon}
         title={stepDef.title}
         description={stepDef.description}
+        actionHint={stepDef.actionHint}
         onGotIt={handleGotIt}
         onSkip={handleSkip}
-        gotItLabel={stepDef.gotItLabel}
-        skipLabel={stepDef.skipLabel}
         isLastStep={currentStep === 11}
       />
     </>
