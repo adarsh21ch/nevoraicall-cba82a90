@@ -216,6 +216,11 @@ const [localData, setLocalData] = useState({
                 )}
               >
                 <span className="truncate">{prospect.name}</span>
+                {(prospect as any).is_demo && (
+                  <span className="ml-1 shrink-0 inline-flex items-center px-1.5 py-0 rounded text-[9px] font-semibold bg-orange-100 text-orange-600 dark:bg-orange-500/15 dark:text-orange-400 leading-tight">
+                    DEMO
+                  </span>
+                )}
                 <ChevronDown className={cn(
                   "h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-transform duration-200",
                   isExpanded && "rotate-180 text-primary"
