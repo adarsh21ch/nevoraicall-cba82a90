@@ -16,7 +16,6 @@ export function BlockingOverlay() {
         zIndex: 9000,
         background: 'rgba(0,0,0,0.45)',
         pointerEvents: 'all',
-        touchAction: 'none',
       }}
     />
   );
@@ -64,11 +63,27 @@ function applyElevationStyles(el: HTMLElement) {
   el.style.position = 'relative';
   el.style.zIndex = '9999';
   el.style.pointerEvents = 'all';
-  el.style.boxShadow = '0 0 0 4px rgba(37,99,235,0.4), 0 0 24px 4px rgba(37,99,235,0.12)';
+  el.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.35), 0 0 16px 2px rgba(37,99,235,0.10)';
   el.style.borderRadius = '8px';
-  el.style.outline = '2.5px solid #2563EB';
-  el.style.outlineOffset = '2px';
+  el.style.outline = '2px solid #2563EB';
+  el.style.outlineOffset = '0px';
   el.style.transition = 'box-shadow 0.3s ease, outline 0.3s ease';
+  // Also elevate scrollable parent so user can scroll the highlighted area
+  let parent = el.parentElement;
+  while (parent) {
+    const style = getComputedStyle(parent);
+    if (
+      (style.overflowY === 'auto' || style.overflowY === 'scroll') &&
+      parent.scrollHeight > parent.clientHeight
+    ) {
+      saveOriginalStyles(parent);
+      parent.style.zIndex = '9998';
+      parent.style.position = 'relative';
+      parent.style.pointerEvents = 'all';
+      break;
+    }
+    parent = parent.parentElement;
+  }
 }
 
 function scrollIntoViewSafely(el: HTMLElement): Promise<void> {
