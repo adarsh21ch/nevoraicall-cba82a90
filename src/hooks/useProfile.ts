@@ -39,7 +39,9 @@ export interface Profile {
   signup_source: string | null;
   /** Whether onboarding flow is completed */
   onboarding_completed: boolean;
-  /** Current onboarding step (0-5) */
+  /** Whether onboarding was skipped */
+  onboarding_skipped: boolean;
+  /** Current onboarding step (0-12) */
   onboarding_step: number;
   /** Whether the WA community popup was shown */
   whatsapp_popup_shown: boolean;
@@ -135,6 +137,7 @@ export function useProfile() {
         phone_number: data.phone_number || null,
         signup_source: data.signup_source || null,
         onboarding_completed: data.onboarding_completed ?? false,
+        onboarding_skipped: data.onboarding_skipped ?? false,
         onboarding_step: data.onboarding_step ?? 0,
         whatsapp_popup_shown: data.whatsapp_popup_shown ?? false,
         whatsapp_community_joined: data.whatsapp_community_joined ?? false,
