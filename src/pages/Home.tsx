@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { WhatsAppCommunityPopup } from '@/components/onboarding/WhatsAppCommunityPopup';
-import { OnboardingOverlay } from '@/components/onboarding/OnboardingOverlay';
+
 import { useProspectsQuery } from '@/hooks/useProspectsQuery';
 import { useGlobalTodos } from '@/contexts/TodosContext';
 import { BottomNav } from '@/components/layout/BottomNav';
@@ -352,7 +352,5 @@ export default function Home() {
         <WhatsAppCommunityPopup onDismiss={() => setShowWaPopup(false)} />
       )}
 
-      {/* Interactive Onboarding Flow */}
-      <OnboardingOverlay />
     </div>;
 }

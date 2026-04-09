@@ -1,28 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useOnboarding } from '@/hooks/useOnboarding';
+import { useOnboarding, OnboardingStep } from '@/hooks/useOnboarding';
 import { useProfile } from '@/hooks/useProfile';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Check, ArrowRight, SkipForward, Sparkles } from 'lucide-react';
+import { ArrowRight, Sparkles, Import, X } from 'lucide-react';
+import {
+  CoachMarkOverlay,
+  FullScreenCard,
+  OnboardingProgress,
+  Confetti,
+} from './OnboardingPrimitives';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
-
-/** Progress dots */
-function ProgressBar({ current, total }: { current: number; total: number }) {
-  return (
-    <div className="flex items-center gap-1.5 justify-center">
-      <span className="text-xs text-muted-foreground font-medium mr-1">Step {current} of {total}</span>
-      {Array.from({ length: total }, (_, i) => (
-        <div
-          key={i}
-          className={`h-2 w-2 rounded-full transition-all ${
-            i < current ? 'bg-primary' : 'bg-muted'
-          }`}
-        />
-      ))}
-    </div>
-  );
-}
 
 export function OnboardingOverlay() {
   const navigate = useNavigate();
@@ -35,311 +23,440 @@ export function OnboardingOverlay() {
     goToStep,
     completeOnboarding,
     skipOnboarding,
+    cleanupDemoData,
     totalSteps,
+    demoSheetId,
   } = useOnboarding();
 
-  const [showComplete, setShowComplete] = useState(false);
+  const [showCleanupPrompt, setShowCleanupPrompt] = useState(false);
 
-  // Step 2: Setup demo data when reaching step 2
-  useEffect(() => {
-    if (currentStep === 2 && isActive) {
-      setupDemoData();
-    }
-  }, [currentStep, isActive, setupDemoData]);
-
-  if (!isActive) return null;
+  if (!isActive && !showCleanupPrompt) return null;
 
   const firstName = profile?.display_name?.split(' ')[0] || 'there';
+  const skipStep = () => goToStep((currentStep + 1) as OnboardingStep);
 
-  // Step 1: Welcome Screen
+  // Cleanup prompt after completion
+  if (showCleanupPrompt) {
+    return (
+      <CoachMarkOverlay showSkip={false}>
+        <div className="text-center space-y-3">
+          <span className="text-3xl">🧹</span>
+          <h2 className="text-lg font-bold text-foreground">Clean up demo data?</h2>
+          <p className="text-sm text-muted-foreground">
+            You've completed the tour. Want to remove the demo leads and start fresh?
+          </p>
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="outline"
+              className="flex-1 h-10 rounded-xl text-sm"
+              onClick={() => setShowCleanupPrompt(false)}
+            >
+              Keep for Reference
+            </Button>
+            <Button
+              className="flex-1 h-10 rounded-xl text-sm"
+              onClick={async () => {
+                await cleanupDemoData();
+                setShowCleanupPrompt(false);
+              }}
+            >
+              Remove Demo Data
+            </Button>
+          </div>
+        </div>
+      </CoachMarkOverlay>
+    );
+  }
+
+  // STEP 0: Welcome Screen
+  if (currentStep === 0) {
+    return (
+      <FullScreenCard>
+        <img
+          src={nevoraLogo}
+          alt="Nevorai"
+          className="w-20 h-20 rounded-2xl shadow-xl mx-auto animate-bounce"
+          style={{ animationDuration: '2s' }}
+        />
+        <div className="space-y-3">
+          <h1 className="text-2xl font-extrabold text-foreground">
+            🎉 Welcome to Nevorai, {firstName}!
+          </h1>
+          <p className="text-muted-foreground text-[15px] leading-relaxed">
+            Your smart CRM for network marketing.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            We've set up a demo workspace so you can explore the app right now — no setup needed.
+          </p>
+          <p className="text-xs text-muted-foreground">This quick tour takes about 2 minutes.</p>
+        </div>
+        <div className="space-y-3 pt-2">
+          <Button
+            onClick={async () => {
+              await setupDemoData();
+              goToStep(1);
+              navigate('/dashboard');
+            }}
+            className="w-full h-12 rounded-xl font-bold text-base"
+            disabled={loading}
+          >
+            {loading ? 'Setting up...' : "Let's Start the Tour"} <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
+          <button
+            onClick={skipOnboarding}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Skip Tour
+          </button>
+        </div>
+      </FullScreenCard>
+    );
+  }
+
+  // STEP 1: Calling Tab — Meet Your Demo Leads
   if (currentStep === 1) {
     return (
-      <div className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center p-6 text-center">
-        <div className="max-w-sm w-full space-y-8">
-          <div className="relative inline-block">
-            <img
-              src={nevoraLogo}
-              alt="Nevorai"
-              className="w-20 h-20 rounded-2xl shadow-xl mx-auto animate-pulse"
-            />
-          </div>
-
-          <div className="space-y-3">
-            <h1 className="text-2xl font-extrabold text-foreground font-heading">
-              Welcome to Nevorai, {firstName}! 🎉
-            </h1>
-            <p className="text-muted-foreground text-[15px] font-body leading-relaxed">
-              The smartest way to manage your network marketing prospects.
+      <CoachMarkOverlay onSkipStep={skipStep}>
+        <OnboardingProgress current={1} total={totalSteps} />
+        <div className="space-y-3">
+          <h2 className="text-lg font-bold text-foreground">📋 Your Calling Sheet</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            This is where you manage all your prospects. We've added 20 demo leads so you can practice.
+          </p>
+          <div className="bg-primary/5 border border-primary/20 rounded-xl p-3">
+            <p className="text-sm text-foreground">
+              👆 In real life, you'll import your own contacts here.
             </p>
-            <p className="text-sm text-muted-foreground font-body">
-              Let's set you up in 2 minutes.
-            </p>
-          </div>
-
-          <ProgressBar current={1} total={totalSteps} />
-
-          <div className="space-y-3 pt-4">
-            <Button
-              onClick={() => goToStep(2)}
-              className="w-full h-12 rounded-xl font-bold text-base"
-            >
-              Let's Go <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-            <button
-              onClick={skipOnboarding}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Skip Setup
-            </button>
           </div>
         </div>
-      </div>
+        <Button onClick={() => goToStep(2)} className="w-full h-10 rounded-xl font-bold">
+          Got it <ArrowRight className="h-4 w-4 ml-2" />
+        </Button>
+      </CoachMarkOverlay>
     );
   }
 
-  // Step 2: Demo Sheet + Leads
+  // STEP 2: Open a Lead Profile
   if (currentStep === 2) {
     return (
-      <div className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center p-6">
-        <div className="max-w-sm w-full space-y-6">
-          <ProgressBar current={2} total={totalSteps} />
-
-          <div className="bg-card rounded-2xl border border-border p-5 space-y-4 shadow-lg">
-            <h2 className="text-lg font-bold text-foreground font-heading">Your Practice Leads</h2>
-            <p className="text-sm text-muted-foreground font-body">
-              We've added 3 demo leads to help you learn the app.
+      <CoachMarkOverlay onSkipStep={skipStep}>
+        <OnboardingProgress current={2} total={totalSteps} />
+        <div className="space-y-3">
+          <h2 className="text-lg font-bold text-foreground">👆 Tap on Rahul Sharma</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Open his profile to see all details and take actions on this lead.
+          </p>
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
+            <p className="text-sm text-foreground">
+              💡 Tap any lead row in the list below to continue.
             </p>
-
-            <div className="space-y-2">
-              {['Rahul Sharma', 'Priya Mehta', 'Amit Gupta'].map((name, i) => (
-                <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-muted/50 border border-border/50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-                      {name[0]}
-                    </div>
-                    <span className="text-sm font-medium">{name}</span>
-                  </div>
-                  <Badge variant="secondary" className="text-[10px]">DEMO</Badge>
-                </div>
-              ))}
-            </div>
-
-            <div className="bg-primary/5 border border-primary/20 rounded-xl p-3">
-              <p className="text-sm text-foreground font-body">
-                👆 These are your practice leads. In real use, you'll import your own prospects here.
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <Button
-              onClick={() => goToStep(3)}
-              className="w-full h-11 rounded-xl font-bold"
-              disabled={loading}
-            >
-              Got it <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-            <button
-              onClick={skipOnboarding}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors mx-auto block"
-            >
-              <SkipForward className="h-3 w-3 inline mr-1" /> Skip Onboarding
-            </button>
           </div>
         </div>
-      </div>
+        <Button onClick={() => goToStep(3)} variant="outline" className="w-full h-10 rounded-xl text-sm">
+          Skip — show me next <ArrowRight className="h-4 w-4 ml-2" />
+        </Button>
+      </CoachMarkOverlay>
     );
   }
 
-  // Step 3: Tag a Lead
+  // STEP 3: Explore Lead Profile
   if (currentStep === 3) {
     return (
-      <div className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center p-6">
-        <div className="max-w-sm w-full space-y-6">
-          <ProgressBar current={3} total={totalSteps} />
-
-          <div className="bg-card rounded-2xl border border-border p-5 space-y-4 shadow-lg">
-            <h2 className="text-lg font-bold text-foreground font-heading">Tag Your Leads</h2>
-            <p className="text-sm text-muted-foreground font-body">
-              Tags help you know exactly where each prospect is in your pipeline.
+      <CoachMarkOverlay onSkipStep={skipStep}>
+        <OnboardingProgress current={3} total={totalSteps} />
+        <div className="space-y-3">
+          <h2 className="text-lg font-bold text-foreground">👤 Lead Profile</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Every prospect has their own profile. You can see their details, call status, tags, and activity history here.
+          </p>
+          <div className="bg-primary/5 border border-primary/20 rounded-xl p-3">
+            <p className="text-sm text-foreground">
+              📱 Notice the phone number is fake — this is just a demo.
             </p>
-
-            <div className="space-y-2">
-              {[
-                { label: '📞 Calling', color: 'bg-blue-500/15 text-blue-700' },
-                { label: '📹 Video Send', color: 'bg-purple-500/15 text-purple-700' },
-                { label: '🔥 Hot Lead', color: 'bg-red-500/15 text-red-700' },
-                { label: '✅ Enrolled', color: 'bg-green-500/15 text-green-700' },
-                { label: '🔄 Follow Up', color: 'bg-orange-500/15 text-orange-700' },
-              ].map((tag) => (
-                <div key={tag.label} className={`px-3 py-2 rounded-lg text-sm font-medium ${tag.color}`}>
-                  {tag.label}
-                </div>
-              ))}
-            </div>
-
-            <div className="bg-primary/5 border border-primary/20 rounded-xl p-3">
-              <p className="text-sm text-foreground font-body">
-                👆 You can assign these tags to any lead from their profile. Try it once you're inside the app!
-              </p>
-            </div>
           </div>
-
-          <Button
-            onClick={() => goToStep(4)}
-            className="w-full h-11 rounded-xl font-bold"
-          >
-            Next Step <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
         </div>
-      </div>
+        <Button onClick={() => goToStep(4)} className="w-full h-10 rounded-xl font-bold">
+          Got it, show me tags <ArrowRight className="h-4 w-4 ml-2" />
+        </Button>
+      </CoachMarkOverlay>
     );
   }
 
-  // Step 4: Activity History
+  // STEP 4: Assign a Tag
   if (currentStep === 4) {
     return (
-      <div className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center p-6">
-        <div className="max-w-sm w-full space-y-6">
-          <ProgressBar current={4} total={totalSteps} />
-
-          <div className="bg-card rounded-2xl border border-border p-5 space-y-4 shadow-lg">
-            <h2 className="text-lg font-bold text-foreground font-heading">Activity History</h2>
-            <p className="text-sm text-muted-foreground font-body">
-              Every action you take is automatically logged. You'll always know what happened with every prospect.
-            </p>
-
-            <div className="space-y-2">
-              <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/50 border border-border/50">
-                <div className="w-6 h-6 rounded-full bg-blue-500/15 flex items-center justify-center shrink-0 mt-0.5">
-                  <span className="text-xs">🏷</span>
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Tagged Rahul Sharma as "Calling"</p>
-                  <p className="text-xs text-muted-foreground">Just now</p>
-                </div>
+      <CoachMarkOverlay onSkipStep={skipStep}>
+        <OnboardingProgress current={4} total={totalSteps} />
+        <div className="space-y-3">
+          <h2 className="text-lg font-bold text-foreground">🏷️ Assign a Tag</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Tags tell you exactly where this prospect is in your process.
+          </p>
+          <div className="space-y-1.5">
+            {[
+              { label: 'Day 1', color: 'bg-blue-500/15 text-blue-700' },
+              { label: 'Video Send', color: 'bg-sky-500/15 text-sky-700' },
+              { label: 'Enrolment', color: 'bg-green-500/15 text-green-700' },
+              { label: 'Not Picked', color: 'bg-purple-500/15 text-purple-700' },
+              { label: 'Call Back', color: 'bg-orange-500/15 text-orange-700' },
+            ].map(t => (
+              <div key={t.label} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${t.color}`}>
+                {t.label}
               </div>
-              <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/50 border border-border/50">
-                <div className="w-6 h-6 rounded-full bg-green-500/15 flex items-center justify-center shrink-0 mt-0.5">
-                  <span className="text-xs">📋</span>
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Added 3 demo leads</p>
-                  <p className="text-xs text-muted-foreground">2 min ago</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-primary/5 border border-primary/20 rounded-xl p-3">
-              <p className="text-sm text-foreground font-body">
-                ✅ This is your Activity History. You'll find it in the Recent tab.
-              </p>
-            </div>
+            ))}
           </div>
-
-          <Button
-            onClick={() => goToStep(5)}
-            className="w-full h-11 rounded-xl font-bold"
-          >
-            Next Step <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
+            <p className="text-sm text-foreground">
+              👆 Try assigning a tag to any lead from the dropdown on their row.
+            </p>
+          </div>
         </div>
-      </div>
+        <Button onClick={() => goToStep(5)} className="w-full h-10 rounded-xl font-bold">
+          Got it <ArrowRight className="h-4 w-4 ml-2" />
+        </Button>
+      </CoachMarkOverlay>
     );
   }
 
-  // Step 5: Follow-Up + Completion
-  if (currentStep === 5 && !showComplete) {
+  // STEP 5: Retargeting Filter
+  if (currentStep === 5) {
     return (
-      <div className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center p-6">
-        <div className="max-w-sm w-full space-y-6">
-          <ProgressBar current={5} total={totalSteps} />
-
-          <div className="bg-card rounded-2xl border border-border p-5 space-y-4 shadow-lg">
-            <h2 className="text-lg font-bold text-foreground font-heading">Schedule Follow-Ups</h2>
-            <p className="text-sm text-muted-foreground font-body">
-              The most powerful feature — never forget to follow up with a prospect.
+      <CoachMarkOverlay onSkipStep={skipStep}>
+        <OnboardingProgress current={5} total={totalSteps} />
+        <div className="space-y-3">
+          <h2 className="text-lg font-bold text-foreground">🔍 Retargeting Filter</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            This is one of Nevorai's most powerful features. It filters your leads by the tag you assigned.
+          </p>
+          <div className="bg-primary/5 border border-primary/20 rounded-xl p-3">
+            <p className="text-sm text-foreground">
+              👆 Tap the "Retargeting" dropdown at the top of the Calling tab to try it!
             </p>
+          </div>
+        </div>
+        <Button onClick={() => { goToStep(6); navigate('/listup'); }} className="w-full h-10 rounded-xl font-bold">
+          Next: Follow-Up Tab <ArrowRight className="h-4 w-4 ml-2" />
+        </Button>
+      </CoachMarkOverlay>
+    );
+  }
 
-            <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/50 border border-border/50">
-              <div className="w-6 h-6 rounded-full bg-primary/15 flex items-center justify-center shrink-0 mt-0.5">
-                <span className="text-xs">📅</span>
+  // STEP 6: Follow-Up — Activity History
+  if (currentStep === 6) {
+    return (
+      <CoachMarkOverlay onSkipStep={skipStep}>
+        <OnboardingProgress current={6} total={totalSteps} />
+        <div className="space-y-3">
+          <h2 className="text-lg font-bold text-foreground">📊 Activity History</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Every action you take is automatically recorded here. Tags assigned, calls made — it's all logged.
+          </p>
+          <div className="space-y-2">
+            <div className="flex items-start gap-3 p-2.5 rounded-xl bg-muted/50 border border-border/50">
+              <div className="w-6 h-6 rounded-full bg-blue-500/15 flex items-center justify-center shrink-0">
+                <span className="text-xs">🏷</span>
               </div>
               <div>
-                <p className="text-sm font-medium">Set a follow-up date on any lead</p>
-                <p className="text-xs text-muted-foreground">Nevorai will remind you so you never forget</p>
+                <p className="text-xs font-medium">Tagged Rahul Sharma as "Video Send"</p>
+                <p className="text-[10px] text-muted-foreground">2 hours ago</p>
               </div>
             </div>
-
-            <div className="bg-primary/5 border border-primary/20 rounded-xl p-3">
-              <p className="text-sm text-foreground font-body">
-                👆 Tap any lead → Schedule Follow-Up. Nevorai takes care of the rest.
-              </p>
+            <div className="flex items-start gap-3 p-2.5 rounded-xl bg-muted/50 border border-border/50">
+              <div className="w-6 h-6 rounded-full bg-green-500/15 flex items-center justify-center shrink-0">
+                <span className="text-xs">✅</span>
+              </div>
+              <div>
+                <p className="text-xs font-medium">Tagged Sunita Yadav as "Enrolment"</p>
+                <p className="text-[10px] text-muted-foreground">5 hours ago</p>
+              </div>
             </div>
           </div>
-
-          <Button
-            onClick={() => setShowComplete(true)}
-            className="w-full h-11 rounded-xl font-bold"
-          >
-            Finish Setup <Sparkles className="h-4 w-4 ml-2" />
-          </Button>
+          <div className="bg-primary/5 border border-primary/20 rounded-xl p-3">
+            <p className="text-sm text-foreground">
+              ✅ This is your Activity History — you'll never forget what happened with any prospect.
+            </p>
+          </div>
         </div>
-      </div>
+        <Button onClick={() => goToStep(7)} className="w-full h-10 rounded-xl font-bold">
+          Got it <ArrowRight className="h-4 w-4 ml-2" />
+        </Button>
+      </CoachMarkOverlay>
     );
   }
 
-  // Completion Screen
-  if (showComplete) {
+  // STEP 7: Prospects View
+  if (currentStep === 7) {
     return (
-      <div className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center p-6 text-center">
-        <div className="max-w-sm w-full space-y-8">
-          <div className="text-5xl">🎉</div>
+      <CoachMarkOverlay onSkipStep={skipStep}>
+        <OnboardingProgress current={7} total={totalSteps} />
+        <div className="space-y-3">
+          <h2 className="text-lg font-bold text-foreground">🎯 Prospects by Tag</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            This is your follow-up dashboard. Leads are grouped by their tags — see all "Call Back" leads in one place, all "Video Send" in another.
+          </p>
+          <div className="bg-primary/5 border border-primary/20 rounded-xl p-3">
+            <p className="text-sm text-foreground">
+              👆 Tap the "Prospects" tab above to see your leads grouped by tag. Try tapping any tag chip to filter.
+            </p>
+          </div>
+        </div>
+        <Button onClick={() => { goToStep(8); navigate('/action'); }} className="w-full h-10 rounded-xl font-bold">
+          Next: To-Do List <ArrowRight className="h-4 w-4 ml-2" />
+        </Button>
+      </CoachMarkOverlay>
+    );
+  }
 
+  // STEP 8: To-Do Tab
+  if (currentStep === 8) {
+    return (
+      <CoachMarkOverlay onSkipStep={skipStep}>
+        <OnboardingProgress current={8} total={totalSteps} />
+        <div className="space-y-3">
+          <h2 className="text-lg font-bold text-foreground">✅ To-Do List</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            This is where you plan your day. Add reminders like:
+          </p>
+          <div className="space-y-1.5 text-sm text-foreground">
+            <p>• "Call Rahul at 5 PM"</p>
+            <p>• "Send video to Priya"</p>
+            <p>• "Follow up with Amit"</p>
+          </div>
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
+            <p className="text-sm text-foreground">
+              👆 Try adding a task using the input bar at the bottom!
+            </p>
+          </div>
+        </div>
+        <Button onClick={() => { goToStep(9); navigate('/tracking'); }} className="w-full h-10 rounded-xl font-bold">
+          Next: TrackUp <ArrowRight className="h-4 w-4 ml-2" />
+        </Button>
+      </CoachMarkOverlay>
+    );
+  }
+
+  // STEP 9: TrackUp Tab
+  if (currentStep === 9) {
+    return (
+      <CoachMarkOverlay onSkipStep={skipStep}>
+        <OnboardingProgress current={9} total={totalSteps} />
+        <div className="space-y-3">
+          <h2 className="text-lg font-bold text-foreground">📈 Track Your Numbers</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            TrackUp automatically counts everything you do each day — leads added, calls made, responses, enrolments.
+          </p>
+          <div className="bg-primary/5 border border-primary/20 rounded-xl p-3">
+            <p className="text-sm text-foreground">
+              📊 See today's column? It's already tracking the demo activity. When you use Nevorai daily, this shows your real numbers.
+            </p>
+          </div>
+          <div className="bg-muted/50 border border-border/50 rounded-xl p-3">
+            <p className="text-xs text-muted-foreground">
+              🔄 Switch between <strong>Leads</strong> view and <strong>Funnel</strong> view to track different metrics.
+            </p>
+          </div>
+        </div>
+        <Button onClick={() => { goToStep(10); navigate('/profile'); }} className="w-full h-10 rounded-xl font-bold">
+          Next: Profile <ArrowRight className="h-4 w-4 ml-2" />
+        </Button>
+      </CoachMarkOverlay>
+    );
+  }
+
+  // STEP 10: Profile Tab
+  if (currentStep === 10) {
+    return (
+      <CoachMarkOverlay onSkipStep={() => goToStep(11 as OnboardingStep)}>
+        <OnboardingProgress current={10} total={totalSteps} />
+        <div className="space-y-3">
+          <h2 className="text-lg font-bold text-foreground">🛠️ Your Tools</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Nevorai has powerful tools built right in:
+          </p>
+          <div className="space-y-2 text-sm">
+            <div className="flex items-start gap-2">
+              <span>🎬</span>
+              <div><strong>Nevorai Flow</strong> — Video funnels for your prospects</div>
+            </div>
+            <div className="flex items-start gap-2">
+              <span>📝</span>
+              <div><strong>Nevorai Forms</strong> — Capture leads from links</div>
+            </div>
+            <div className="flex items-start gap-2">
+              <span>📒</span>
+              <div><strong>Nevorai Notes</strong> — Quick notes & voice memos</div>
+            </div>
+            <div className="flex items-start gap-2">
+              <span>🤝</span>
+              <div><strong>Shared Leads</strong> — Get leads from your upline</div>
+            </div>
+          </div>
+          <div className="bg-muted/50 border border-border/50 rounded-xl p-3">
+            <p className="text-xs text-muted-foreground">
+              ⚙️ Customise your tracking format anytime from Profile → Tracking Format.
+            </p>
+          </div>
+        </div>
+        <Button onClick={() => goToStep(11 as OnboardingStep)} className="w-full h-10 rounded-xl font-bold">
+          Almost done <Sparkles className="h-4 w-4 ml-2" />
+        </Button>
+      </CoachMarkOverlay>
+    );
+  }
+
+  // STEP 11: Completion Screen
+  if (currentStep === 11) {
+    return (
+      <>
+        <Confetti />
+        <FullScreenCard>
+          <div className="text-5xl">🎉</div>
           <div className="space-y-3">
-            <h1 className="text-2xl font-extrabold text-foreground font-heading">
-              You're all set!
-            </h1>
-            <div className="space-y-2 text-left bg-card rounded-2xl border border-border p-5">
+            <h1 className="text-2xl font-extrabold text-foreground">You're Ready!</h1>
+            <p className="text-sm text-muted-foreground">You just explored all of Nevorai:</p>
+            <div className="space-y-2 text-left bg-card rounded-2xl border border-border p-4">
               {[
-                'Manage your leads',
-                'Tag prospects by stage',
-                'Track your activity',
-                'Schedule follow-ups',
-              ].map((item) => (
-                <div key={item} className="flex items-center gap-2.5">
-                  <Check className="h-4 w-4 text-green-600 shrink-0" />
+                '✅ Calling — Manage your prospects',
+                '🏷️ Tags — Organise by stage',
+                '🔍 Retargeting — Filter instantly',
+                '📊 Follow-Up — Track activity',
+                '✅ To-Do — Plan your day',
+                '📈 TrackUp — See your numbers',
+                '🛠️ Profile — Your tools',
+              ].map(item => (
+                <div key={item} className="flex items-center gap-2">
                   <span className="text-sm text-foreground">{item}</span>
                 </div>
               ))}
             </div>
-            <p className="text-sm text-muted-foreground">
-              You're ready to import your real leads now!
+            <p className="text-sm text-muted-foreground font-medium">
+              Now import your REAL leads and start building your business!
             </p>
           </div>
-
-          <div className="space-y-3 pt-4">
+          <div className="space-y-3 pt-2">
             <Button
               onClick={() => {
                 completeOnboarding();
+                setShowCleanupPrompt(true);
                 navigate('/dashboard');
               }}
               className="w-full h-12 rounded-xl font-bold text-base"
             >
-              Import My Leads <ArrowRight className="h-4 w-4 ml-2" />
+              <Import className="h-4 w-4 mr-2" /> Import My Leads
             </Button>
             <button
               onClick={() => {
                 completeOnboarding();
+                setShowCleanupPrompt(true);
                 navigate('/dashboard');
               }}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              Explore App
+              Explore App on my own
             </button>
           </div>
-        </div>
-      </div>
+        </FullScreenCard>
+      </>
     );
   }
 
