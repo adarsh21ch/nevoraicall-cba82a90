@@ -3782,9 +3782,13 @@ export type Database = {
           leaders_id_of_my_leader: string | null
           level_id: string | null
           neverai_id: string | null
+          onboarding_completed: boolean
+          onboarding_step: number
           phone: string | null
+          phone_number: string | null
           response_labels: Json | null
           root_leader_id: string | null
+          signup_source: string | null
           source_app: string | null
           stage_count: number
           stage_labels: Json | null
@@ -3795,6 +3799,9 @@ export type Database = {
           upline_email: string | null
           use_leader_stages: boolean
           user_id: string
+          whatsapp_community_joined: boolean
+          whatsapp_joined_at: string | null
+          whatsapp_popup_shown: boolean
         }
         Insert: {
           allow_leader_to_view?: boolean
@@ -3813,9 +3820,13 @@ export type Database = {
           leaders_id_of_my_leader?: string | null
           level_id?: string | null
           neverai_id?: string | null
+          onboarding_completed?: boolean
+          onboarding_step?: number
           phone?: string | null
+          phone_number?: string | null
           response_labels?: Json | null
           root_leader_id?: string | null
+          signup_source?: string | null
           source_app?: string | null
           stage_count?: number
           stage_labels?: Json | null
@@ -3826,6 +3837,9 @@ export type Database = {
           upline_email?: string | null
           use_leader_stages?: boolean
           user_id: string
+          whatsapp_community_joined?: boolean
+          whatsapp_joined_at?: string | null
+          whatsapp_popup_shown?: boolean
         }
         Update: {
           allow_leader_to_view?: boolean
@@ -3844,9 +3858,13 @@ export type Database = {
           leaders_id_of_my_leader?: string | null
           level_id?: string | null
           neverai_id?: string | null
+          onboarding_completed?: boolean
+          onboarding_step?: number
           phone?: string | null
+          phone_number?: string | null
           response_labels?: Json | null
           root_leader_id?: string | null
+          signup_source?: string | null
           source_app?: string | null
           stage_count?: number
           stage_labels?: Json | null
@@ -3857,6 +3875,9 @@ export type Database = {
           upline_email?: string | null
           use_leader_stages?: boolean
           user_id?: string
+          whatsapp_community_joined?: boolean
+          whatsapp_joined_at?: string | null
+          whatsapp_popup_shown?: boolean
         }
         Relationships: [
           {
@@ -3883,6 +3904,7 @@ export type Database = {
           gender: string | null
           id: string
           instagram: string | null
+          is_demo: boolean
           name: string
           notes: string | null
           personal_tags: Json | null
@@ -3912,6 +3934,7 @@ export type Database = {
           gender?: string | null
           id?: string
           instagram?: string | null
+          is_demo?: boolean
           name: string
           notes?: string | null
           personal_tags?: Json | null
@@ -3941,6 +3964,7 @@ export type Database = {
           gender?: string | null
           id?: string
           instagram?: string | null
+          is_demo?: boolean
           name?: string
           notes?: string | null
           personal_tags?: Json | null
@@ -5753,6 +5777,7 @@ export type Database = {
         Args: { p_count?: number; p_user_id: string }
         Returns: Json
       }
+      cleanup_demo_data: { Args: { p_user_id: string }; Returns: undefined }
       clear_upline_relationship: { Args: { p_user_id: string }; Returns: Json }
       ensure_ac_profile_exists: { Args: never; Returns: Json }
       gen_random_bytes: { Args: { n: number }; Returns: string }
@@ -6008,6 +6033,7 @@ export type Database = {
           }
       normalize_leader_id: { Args: { id: string }; Returns: string }
       record_app_access: { Args: { p_app: string }; Returns: undefined }
+      setup_onboarding_demo_data: { Args: { p_user_id: string }; Returns: Json }
       update_leader_hierarchy: {
         Args: { p_leader_id: string; p_user_id: string }
         Returns: Json

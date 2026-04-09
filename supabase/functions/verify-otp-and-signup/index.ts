@@ -18,7 +18,7 @@ serve(async (req) => {
   }
 
   try {
-    const { email, otp_code, password, name } = await req.json();
+    const { email, otp_code, password, name, phone_number } = await req.json();
 
     // Validate inputs
     if (!email || !otp_code || !password || !name) {
@@ -212,13 +212,17 @@ serve(async (req) => {
       // Wait a moment for profile trigger to fire
       await new Promise(resolve => setTimeout(resolve, 200));
 
-      // Update profile with display_name
+      // Update profile with display_name and phone_number
+      const profileUpdate: Record<string, any> = { 
+        display_name: name.trim(),
+        email: normalizedEmail
+      };
+      if (phone_number) {
+        profileUpdate.phone_number = phone_number;
+      }
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({ 
-          display_name: name.trim(),
-          email: normalizedEmail
-        })
+        .update(profileUpdate)
         .eq('user_id', userId);
 
       if (profileError) {

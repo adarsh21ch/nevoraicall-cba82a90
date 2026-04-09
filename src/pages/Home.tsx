@@ -2,6 +2,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
+import { WhatsAppCommunityPopup } from '@/components/onboarding/WhatsAppCommunityPopup';
+import { OnboardingOverlay } from '@/components/onboarding/OnboardingOverlay';
 import { useProspectsQuery } from '@/hooks/useProspectsQuery';
 import { useGlobalTodos } from '@/contexts/TodosContext';
 import { BottomNav } from '@/components/layout/BottomNav';
@@ -104,6 +107,19 @@ export default function Home() {
     refetch: refetchTodos
   } = useGlobalTodos();
   const [searchQuery, setSearchQuery] = useState('');
+  const [showWaPopup, setShowWaPopup] = useState(false);
+  const { profile } = useProfile();
+
+  // Check if WhatsApp popup should show (once per user)
+  useEffect(() => {
+    if (!profile || !user) return;
+    const localShown = localStorage.getItem('whatsapp_popup_shown');
+    if (!localShown && !profile.whatsapp_popup_shown) {
+      // Small delay so user sees the app first
+      const timer = setTimeout(() => setShowWaPopup(true), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [profile, user]);
 
   // Calendar strip state management
   const calendar = useCalendarStrip();
@@ -330,5 +346,13 @@ export default function Home() {
       
       {/* Trial Expired Modal - shows when trial ends in trial-only mode */}
       <TrialExpiredModal />
+
+      {/* WhatsApp Community Popup - shown once after signup */}
+      {showWaPopup && (
+        <WhatsAppCommunityPopup onDismiss={() => setShowWaPopup(false)} />
+      )}
+
+      {/* Interactive Onboarding Flow */}
+      <OnboardingOverlay />
     </div>;
 }

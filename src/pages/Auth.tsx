@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { toast } from 'sonner';
-import { Loader2, Mail, Lock, Eye, EyeOff, ArrowLeft, User } from 'lucide-react';
+import { Loader2, Mail, Lock, Eye, EyeOff, ArrowLeft, User, Phone } from 'lucide-react';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
 import { getPasswordRecoveryRedirectUrl, PUBLISHED_APP_URL } from '@/config/siteUrl';
 
@@ -19,6 +19,7 @@ export default function Auth() {
   const [emailOrLeaderId, setEmailOrLeaderId] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
@@ -125,10 +126,31 @@ export default function Auth() {
     return true;
   }, []);
 
+  // Normalize phone to +91XXXXXXXXXX format
+  const normalizePhone = (raw: string): string | null => {
+    const digits = raw.replace(/[\s\-+()]/g, '');
+    if (!digits) return null;
+    if (digits.length === 10 && /^\d{10}$/.test(digits)) return `+91${digits}`;
+    if (digits.length === 12 && digits.startsWith('91')) return `+${digits}`;
+    if (digits.length === 13 && digits.startsWith('91')) return `+${digits}`;
+    // Other country codes
+    if (digits.length >= 10) return `+${digits}`;
+    return null;
+  };
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !emailOrLeaderId || !password) {
       toast.error('Please fill in all fields');
+      return;
+    }
+    if (!phoneNumber.trim()) {
+      toast.error('Please enter your WhatsApp number');
+      return;
+    }
+    const normalizedPhone = normalizePhone(phoneNumber);
+    if (!normalizedPhone) {
+      toast.error('Please enter a valid phone number (10 digits)');
       return;
     }
     if (!emailOrLeaderId.includes('@')) {
@@ -157,12 +179,14 @@ export default function Auth() {
       return;
     }
     setOtpVerifying(true);
+    const normalizedPhone = normalizePhone(phoneNumber);
     const { data, error } = await supabase.functions.invoke('verify-otp-and-signup', {
       body: {
         email: pendingSignupData.email,
         otp_code: otpCode,
         password: pendingSignupData.password,
-        name: pendingSignupData.name
+        name: pendingSignupData.name,
+        phone_number: normalizedPhone
       }
     });
     if (error || !data?.success) {
@@ -470,6 +494,28 @@ export default function Auth() {
                     required
                   />
                 </div>
+              </div>
+            )}
+
+            {isSignUp && (
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="text-sm font-medium">WhatsApp Number</Label>
+                <div className="relative">
+                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="phone"
+                    type="tel"
+                    inputMode="numeric"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="+91 98765 43210"
+                    className="pl-10 h-12 rounded-xl bg-secondary border-border focus:border-primary focus:ring-2 focus:ring-primary/15"
+                    required
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground font-body">
+                  We'll use this only to help you get started with Nevorai.
+                </p>
               </div>
             )}
 
