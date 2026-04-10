@@ -120,7 +120,7 @@ export function EnhancedUsersTab({ headerPlanFilter }: EnhancedUsersTabProps) {
   const [overrideUser, setOverrideUser] = useState<EnhancedUser | null>(null);
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
-  const [tierCounts, setTierCounts] = useState<TierCounts>({ free: 0, basic: 0, pro: 0, total: 0 });
+  const [tierCounts, setTierCounts] = useState<TierCounts>({ free: 0, pro: 0, total: 0 });
   const [tierLoading, setTierLoading] = useState(true);
 
   // Sync header plan filter
@@ -140,18 +140,14 @@ export function EnhancedUsersTab({ headerPlanFilter }: EnhancedUsersTabProps) {
           supabase.from('user_subscriptions').select('plan, tier, expires_at'),
         ]);
         const total = Number(totalRes.data) || 0;
-        let basic = 0, pro = 0;
+        let proCount = 0;
         (subsRes.data || []).forEach((s: any) => {
           if (s.plan === 'pro') {
-            // Active = no expiry (lifetime/admin) OR expiry in future
             const isActive = !s.expires_at || new Date(s.expires_at) > new Date();
-            if (isActive) {
-              if (s.tier === 'premium') pro++;
-              else basic++;
-            }
+            if (isActive) proCount++;
           }
         });
-        setTierCounts({ free: total - basic - pro, basic, pro, total });
+        setTierCounts({ free: total - proCount, pro: proCount, total });
       } catch { /* ignore */ }
       setTierLoading(false);
     }
