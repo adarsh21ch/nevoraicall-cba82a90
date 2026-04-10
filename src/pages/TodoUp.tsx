@@ -15,6 +15,7 @@ import { RecentActivityView } from '@/components/todo/RecentActivityView';
 import { TopTabBar } from '@/components/ui/TopTabBar';
 import { TrialBanner } from '@/components/subscription/TrialBanner';
 import { UpgradeButton } from '@/components/subscription/UpgradeButton';
+import { SubscriptionStatusBanner } from '@/components/subscription/SubscriptionStatusBanner';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -286,6 +287,7 @@ export default function TodoUp() {
         <PullToRefreshIndicator isRefreshing={isRefreshing} pullDistance={pullDistance} showIndicator={showIndicator} />
         <div className="container px-4 space-y-2">
           {/* Trial Banner - respects admin config */}
+          <SubscriptionStatusBanner className="mb-2" />
           <TrialBanner tabId="todoup" />
           <UpgradeButton tabId="todoup" variant="prominent" />
           

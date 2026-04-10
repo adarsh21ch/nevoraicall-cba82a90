@@ -9,6 +9,7 @@ import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { TopTabBar } from '@/components/ui/TopTabBar';
 import { TrialBanner } from '@/components/subscription/TrialBanner';
 import { UpgradeButton } from '@/components/subscription/UpgradeButton';
+import { SubscriptionStatusBanner } from '@/components/subscription/SubscriptionStatusBanner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Filter, ChevronDown, ChevronUp, Tags, X, Search, Phone, Layers, Clock, Calendar1 } from 'lucide-react';
@@ -385,6 +386,7 @@ export default function ListUp() {
         <PullToRefreshIndicator isRefreshing={isRefreshing} pullDistance={pullDistance} showIndicator={showIndicator} />
         <div className="container py-3 px-4 space-y-3">
           {/* Trial Banner */}
+          <SubscriptionStatusBanner className="mb-2" />
           <TrialBanner tabId="listup" />
           <UpgradeButton tabId="listup" variant="prominent" />
 

@@ -10,6 +10,7 @@ import { useLeaderSetup } from '@/hooks/useLeaderSetup';
 import { useLifetimeLeadLimit } from '@/hooks/useLifetimeLeadLimit';
 import { useTrackingFormatContext } from '@/contexts/TrackingFormatContext';
 import { useFreeTrial } from '@/hooks/useFreeTrial';
+import { useSubscription } from '@/hooks/useSubscription';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { HeaderBellIcon } from '@/components/layout/HeaderBellIcon';
 import { EditProfileDialog } from '@/components/profile/EditProfileDialog';
@@ -23,11 +24,12 @@ import { RecentlyDeletedDrawer } from '@/components/profile/RecentlyDeletedDrawe
 import { ProgressiveNudgeBanner } from '@/components/subscription/ProgressiveNudgeBanner';
 import { TrialBanner } from '@/components/subscription/TrialBanner';
 import { UpgradeButton } from '@/components/subscription/UpgradeButton';
+import { SubscriptionStatusBanner } from '@/components/subscription/SubscriptionStatusBanner';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { User, LogOut, ChevronRight, ChevronDown, Loader2, FileText, Shield, Receipt, Settings, ExternalLink, BarChart3, Crown, Gift, Trash2, Sparkles, Lock, Share2, Video, Sliders, NotebookPen, Bell, BrainCircuit, PlayCircle } from 'lucide-react';
+import { User, LogOut, ChevronRight, ChevronDown, Loader2, FileText, Shield, Receipt, Settings, ExternalLink, BarChart3, Crown, Gift, Trash2, Sparkles, Lock, Share2, Video, Sliders, NotebookPen, Bell, BrainCircuit, PlayCircle, Clock } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 
@@ -198,6 +200,7 @@ export default function Profile() {
     isPaid: isPro,
     isLoading: subLoading
   } = usePermissions();
+  const { subscription, daysRemaining } = useSubscription();
   const {
     refreshFormat
   } = useTrackingFormatContext();
@@ -302,9 +305,17 @@ export default function Profile() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-semibold text-lg truncate">{displayName}</p>
-                      {isPro && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                      {isPro && daysRemaining > 7 && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
                           <Crown className="h-3 w-3" />
                           Pro
+                        </span>}
+                      {isPro && daysRemaining > 0 && daysRemaining <= 7 && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/40">
+                          <Crown className="h-3 w-3" />
+                          Pro · {daysRemaining}d left
+                        </span>}
+                      {!isPro && subscription?.expires_at && new Date(subscription.expires_at) <= new Date() && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-destructive/10 text-destructive border border-destructive/30">
+                          <Clock className="h-3 w-3" />
+                          Pro Expired
                         </span>}
                       {isTrialActive && !isPro && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                           <Gift className="h-3 w-3" />
@@ -329,6 +340,9 @@ export default function Profile() {
             <div className="absolute -right-4 -top-4 w-16 h-16 rounded-full bg-primary/5" />
           </div>
 
+          {/* Subscription Status Banner - expiry warnings + expired renewal */}
+          <SubscriptionStatusBanner />
+          
           {/* Trial Banner - show for users with active trial */}
           <TrialBanner tabId="profile" />
           
