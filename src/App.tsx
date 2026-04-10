@@ -102,7 +102,6 @@ function App() {
         <BrowserRouter>
           <AuthProvider>
             <PermissionsProvider>
-              <PreviewModeProvider>
               <CustomOptionsProvider>
                 <TrackingFormatProvider>
                   <ProspectsProvider>
@@ -111,10 +110,6 @@ function App() {
                     <InstallPromptBanner />
                     <UpdateBanner />
                     <AppAccessTracker />
-                    <PreviewModeBanner />
-                    <PreviewStepJumpSheet />
-                    <PreviewNoteInput />
-                    <PreviewSessionSummary />
                     <OnboardingOverlay />
                     <Suspense fallback={<PageLoader />}>
                       <Routes>
@@ -152,7 +147,6 @@ function App() {
                   </ProspectsProvider>
                 </TrackingFormatProvider>
               </CustomOptionsProvider>
-              </PreviewModeProvider>
             </PermissionsProvider>
           </AuthProvider>
         </BrowserRouter>
