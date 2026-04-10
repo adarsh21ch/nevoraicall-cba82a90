@@ -79,7 +79,6 @@ function TierChips({ counts, loading }: { counts: TierCounts; loading: boolean }
 
 function TierBadge({ tier, plan }: { tier: string; plan: string }) {
   if (plan !== 'pro') return <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Free</Badge>;
-  if (tier === 'premium') return <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-400 border-0 text-[10px] px-1.5 py-0 gap-0.5"><Gem className="h-2.5 w-2.5" />Pro</Badge>;
   return <Badge className="bg-primary/20 text-primary border-0 text-[10px] px-1.5 py-0 gap-0.5"><Crown className="h-2.5 w-2.5" />Pro</Badge>;
 }
 
