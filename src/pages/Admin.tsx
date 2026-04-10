@@ -16,7 +16,7 @@ import { NewSignupsView } from '@/components/admin/NewSignupsView';
 import { RevenueTab } from '@/components/admin/RevenueTab';
 import { ManageTab } from '@/components/admin/ManageTab';
 import { BroadcastTab } from '@/components/admin/BroadcastTab';
-import { PreviewLaunchCard } from '@/components/admin/PreviewLaunchCard';
+
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -105,7 +105,6 @@ export default function Admin() {
 
       <main className="scrollable-content">
         <div className="container py-3 px-3 pb-24 space-y-4">
-          <PreviewLaunchCard />
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="w-full grid grid-cols-5 h-10">
               <TabsTrigger value="overview" className="text-[11px] px-1 h-8 gap-1">
