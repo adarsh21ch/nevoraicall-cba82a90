@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { TrialBanner } from '@/components/subscription/TrialBanner';
 import { UpgradeButton } from '@/components/subscription/UpgradeButton';
+import { SubscriptionStatusBanner } from '@/components/subscription/SubscriptionStatusBanner';
 import { Button } from '@/components/ui/button';
 import { ModeSelectors } from '@/components/trackup-v2/ModeSelectors';
 import { ViewSelector } from '@/components/trackup-v2/ViewSelector';
@@ -177,6 +178,7 @@ export default function Tracking() {
 
       <main className="scrollable-content">
         <div className="container py-2 px-3 pb-24">
+          <SubscriptionStatusBanner className="mb-3" />
           <TrialBanner tabId="tracking" className="mb-3" />
           <UpgradeButton tabId="tracking" variant="prominent" />
 

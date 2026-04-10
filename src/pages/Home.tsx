@@ -14,6 +14,7 @@ import { LeaderIdSetupDialog } from '@/components/profile/LeaderIdSetupDialog';
 import { CalendarStrip } from '@/components/calendar/CalendarStrip';
 import { useCalendarStrip } from '@/hooks/useCalendarStrip';
 import { TrialBanner } from '@/components/subscription/TrialBanner';
+import { SubscriptionStatusBanner } from '@/components/subscription/SubscriptionStatusBanner';
 import { TrialExpiredModal } from '@/components/subscription/TrialExpiredModal';
 import { Loader2, Clock } from 'lucide-react';
 import { SearchBar } from '@/components/ui/SearchBar';
@@ -260,6 +261,7 @@ export default function Home() {
         <PullToRefreshIndicator isRefreshing={isRefreshing} pullDistance={pullDistance} showIndicator={showIndicator} />
         <div className="container py-3 px-3 pb-20 flex-1 flex flex-col">
           {/* Trial Banner - shows for users with active trial */}
+          <SubscriptionStatusBanner className="mb-3" />
           <TrialBanner tabId="home" className="mb-3" />
           
           {/* WhatsApp-style Search Bar */}

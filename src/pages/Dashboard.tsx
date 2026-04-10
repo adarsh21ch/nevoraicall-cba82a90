@@ -16,6 +16,7 @@ import { FilterTagSetupDialog, useFilterTagSetup } from '@/components/prospects/
 import { KPIStrip } from '@/components/prospects/KPIStrip';
 import { TrialBanner } from '@/components/subscription/TrialBanner';
 import { UpgradeButton } from '@/components/subscription/UpgradeButton';
+import { SubscriptionStatusBanner } from '@/components/subscription/SubscriptionStatusBanner';
 import { Loader2, Phone, Layers, Flame } from 'lucide-react';
 import nevoraLogo from '@/assets/nevorai-logo.jpeg';
 import { useStreak } from '@/hooks/useStreak';
@@ -279,6 +280,7 @@ export default function Dashboard() {
         
         {/* Trial Banner */}
         <div className="px-4 pt-2">
+          <SubscriptionStatusBanner className="mb-2" />
           <TrialBanner tabId="dashboard" />
           <UpgradeButton tabId="dashboard" variant="prominent" />
         </div>
