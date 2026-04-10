@@ -7,16 +7,11 @@ import { CustomOptionsProvider } from "@/contexts/CustomOptionsContext";
 import { ProspectsProvider } from "@/contexts/ProspectsContext";
 import { TodosProvider } from "@/contexts/TodosContext";
 import { PermissionsProvider } from "@/contexts/PermissionsContext";
-import { PreviewModeProvider } from "@/contexts/PreviewModeContext";
 import { Toaster } from "sonner";
 import { InstallPromptBanner } from "@/components/pwa/InstallPromptBanner";
 import { UpdateBanner } from "@/components/pwa/UpdateBanner";
 import { AppAccessTracker } from "@/components/AppAccessTracker";
-import { PreviewModeBanner } from "@/components/admin/PreviewModeBanner";
 import { OnboardingOverlay } from "@/components/onboarding/OnboardingOverlay";
-import { PreviewStepJumpSheet } from "@/components/admin/PreviewStepJumpSheet";
-import { PreviewNoteInput } from "@/components/admin/PreviewNoteInput";
-import { PreviewSessionSummary } from "@/components/admin/PreviewSessionSummary";
 import { Loader2 } from "lucide-react";
 
 // Eagerly load the most used pages (bottom nav tabs)
