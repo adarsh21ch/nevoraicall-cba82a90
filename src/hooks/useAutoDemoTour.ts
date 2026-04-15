@@ -183,15 +183,18 @@ export function useAutoDemoTour() {
         .eq('user_id', user.id)
         .eq('is_demo', true);
 
-      // Restore original labels (or empty arrays)
+      // Restore original labels — keep the new-user defaults (the trigger already set them)
+      // Don't reset to empty since new users should keep their default tags
       const orig = originalLabelsRef.current;
-      await supabase
-        .from('profiles')
-        .update({
-          response_labels: orig.response && orig.response.length > 0 ? orig.response : [],
-          stage_labels: orig.stage && orig.stage.length > 0 ? orig.stage : [],
-        } as any)
-        .eq('user_id', user.id);
+      if (orig.response || orig.stage) {
+        await supabase
+          .from('profiles')
+          .update({
+            response_labels: orig.response || DEMO_RESPONSE_LABELS,
+            stage_labels: orig.stage || DEMO_STAGE_LABELS,
+          } as any)
+          .eq('user_id', user.id);
+      }
     } catch (e) {
       console.error('[AutoDemoTour] Cleanup error:', e);
     }
