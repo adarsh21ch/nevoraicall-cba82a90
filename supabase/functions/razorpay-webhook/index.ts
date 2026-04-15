@@ -206,7 +206,8 @@ Deno.serve(async (req) => {
       const notes = payment.notes || {};
       const email = notes.user_email || payment.email;
 
-      console.log(`Payment captured: ${paymentId}, email: ${email}, amount: ${amount}`);
+      const maskedEmail = email ? `${email.slice(0, 2)}***@${email.split('@')[1] || '?'}` : 'unknown';
+      console.log(`Payment captured: ${paymentId}, email: ${maskedEmail}, amount: ${amount}`);
 
       if (!email) {
         await logPayment(supabase, 'payment.captured', null, paymentId, amount, 'error', 'No email found', null, false, payload);
