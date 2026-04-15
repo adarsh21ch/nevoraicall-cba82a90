@@ -70,18 +70,20 @@ function SimpleMarkdown({ content }: { content: string }) {
           .replace(/\*(.*?)\*/g, '<em>$1</em>')
           .replace(/`(.*?)`/g, '<code class="px-1 py-0.5 rounded bg-muted text-xs">$1</code>');
 
+        const safe = DOMPurify.sanitize(processed, { ALLOWED_TAGS: ['strong', 'em', 'code'], ALLOWED_ATTR: ['class'] });
+
         if (isHeading) {
-          processed = processed.replace(/^#{1,3}\s/, '');
-          return <p key={i} className="font-semibold text-foreground" dangerouslySetInnerHTML={{ __html: processed }} />;
+          const safeHeading = DOMPurify.sanitize(safe.replace(/^#{1,3}\s/, ''), { ALLOWED_TAGS: ['strong', 'em', 'code'], ALLOWED_ATTR: ['class'] });
+          return <p key={i} className="font-semibold text-foreground" dangerouslySetInnerHTML={{ __html: safeHeading }} />;
         }
         if (isBullet) {
-          processed = processed.replace(/^[-•*]\s/, '');
-          return <div key={i} className="flex gap-2 pl-2"><span className="text-muted-foreground">•</span><span dangerouslySetInnerHTML={{ __html: processed }} /></div>;
+          const safeBullet = DOMPurify.sanitize(safe.replace(/^[-•*]\s/, ''), { ALLOWED_TAGS: ['strong', 'em', 'code'], ALLOWED_ATTR: ['class'] });
+          return <div key={i} className="flex gap-2 pl-2"><span className="text-muted-foreground">•</span><span dangerouslySetInnerHTML={{ __html: safeBullet }} /></div>;
         }
         if (isNumbered) {
-          return <div key={i} className="pl-2" dangerouslySetInnerHTML={{ __html: processed }} />;
+          return <div key={i} className="pl-2" dangerouslySetInnerHTML={{ __html: safe }} />;
         }
-        return <p key={i} dangerouslySetInnerHTML={{ __html: processed }} />;
+        return <p key={i} dangerouslySetInnerHTML={{ __html: safe }} />;
       })}
     </div>
   );
