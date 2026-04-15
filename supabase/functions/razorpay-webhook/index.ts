@@ -206,10 +206,11 @@ Deno.serve(async (req) => {
       const notes = payment.notes || {};
       const email = notes.user_email || payment.email;
 
-      console.log(`Payment captured: ${paymentId}, email: ${email}, amount: ${amount}`);
+      const maskedEmail = email ? `${email.slice(0, 2)}***@${email.split('@')[1] || '?'}` : 'unknown';
+      console.log(`Payment captured: ${paymentId}, email: ${maskedEmail}, amount: ${amount}`);
 
       if (!email) {
-        await logPayment(supabase, 'payment.captured', null, paymentId, amount, 'error', 'No email found', null, false, payload);
+        await logPayment(supabase, 'payment.captured', null, paymentId, amount, 'error', 'No email found', null, false, null);
         return new Response(JSON.stringify({ error: 'No email in payment' }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -221,7 +222,7 @@ Deno.serve(async (req) => {
         userId = await findUserByEmail(supabase, email);
       } catch (err) {
         console.error('Error fetching profile:', err);
-        await logPayment(supabase, 'payment.captured', email, paymentId, amount, 'error', 'Failed to fetch profile', null, false, payload);
+        await logPayment(supabase, 'payment.captured', email, paymentId, amount, 'error', 'Failed to fetch profile', null, false, null);
         return new Response(JSON.stringify({ error: 'Failed to fetch user profile' }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -229,7 +230,7 @@ Deno.serve(async (req) => {
       }
 
       if (!userId) {
-        await logPayment(supabase, 'payment.captured', email, paymentId, amount, 'error', 'User not found', null, false, payload);
+        await logPayment(supabase, 'payment.captured', email, paymentId, amount, 'error', 'User not found', null, false, null);
         return new Response(JSON.stringify({ error: 'User not found' }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -241,7 +242,7 @@ Deno.serve(async (req) => {
       const tier = notes.tier || 'pro'; // Default to 'pro' for backward compat
       
       if (!durationDays) {
-        await logPayment(supabase, 'payment.captured', email, paymentId, amount, 'error', 'Missing duration_days in notes', userId, true, payload);
+        await logPayment(supabase, 'payment.captured', email, paymentId, amount, 'error', 'Missing duration_days in notes', userId, true, null);
         return new Response(JSON.stringify({ error: 'Missing duration_days' }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -306,13 +307,13 @@ Deno.serve(async (req) => {
       console.log(`Subscription activated: ${subId}, email: ${email}, plan: ${razorpayPlanId}`);
 
       if (!email) {
-        await logPayment(supabase, 'subscription.activated', null, subId, null, 'error', 'No email in notes', null, false, payload);
+        await logPayment(supabase, 'subscription.activated', null, subId, null, 'error', 'No email in notes', null, false, null);
         return new Response(JSON.stringify({ error: 'No email' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
       const userId = await findUserByEmail(supabase, email);
       if (!userId) {
-        await logPayment(supabase, 'subscription.activated', email, subId, null, 'error', 'User not found', null, false, payload);
+        await logPayment(supabase, 'subscription.activated', email, subId, null, 'error', 'User not found', null, false, null);
         return new Response(JSON.stringify({ error: 'User not found' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
@@ -331,7 +332,7 @@ Deno.serve(async (req) => {
       }
 
       if (!durationDays) {
-        await logPayment(supabase, 'subscription.activated', email, subId, null, 'error', 'Missing duration_days', userId, true, payload);
+        await logPayment(supabase, 'subscription.activated', email, subId, null, 'error', 'Missing duration_days', userId, true, null);
         return new Response(JSON.stringify({ error: 'Missing duration' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
@@ -395,7 +396,7 @@ Deno.serve(async (req) => {
       }
 
       if (!durationDays) {
-        await logPayment(supabase, 'subscription.charged', email, paymentId, amount, 'error', 'Missing duration', null, false, payload);
+        await logPayment(supabase, 'subscription.charged', email, paymentId, amount, 'error', 'Missing duration', null, false, null);
         return new Response(JSON.stringify({ error: 'Missing duration' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
