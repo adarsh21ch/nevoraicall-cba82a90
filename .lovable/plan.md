@@ -1,53 +1,21 @@
 
-# Nevorai — Onboarding, Retention & Growth Plan
+This is a research/audit request, not an implementation task. The user wants a comprehensive written report. I'll gather context across the codebase (routes, auth, DB schema, integrations, admin, design tokens, edge functions, known issues from memory) and then deliver the audit as the response. Since plan mode is read-only and the user explicitly wants a long structured report (not code), I'll exit plan mode and deliver the audit in default mode.
 
-## Phase 1: Signup Form — Add Phone Field
-- Add WhatsApp Number field to Auth signup form (tel input, Indian format validation)
-- Store as `+91XXXXXXXXXX` in profiles table
-- Add `phone_number`, `signup_source`, `onboarding_completed`, `onboarding_step`, `whatsapp_popup_shown`, `whatsapp_community_joined`, `whatsapp_joined_at` columns to profiles
-- Helper text: "We'll use this only to help you get started with Nevorai."
+Plan: Switch to default mode and produce the structured audit using existing context already loaded (memory index covers most architecture, App.tsx routes are visible, edge functions list visible, types/components list visible). I'll do targeted reads only where memory is insufficient (package.json for integrations, tailwind config for design tokens, profiles schema for DB inventory).
 
-## Phase 2: Admin Users — Phone + New Signups View
-- Show phone number, lead count, WA community status, last active in Users list
-- Add call/WhatsApp/email action buttons per user
-- Add "New Signups" sub-tab showing last 7 days with quick-action buttons
-- Add filters: No Phone, Not in WA, Never Active
-- Pre-filled WhatsApp message from founder
+## Audit Delivery Plan
 
-## Phase 3: Post-Signup WhatsApp Community Popup
-- Full-screen bottom sheet after signup (once per user)
-- WhatsApp group invite link with tracking
-- "Maybe Later" skip option
-- Store `whatsapp_popup_shown` and `whatsapp_community_joined` in profiles
+**Step 1 — Targeted reads (read-only, ~6 files)**
+- `package.json` → integrations, libraries
+- `tailwind.config.ts` + `src/index.css` → design tokens, colors
+- `src/integrations/supabase/types.ts` (table list only) → DB inventory
+- `src/contexts/AuthContext.tsx` → auth method confirmation
+- `src/pages/Profile.tsx` (skim) → profile features
+- Memory files already in context cover: monetization, onboarding, KYC, streaks, sharing, AI, forms, funnels, notes, push, admin
 
-## Phase 4: 100 Lead Limit + Enforcement UI
-- Replace trial days with simple 100-lead free limit
-- Warning banner at 80 leads, blocking sheet at 100 leads
-- Update existing `useLeadLimit` / `useLifetimeLeadLimit` hooks
-- Update admin panel to show "Free — 47/100 leads" instead of trial badges
-- Note: Will work with existing lead limit infrastructure, not create duplicate systems
+**Step 2 — Compose the 19-section audit report**
+Deliver as plain-text structured response (not a code change). Each section will be specific to Nevorai with concrete component/file/table names. Length target: thorough but readable (~3–4 screens).
 
-## Phase 5: Default Tags + Demo Leads on Signup
-- Auto-create 5 default tags (Calling, Video Send, Hot Lead, Enrolled, Follow Up) for new users
-- Create demo sheet with 3 demo leads marked `is_demo = true`
-- Demo leads excluded from limits, auto-deleted after 7 days or onboarding completion
+**Step 3 — End with feature-suggestions block** as per system rules.
 
-## Phase 6: Interactive Onboarding Flow (5 steps)
-- Step 1: Welcome screen with user's first name
-- Step 2: Show demo sheet + coach mark overlay
-- Step 3: Guide user to tag a demo lead
-- Step 4: Show activity history
-- Step 5: Schedule a follow-up
-- Progress bar, skip option after Step 2, state persistence
-
-## Phase 7: Push Notification Sequences
-- Sequence A: New user onboarding reminders (4h, Day 1, Day 3, Day 7)
-- Sequence B: Lead limit nudges (50, 80, 100 leads)
-- Sequence C: Re-engagement (3d, 7d, 14d dormant)
-- Edge function cron jobs checking profiles.last_active
-
-## Implementation Notes
-- Will reuse existing infrastructure where possible (useLeadLimit, useFreeTrial, push notification system)
-- Each phase will be implemented and verified before moving to next
-- Database migration first, then code changes
-- Phone number will be encrypted using existing encryption system
+No file edits, no DB changes, no scripts. Pure deliverable: a written audit document in the chat response.
