@@ -68,7 +68,7 @@ serve(async (req) => {
 
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("user_id, email, display_name, full_name, created_at, subscription_plan, subscription_status, subscription_expires_at")
+      .select("user_id, email, phone, whatsapp_number, display_name, full_name, created_at, subscription_plan, subscription_status, subscription_expires_at")
       .or(orParts.join(","))
       .order("created_at", { ascending: true })
       .limit(1)
@@ -82,9 +82,12 @@ serve(async (req) => {
     if (!profile) {
       return json({
         isPro: false,
-        plan: "none",
+        plan: null,
         fullName: null,
+        email: email || null,
+        phone: phone || null,
         registeredAt: null,
+        callingAppUserId: null,
       });
     }
 
@@ -115,9 +118,12 @@ serve(async (req) => {
 
     return json({
       isPro,
-      plan: isPro ? "pro" : "none",
+      plan: isPro ? plan : null,
       fullName: profile.full_name || profile.display_name || null,
+      email: profile.email || null,
+      phone: (profile as any).phone || (profile as any).whatsapp_number || null,
       registeredAt: profile.created_at,
+      callingAppUserId: profile.user_id,
     });
   } catch (err) {
     console.error("is-pro-user error:", err);
