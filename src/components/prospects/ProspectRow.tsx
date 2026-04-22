@@ -269,30 +269,24 @@ export const ProspectRow = memo(function ProspectRow({
         return (
           <td 
             key={columnId} 
-            className={cn(cellClass, "text-right")} 
+            className={cn(cellClass, "text-right p-0 cursor-pointer hover:bg-muted/40 active:bg-muted/60 transition-colors")} 
             style={{ width: '35%', minWidth: '100px' }}
             onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              setTagSheetOpen(true);
+            }}
             {...(index === 1 ? { 'data-onboarding': 'response-select' } : {})}
           >
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setTagSheetOpen(true);
-                }}
-                className={cn(
-                  "min-w-[70px] h-full px-2 py-1 rounded-md text-xs",
-                  "hover:bg-muted/60 active:scale-[0.97] transition-all",
-                  "flex items-center justify-end gap-1"
-                )}
-              >
-                {actionVal ? (
-                  <ActionBadge action={actionVal} />
-                ) : (
-                  <span className="text-muted-foreground/50 text-xs">Select...</span>
-                )}
-              </button>
+            <div className={cn(
+              "flex items-center justify-end h-full w-full px-2 py-4",
+              isMobileTable && "px-1.5 py-3.5"
+            )}>
+              {actionVal ? (
+                <ActionBadge action={actionVal} />
+              ) : (
+                <span className="text-muted-foreground/50 text-xs">Select...</span>
+              )}
             </div>
           </td>
         );
@@ -303,29 +297,23 @@ export const ProspectRow = memo(function ProspectRow({
         return (
           <td 
             key={columnId} 
-            className={cn(cellClass, "text-right")} 
+            className={cn(cellClass, "text-right p-0 cursor-pointer hover:bg-muted/40 active:bg-muted/60 transition-colors")} 
             style={{ width: '35%', minWidth: '100px' }}
             onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              setStageSheetOpen(true);
+            }}
           >
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setStageSheetOpen(true);
-                }}
-                className={cn(
-                  "min-w-[70px] h-full px-2 py-1 rounded-md text-xs",
-                  "hover:bg-muted/60 active:scale-[0.97] transition-all",
-                  "flex items-center justify-end gap-1"
-                )}
-              >
-                {stageVal ? (
-                  <StageBadge stage={stageVal} />
-                ) : (
-                  <span className="text-muted-foreground/50 text-xs">Select...</span>
-                )}
-              </button>
+            <div className={cn(
+              "flex items-center justify-end h-full w-full px-2 py-4",
+              isMobileTable && "px-1.5 py-3.5"
+            )}>
+              {stageVal ? (
+                <StageBadge stage={stageVal} />
+              ) : (
+                <span className="text-muted-foreground/50 text-xs">Select...</span>
+              )}
             </div>
           </td>
         );
