@@ -1,10 +1,11 @@
 import { useState, useEffect, memo, useCallback, useRef } from 'react';
 import { motion, useMotionValue, useTransform, animate, type PanInfo } from 'framer-motion';
-import { Phone } from 'lucide-react';
+import { Phone, Tag } from 'lucide-react';
 import { Prospect, FunnelStage, ActionTaken, ProspectStatus, FUNNEL_STAGES, EXTENDED_ACTIONS, STATUSES, ExtendedActionTaken } from '@/types/prospect';
 import { InlineSelect } from './InlineSelect';
 import { StatusBadge, StageBadge, ActionBadge } from './StatusBadge';
 import { InlineReportCard } from './InlineReportCard';
+import { ResponseTagSheet } from './ResponseTagSheet';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CallIconButton } from '@/components/ui/ActionIcons';
 import { ChevronRight } from 'lucide-react';
