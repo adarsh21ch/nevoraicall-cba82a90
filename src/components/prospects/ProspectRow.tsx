@@ -532,8 +532,9 @@ export const ProspectRow = memo(function ProspectRow({
           {/* Draggable foreground card (left + right) */}
           <motion.div
             drag="x"
-            dragConstraints={{ left: -SWIPE_REVEAL * 1.8, right: SWIPE_REVEAL * 1.8 }}
-            dragElastic={{ left: 0.08, right: 0.08 }}
+            dragConstraints={{ left: -SWIPE_REVEAL * 1.4, right: SWIPE_REVEAL * 1.4 }}
+            dragElastic={0.12}
+            dragMomentum={false}
             dragDirectionLock
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
