@@ -117,9 +117,9 @@ export const ResponseTagSheet = memo(function ResponseTagSheet({
           <motion.div
             role="dialog"
             aria-label={title}
-            initial={{ opacity: 0, x: -20, scale: 0.97 }}
+            initial={{ opacity: 0, x: 20, scale: 0.97 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: -20, scale: 0.97 }}
+            exit={{ opacity: 0, x: 20, scale: 0.97 }}
             transition={{ type: 'spring', stiffness: 380, damping: 32 }}
             className={cn(
               'fixed right-2 z-50 flex flex-col',
