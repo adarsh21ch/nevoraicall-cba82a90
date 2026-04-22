@@ -105,7 +105,7 @@ export const ResponseTagSheet = memo(function ResponseTagSheet({
             {title}
           </SheetTitle>
           {prospectName && (
-            <p className="text-xs text-muted-foreground text-left truncate font-medium">
+            <p className="text-sm text-foreground text-left truncate font-semibold tracking-tight">
               {prospectName}
             </p>
           )}
