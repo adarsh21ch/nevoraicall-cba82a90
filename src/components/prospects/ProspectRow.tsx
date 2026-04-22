@@ -428,35 +428,63 @@ export const ProspectRow = memo(function ProspectRow({
           className={cn("p-0 relative overflow-hidden", bgColor)}
           onPointerDown={(e) => e.stopPropagation()}
         >
-          {/* Revealed green call action (underlay) */}
+          {/* Progressive green gradient background that fades in with swipe */}
+          <motion.div
+            aria-hidden="true"
+            style={{ opacity: bgOpacity }}
+            className="absolute inset-0 pointer-events-none"
+          >
+            <div
+              className="absolute inset-0"
+              style={{
+                background: 'linear-gradient(90deg, hsl(142 71% 45% / 0) 0%, hsl(142 71% 45% / 0.18) 55%, hsl(142 71% 45% / 0.32) 100%)',
+              }}
+            />
+          </motion.div>
+
+          {/* Revealed pill Call button */}
           <motion.div
             aria-hidden={false}
-            style={{ opacity: callBtnOpacity }}
+            style={{ opacity: callBtnOpacity, x: callBtnTranslate }}
             className="absolute inset-y-0 right-0 flex items-center justify-end pr-3 pointer-events-none"
           >
             <button
               type="button"
               onClick={handleRevealedCallClick}
               aria-label={`Call ${prospect.name}`}
-              className="pointer-events-auto h-[calc(100%-12px)] my-1.5 px-4 rounded-xl flex items-center gap-2 text-white font-semibold shadow-lg active:scale-95 transition-transform"
-              style={{ backgroundColor: 'hsl(142 71% 45%)' }}
+              className="pointer-events-auto flex items-center gap-2 text-white font-semibold active:scale-95 transition-transform"
+              style={{
+                padding: '0 28px',
+                height: '44px',
+                borderRadius: '50px',
+                background: 'linear-gradient(135deg, #16a34a, #22c55e)',
+                boxShadow: '0 4px 20px rgba(34, 197, 94, 0.45)',
+              }}
             >
-              <motion.span style={{ scale: callBtnScale }} className="flex items-center gap-2">
-                <Phone className="h-5 w-5" fill="currentColor" />
-                <span className="text-sm">Call</span>
+              <motion.span
+                animate={{ scale: [1, 1.12, 1] }}
+                transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+                className="flex items-center"
+              >
+                <Phone className="h-6 w-6" fill="currentColor" />
               </motion.span>
+              <span className="text-sm tracking-wide">Call</span>
             </button>
           </motion.div>
 
-          {/* Draggable foreground content rendered as a nested table row layout */}
+          {/* Draggable foreground content */}
           <motion.div
             drag="x"
-            dragConstraints={{ left: -SWIPE_REVEAL * 1.6, right: 0 }}
-            dragElastic={{ left: 0.15, right: 0 }}
+            dragConstraints={{ left: -SWIPE_REVEAL * 1.8, right: 0 }}
+            dragElastic={{ left: 0.08, right: 0 }}
             dragDirectionLock
-            onDragStart={() => { isSwipingRef.current = true; }}
+            onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
-            style={{ x }}
+            style={{
+              x,
+              scale: cardScale,
+              boxShadow: isDragging ? '0 8px 30px rgba(0,0,0,0.12)' : 'none',
+            }}
             className={cn("relative w-full", bgColor)}
           >
             <table className="w-full" style={{ tableLayout: 'fixed' }}>
