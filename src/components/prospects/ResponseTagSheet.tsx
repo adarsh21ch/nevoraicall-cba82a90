@@ -80,8 +80,8 @@ export const ResponseTagSheet = memo(function ResponseTagSheet({
         type="button"
         onClick={() => handlePick(option)}
         className={cn(
-          'w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg border transition-all duration-150',
-          'min-h-[40px] text-left active:scale-[0.97]',
+          'w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg border transition-all duration-150',
+          'min-h-[34px] text-left active:scale-[0.97]',
           isSelected
             ? 'border-primary bg-primary/10 shadow-sm'
             : 'border-border/60 bg-card/60 hover:bg-muted/60 hover:border-border'
@@ -123,10 +123,11 @@ export const ResponseTagSheet = memo(function ResponseTagSheet({
             transition={{ type: 'spring', stiffness: 380, damping: 32 }}
             className={cn(
               'fixed right-2 z-50 flex flex-col',
-              // Table-area window (Dashboard chrome aware)
-              'top-[180px] bottom-[150px]',
+              // Window: from just below the action toolbar down to just above
+              // the SheetTabs strip + BottomNav — covers the table area only
+              'top-[230px] bottom-[112px]',
               // Compact width — leaves the lead row visible on the left
-              'w-[78vw] max-w-[340px] sm:w-[55vw] sm:max-w-[360px]',
+              'w-[62vw] max-w-[280px] sm:w-[42vw] sm:max-w-[300px]',
               // Premium glassy surface
               'rounded-2xl border border-border/60',
               'bg-popover/95 backdrop-blur-xl',
