@@ -629,7 +629,10 @@ export default function Profile() {
               </div>
               <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
             </Link>}
+          </div>{/* end Settings & Support */}
 
+          {/* ── SECTION: Community ────────────── */}
+          <SectionHeader>Community</SectionHeader>
           {/* Join WhatsApp Community */}
           <a
             href="https://chat.whatsapp.com/FvNbWgFVR2IFBq6ihWhTs2"
