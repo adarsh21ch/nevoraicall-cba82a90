@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Prospect, FunnelStage, ProspectStatus, FUNNEL_STAGES, EXTENDED_ACTIONS, STATUSES, ExtendedActionTaken, ActionTaken } from '@/types/prospect';
 import { InlineSelect } from './InlineSelect';
+import { ResponseTagSheet } from './ResponseTagSheet';
 import { StatusBadge, StageBadge, ActionBadge } from './StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +33,9 @@ export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDel
   // Optimistic state for instant UI updates
   const [optimisticAction, setOptimisticAction] = useState<ExtendedActionTaken | null>(null);
   const [optimisticStage, setOptimisticStage] = useState<string | null>(null);
+  // Tag selection popups
+  const [responseSheetOpen, setResponseSheetOpen] = useState(false);
+  const [stageSheetOpen, setStageSheetOpen] = useState(false);
   
 const [localData, setLocalData] = useState({
     name: prospect.name,
