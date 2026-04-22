@@ -496,6 +496,31 @@ const [localData, setLocalData] = useState({
           </div>
         </div>
       )}
+
+      {/* Centered popups for tag selection — same UI as the swipe-right reveal */}
+      <ResponseTagSheet
+        open={responseSheetOpen}
+        onOpenChange={setResponseSheetOpen}
+        currentValue={getActionDisplayValue()}
+        trackingOptions={leadsTrackingTagNames}
+        nonTrackingOptions={leadsNonTrackingTags}
+        finalTargetTag={leadsFinalTargetTag}
+        stageTag={leadsStageTag}
+        onSelect={handleActionChange}
+        prospectName={prospect.name}
+        title="Response Tag"
+      />
+      <ResponseTagSheet
+        open={stageSheetOpen}
+        onOpenChange={setStageSheetOpen}
+        currentValue={getStageDisplayValue()}
+        trackingOptions={stageTagNames}
+        nonTrackingOptions={stageNonTrackingTags}
+        finalTargetTag={stageFinalTargetTag}
+        onSelect={handleStageChange}
+        prospectName={prospect.name}
+        title="Stage Tag"
+      />
     </div>
   );
 }
