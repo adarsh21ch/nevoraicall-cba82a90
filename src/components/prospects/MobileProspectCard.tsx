@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Prospect, FunnelStage, ProspectStatus, FUNNEL_STAGES, EXTENDED_ACTIONS, STATUSES, ExtendedActionTaken, ActionTaken } from '@/types/prospect';
 import { InlineSelect } from './InlineSelect';
+import { ResponseTagSheet } from './ResponseTagSheet';
 import { StatusBadge, StageBadge, ActionBadge } from './StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +33,9 @@ export function MobileProspectCard({ prospect, index, isCalling, onUpdate, onDel
   // Optimistic state for instant UI updates
   const [optimisticAction, setOptimisticAction] = useState<ExtendedActionTaken | null>(null);
   const [optimisticStage, setOptimisticStage] = useState<string | null>(null);
+  // Tag selection popups
+  const [responseSheetOpen, setResponseSheetOpen] = useState(false);
+  const [stageSheetOpen, setStageSheetOpen] = useState(false);
   
 const [localData, setLocalData] = useState({
     name: prospect.name,
@@ -254,30 +258,29 @@ const [localData, setLocalData] = useState({
       {/* Status Chips Row - Tracking Tags */}
       <div className="px-4 py-3 flex flex-wrap items-center gap-2 bg-muted/10">
         {!isCalling && (
-          <InlineSelect<FunnelStage>
-            value={getStageDisplayValue() as FunnelStage}
-            options={stageOptions as FunnelStage[]}
-            onChange={handleStageChange}
-            renderValue={(value) => <StageBadge stage={value} />}
-            placeholder="Stage"
-            showTagSeparation={hasStageTrackingTags}
-            trackingOptions={stageTagNames}
-            nonTrackingOptions={stageNonTrackingTags}
-            finalTargetTag={stageFinalTargetTag}
-          />
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setStageSheetOpen(true); }}
+            className="px-2 py-1 rounded-md text-xs hover:bg-muted/60 active:scale-[0.97] transition-all flex items-center gap-1"
+          >
+            {getStageDisplayValue() ? (
+              <StageBadge stage={getStageDisplayValue() as FunnelStage} />
+            ) : (
+              <span className="text-muted-foreground/60 text-xs">Stage</span>
+            )}
+          </button>
         )}
-        <InlineSelect<ExtendedActionTaken>
-          value={getActionDisplayValue()}
-          options={actionOptions as ExtendedActionTaken[]}
-          onChange={handleActionChange}
-          placeholder="Response"
-          renderValue={(value) => <ActionBadge action={value as any} />}
-          showTagSeparation={hasLeadsTrackingTags}
-          trackingOptions={leadsTrackingTagNames}
-          nonTrackingOptions={leadsNonTrackingTags}
-          finalTargetTag={leadsFinalTargetTag}
-          stageTag={leadsStageTag}
-        />
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); setResponseSheetOpen(true); }}
+          className="px-2 py-1 rounded-md text-xs hover:bg-muted/60 active:scale-[0.97] transition-all flex items-center gap-1"
+        >
+          {getActionDisplayValue() ? (
+            <ActionBadge action={getActionDisplayValue() as any} />
+          ) : (
+            <span className="text-muted-foreground/60 text-xs">Response</span>
+          )}
+        </button>
         <InlineSelect<ProspectStatus>
           value={prospect.prospect_status}
           options={statusOptions as ProspectStatus[]}
@@ -493,6 +496,31 @@ const [localData, setLocalData] = useState({
           </div>
         </div>
       )}
+
+      {/* Centered popups for tag selection — same UI as the swipe-right reveal */}
+      <ResponseTagSheet
+        open={responseSheetOpen}
+        onOpenChange={setResponseSheetOpen}
+        currentValue={getActionDisplayValue()}
+        trackingOptions={leadsTrackingTagNames}
+        nonTrackingOptions={leadsNonTrackingTags}
+        finalTargetTag={leadsFinalTargetTag}
+        stageTag={leadsStageTag}
+        onSelect={handleActionChange}
+        prospectName={prospect.name}
+        title="Response Tag"
+      />
+      <ResponseTagSheet
+        open={stageSheetOpen}
+        onOpenChange={setStageSheetOpen}
+        currentValue={getStageDisplayValue()}
+        trackingOptions={stageTagNames}
+        nonTrackingOptions={stageNonTrackingTags}
+        finalTargetTag={stageFinalTargetTag}
+        onSelect={handleStageChange}
+        prospectName={prospect.name}
+        title="Stage Tag"
+      />
     </div>
   );
 }
