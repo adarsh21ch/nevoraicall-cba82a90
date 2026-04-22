@@ -322,14 +322,14 @@ export const ProspectRow = memo(function ProspectRow({
   const rowRef = dragHandleProps?.ref;
   const rowDragListeners = dragHandleProps?.listeners || {};
 
-  // ===== Premium swipe-to-call (iOS-style) =====
-  const SWIPE_REVEAL = 96; // width threshold to fully reveal button
-  const SWIPE_TRIGGER = 150; // distance to auto-trigger call
+  // ===== Premium swipe-to-call (iOS-style, left-only) =====
+  const SWIPE_REVEAL = 110; // width threshold to fully reveal button
+  const SWIPE_TRIGGER = 160; // distance to auto-trigger call
   const x = useMotionValue(0);
-  // Progressive green background fade
-  const bgOpacity = useTransform(x, [0, -SWIPE_TRIGGER], [0, 1]);
+  // Progressive green surface fade-in as user drags left
+  const surfaceOpacity = useTransform(x, [0, -40, -SWIPE_REVEAL], [0, 0.5, 1]);
   // Pill button reveal
-  const callBtnOpacity = useTransform(x, [-10, -SWIPE_REVEAL * 0.6], [0, 1]);
+  const callBtnOpacity = useTransform(x, [-20, -SWIPE_REVEAL * 0.7], [0, 1]);
   const callBtnTranslate = useTransform(x, [0, -SWIPE_REVEAL], [40, 0]);
   // Card depth while dragging
   const cardScale = useMotionValue(1);
@@ -341,15 +341,15 @@ export const ProspectRow = memo(function ProspectRow({
     window.open(`tel:${cleanPhoneNumber(prospect.phone)}`, '_self');
   }, [prospect.phone, onMarkLastContacted]);
 
-  const pulseSnap = useCallback(() => {
-    // Subtle haptic-style visual pulse: 1 → 1.01 → 1
-    animate(cardScale, [1, 1.01, 1], { duration: 0.28, ease: 'easeOut' });
+  const microBounce = useCallback(() => {
+    // Micro-bounce on snap back: 1 → 1.02 → 1 over ~80ms
+    animate(cardScale, [1, 1.02, 1], { duration: 0.18, ease: 'easeOut' });
   }, [cardScale]);
 
   const handleDragStart = useCallback(() => {
     isSwipingRef.current = true;
     setIsDragging(true);
-    animate(cardScale, 0.98, { type: 'spring', stiffness: 400, damping: 30 });
+    animate(cardScale, 0.97, { type: 'spring', stiffness: 400, damping: 30 });
   }, [cardScale]);
 
   const handleDragEnd = useCallback((_: any, info: PanInfo) => {
@@ -358,40 +358,38 @@ export const ProspectRow = memo(function ProspectRow({
     setIsDragging(false);
 
     // Restore scale from drag depth
-    animate(cardScale, 1, { type: 'spring', stiffness: 400, damping: 30 });
+    animate(cardScale, 1, { type: 'spring', stiffness: 500, damping: 42 });
 
-    // Full swipe or fast flick → trigger call
-    if (offset < -SWIPE_TRIGGER || velocity < -600) {
+    // Full swipe or fast left flick → trigger call
+    if (offset < -SWIPE_TRIGGER || velocity < -650) {
       triggerCall();
-      animate(x, 0, { type: 'spring', stiffness: 500, damping: 40 });
-      setTimeout(pulseSnap, 80);
+      animate(x, 0, { type: 'spring', stiffness: 500, damping: 42 });
+      setTimeout(microBounce, 80);
     } else if (offset < -SWIPE_REVEAL / 2) {
-      // Snap to revealed state briefly, then back
       animate(x, -SWIPE_REVEAL, {
         type: 'spring',
         stiffness: 500,
-        damping: 40,
+        damping: 42,
         onComplete: () => {
           setTimeout(() => {
-            animate(x, 0, { type: 'spring', stiffness: 500, damping: 40 });
-            setTimeout(pulseSnap, 80);
-          }, 1400);
+            animate(x, 0, { type: 'spring', stiffness: 500, damping: 42 });
+            setTimeout(microBounce, 60);
+          }, 1500);
         },
       });
     } else {
-      // Firm elastic snap back
-      animate(x, 0, { type: 'spring', stiffness: 500, damping: 40 });
-      setTimeout(pulseSnap, 60);
+      animate(x, 0, { type: 'spring', stiffness: 500, damping: 42 });
+      setTimeout(microBounce, 40);
     }
     setTimeout(() => { isSwipingRef.current = false; }, 50);
-  }, [x, cardScale, triggerCall, pulseSnap]);
+  }, [x, cardScale, triggerCall, microBounce]);
 
   const handleRevealedCallClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     triggerCall();
-    animate(x, 0, { type: 'spring', stiffness: 500, damping: 40 });
-    setTimeout(pulseSnap, 80);
-  }, [x, triggerCall, pulseSnap]);
+    animate(x, 0, { type: 'spring', stiffness: 500, damping: 42 });
+    setTimeout(microBounce, 80);
+  }, [x, triggerCall, microBounce]);
 
   return (
     <>
