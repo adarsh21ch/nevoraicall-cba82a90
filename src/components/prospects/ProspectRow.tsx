@@ -423,54 +423,53 @@ export const ProspectRow = memo(function ProspectRow({
         )}
         <td
           colSpan={columnOrder.length}
-          className={cn("p-0 relative overflow-hidden", bgColor)}
+          className={cn("p-0 relative", bgColor)}
+          style={{ padding: '6px 8px' }}
           onPointerDown={(e) => e.stopPropagation()}
         >
-          {/* Progressive green gradient background that fades in with swipe */}
+          {/* Green rounded surface underneath the card */}
           <motion.div
             aria-hidden="true"
-            style={{ opacity: bgOpacity }}
-            className="absolute inset-0 pointer-events-none"
-          >
-            <div
-              className="absolute inset-0"
-              style={{
-                background: 'linear-gradient(90deg, hsl(142 71% 45% / 0) 0%, hsl(142 71% 45% / 0.18) 55%, hsl(142 71% 45% / 0.32) 100%)',
-              }}
-            />
-          </motion.div>
+            style={{
+              opacity: surfaceOpacity,
+              borderRadius: '16px',
+              background: 'linear-gradient(135deg, #15803d 0%, #22c55e 100%)',
+            }}
+            className="absolute inset-y-1.5 inset-x-2 pointer-events-none"
+          />
 
-          {/* Revealed pill Call button */}
+          {/* Revealed circular Call button */}
           <motion.div
-            aria-hidden={false}
             style={{ opacity: callBtnOpacity, x: callBtnTranslate }}
-            className="absolute inset-y-0 right-0 flex items-center justify-end pr-3 pointer-events-none"
+            className="absolute inset-y-0 right-0 flex items-center justify-end pr-5 pointer-events-none"
           >
             <button
               type="button"
               onClick={handleRevealedCallClick}
               aria-label={`Call ${prospect.name}`}
-              className="pointer-events-auto flex items-center gap-2 text-white font-semibold active:scale-95 transition-transform"
+              className="pointer-events-auto flex items-center justify-center text-white active:scale-95 transition-transform"
               style={{
-                padding: '0 28px',
-                height: '44px',
-                borderRadius: '50px',
-                background: 'linear-gradient(135deg, #16a34a, #22c55e)',
-                boxShadow: '0 4px 20px rgba(34, 197, 94, 0.45)',
+                height: '48px',
+                minWidth: '48px',
+                width: '48px',
+                borderRadius: '9999px',
+                background: 'rgba(255,255,255,0.18)',
+                backdropFilter: 'blur(6px)',
+                border: '1.5px solid rgba(255,255,255,0.35)',
+                boxShadow: '0 6px 18px rgba(0,0,0,0.18)',
               }}
             >
               <motion.span
-                animate={{ scale: [1, 1.12, 1] }}
-                transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-                className="flex items-center"
+                animate={{ scale: [1, 1.15, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                className="flex items-center justify-center"
               >
                 <Phone className="h-6 w-6" fill="currentColor" />
               </motion.span>
-              <span className="text-sm tracking-wide">Call</span>
             </button>
           </motion.div>
 
-          {/* Draggable foreground content */}
+          {/* Draggable foreground card (left-only) */}
           <motion.div
             drag="x"
             dragConstraints={{ left: -SWIPE_REVEAL * 1.8, right: 0 }}
@@ -481,9 +480,12 @@ export const ProspectRow = memo(function ProspectRow({
             style={{
               x,
               scale: cardScale,
-              boxShadow: isDragging ? '0 8px 30px rgba(0,0,0,0.12)' : 'none',
+              borderRadius: '16px',
+              boxShadow: isDragging
+                ? '0 12px 40px rgba(0,0,0,0.15), -4px 0 20px rgba(34,197,94,0.3)'
+                : 'none',
             }}
-            className={cn("relative w-full", bgColor)}
+            className={cn("relative w-full overflow-hidden", bgColor)}
           >
             <table className="w-full" style={{ tableLayout: 'fixed' }}>
               <tbody>
