@@ -258,30 +258,29 @@ const [localData, setLocalData] = useState({
       {/* Status Chips Row - Tracking Tags */}
       <div className="px-4 py-3 flex flex-wrap items-center gap-2 bg-muted/10">
         {!isCalling && (
-          <InlineSelect<FunnelStage>
-            value={getStageDisplayValue() as FunnelStage}
-            options={stageOptions as FunnelStage[]}
-            onChange={handleStageChange}
-            renderValue={(value) => <StageBadge stage={value} />}
-            placeholder="Stage"
-            showTagSeparation={hasStageTrackingTags}
-            trackingOptions={stageTagNames}
-            nonTrackingOptions={stageNonTrackingTags}
-            finalTargetTag={stageFinalTargetTag}
-          />
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setStageSheetOpen(true); }}
+            className="px-2 py-1 rounded-md text-xs hover:bg-muted/60 active:scale-[0.97] transition-all flex items-center gap-1"
+          >
+            {getStageDisplayValue() ? (
+              <StageBadge stage={getStageDisplayValue() as FunnelStage} />
+            ) : (
+              <span className="text-muted-foreground/60 text-xs">Stage</span>
+            )}
+          </button>
         )}
-        <InlineSelect<ExtendedActionTaken>
-          value={getActionDisplayValue()}
-          options={actionOptions as ExtendedActionTaken[]}
-          onChange={handleActionChange}
-          placeholder="Response"
-          renderValue={(value) => <ActionBadge action={value as any} />}
-          showTagSeparation={hasLeadsTrackingTags}
-          trackingOptions={leadsTrackingTagNames}
-          nonTrackingOptions={leadsNonTrackingTags}
-          finalTargetTag={leadsFinalTargetTag}
-          stageTag={leadsStageTag}
-        />
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); setResponseSheetOpen(true); }}
+          className="px-2 py-1 rounded-md text-xs hover:bg-muted/60 active:scale-[0.97] transition-all flex items-center gap-1"
+        >
+          {getActionDisplayValue() ? (
+            <ActionBadge action={getActionDisplayValue() as any} />
+          ) : (
+            <span className="text-muted-foreground/60 text-xs">Response</span>
+          )}
+        </button>
         <InlineSelect<ProspectStatus>
           value={prospect.prospect_status}
           options={statusOptions as ProspectStatus[]}
