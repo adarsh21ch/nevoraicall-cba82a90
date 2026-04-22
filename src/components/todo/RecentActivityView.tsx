@@ -235,6 +235,7 @@ export function RecentActivityView({ selectedDate: externalDate, searchQuery: ex
                         )}
                       </div>
                     </SwipeableActivityRow>
+                    )}
                   </div>
                 </div>
               </div>
