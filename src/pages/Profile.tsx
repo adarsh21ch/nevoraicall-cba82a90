@@ -432,6 +432,11 @@ export default function Profile() {
             </div>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </button>
+          </div>{/* end data-onboarding="profile-tools" */}
+
+          {/* ── SECTION: Leads & AI ───────────── */}
+          <SectionHeader>Leads & AI</SectionHeader>
+          <div className="space-y-2">
           <button onClick={() => navigate('/shared-leads')} className={cn(
             "w-full rounded-xl px-4 py-2.5",
             "bg-gradient-to-r backdrop-blur-sm",
@@ -495,7 +500,7 @@ export default function Profile() {
             )}
           </button>
 
-          {/* AI Insights Settings - directly below AI Assistant */}
+          {/* AI Insights Settings */}
           <button
             onClick={() => setShowAIInsights(true)}
             className="w-full rounded-xl px-4 py-2.5 bg-gradient-to-r from-primary/15 to-primary/5 backdrop-blur-sm border border-primary/20 flex items-center justify-between transition-all duration-200 hover:shadow-md"
@@ -511,8 +516,8 @@ export default function Profile() {
             </div>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </button>
+          </div>{/* end Leads & AI */}
 
-          </div>{/* end data-onboarding="profile-tools" */}
 
           {/* Tracking Format - Full page */}
           <button
