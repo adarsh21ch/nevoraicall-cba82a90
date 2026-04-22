@@ -590,7 +590,7 @@ export const ProspectRow = memo(function ProspectRow({
         />
       )}
 
-      {/* Response Tag bottom sheet — opens on right-swipe (Leads/calling tab) */}
+      {/* Response Tag popup — opens on tap of Response cell or right-swipe (Leads tab) */}
       {isCalling && (
         <ResponseTagSheet
           open={tagSheetOpen}
@@ -602,6 +602,22 @@ export const ProspectRow = memo(function ProspectRow({
           stageTag={leadsStageTag}
           onSelect={handleActionChange}
           prospectName={prospect.name}
+          title="Response Tag"
+        />
+      )}
+
+      {/* Stage Tag popup — opens on tap of Stage cell or right-swipe (Funnel tab) */}
+      {!isCalling && (
+        <ResponseTagSheet
+          open={stageSheetOpen}
+          onOpenChange={setStageSheetOpen}
+          currentValue={getStageDisplayValue()}
+          trackingOptions={stageTagNames}
+          nonTrackingOptions={stageNonTrackingTags}
+          finalTargetTag={stageFinalTargetTag}
+          onSelect={handleStageChange}
+          prospectName={prospect.name}
+          title="Stage Tag"
         />
       )}
     </>
