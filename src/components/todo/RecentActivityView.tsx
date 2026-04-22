@@ -1,5 +1,6 @@
 // Activity History View - Universal component with built-in calendar
 import { useMemo, useState } from 'react';
+import { motion, useMotionValue, useTransform, type PanInfo } from 'framer-motion';
 import { useProspectsQuery } from '@/hooks/useProspectsQuery';
 import { useGlobalTodos } from '@/contexts/TodosContext';
 import { useActivityLogs } from '@/hooks/useActivityLogs';
@@ -191,48 +192,49 @@ export function RecentActivityView({ selectedDate: externalDate, searchQuery: ex
                         <span className="text-xs text-muted-foreground">📥 {activity.name}</span>
                       </div>
                     ) : (
-                    <div className="flex items-start justify-between gap-2 p-2 rounded-lg bg-muted/30 hover:bg-muted/40 transition-colors">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{activity.name}</p>
-                        
-                        {/* Tags */}
-                        <div className="flex items-center gap-1.5 flex-wrap mt-1">
-                          {activity.stage && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
-                              {activity.stage}
-                            </span>
-                          )}
-                          {activity.action && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
-                              {activity.action}
-                            </span>
-                          )}
-                          {activity.type === 'todo' && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600">
-                              To-Do
-                            </span>
-                          )}
+                    <SwipeableActivityRow
+                      phone={activity.phone}
+                      onCall={() => activity.phone && handleCall(activity.phone)}
+                    >
+                      <div className="flex items-start justify-between gap-2 p-2 rounded-lg bg-muted/30 hover:bg-muted/40 transition-colors">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{activity.name}</p>
+                          <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                            {activity.stage && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
+                                {activity.stage}
+                              </span>
+                            )}
+                            {activity.action && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
+                                {activity.action}
+                              </span>
+                            )}
+                            {activity.type === 'todo' && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600">
+                                To-Do
+                              </span>
+                            )}
+                          </div>
                         </div>
+                        {activity.phone && (
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              onClick={() => handleCall(activity.phone!)}
+                              className="p-1.5 rounded-full transition-colors bg-secondary"
+                            >
+                              <CallIcon className="h-3.5 w-3.5 text-primary" />
+                            </button>
+                            <button
+                              onClick={() => handleWhatsApp(activity.phone!)}
+                              className="p-1.5 rounded-full bg-green-500/10 hover:bg-green-500/20 transition-colors"
+                            >
+                              <WhatsAppIcon className="h-3.5 w-3.5 text-green-600" />
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      
-                      {/* Call/WhatsApp buttons */}
-                      {activity.phone && (
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button 
-                            onClick={() => handleCall(activity.phone!)} 
-                            className="p-1.5 rounded-full transition-colors bg-secondary"
-                          >
-                            <CallIcon className="h-3.5 w-3.5 text-primary" />
-                          </button>
-                          <button 
-                            onClick={() => handleWhatsApp(activity.phone!)} 
-                            className="p-1.5 rounded-full bg-green-500/10 hover:bg-green-500/20 transition-colors"
-                          >
-                            <WhatsAppIcon className="h-3.5 w-3.5 text-green-600" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                    </SwipeableActivityRow>
                     )}
                   </div>
                 </div>
@@ -241,6 +243,73 @@ export function RecentActivityView({ selectedDate: externalDate, searchQuery: ex
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ===== Swipeable activity row — LEFT swipe → call (parity with Calling tab) =====
+interface SwipeableActivityRowProps {
+  phone: string | null;
+  onCall: () => void;
+  children: React.ReactNode;
+}
+
+function SwipeableActivityRow({ phone, onCall, children }: SwipeableActivityRowProps) {
+  const SWIPE_REVEAL = 96;
+  const SWIPE_TRIGGER = 140;
+  const x = useMotionValue(0);
+
+  const surfaceOpacity = useTransform(x, [0, -30, -SWIPE_REVEAL], [0, 0.5, 1]);
+  const callBtnOpacity = useTransform(x, [-15, -SWIPE_REVEAL * 0.7], [0, 1]);
+  const callBtnTranslate = useTransform(x, [0, -SWIPE_REVEAL], [30, 0]);
+
+  // No phone → render children plainly (no swipe affordance)
+  if (!phone) return <>{children}</>;
+
+  const handleDragEnd = (_: unknown, info: PanInfo) => {
+    const offset = info.offset.x;
+    const velocity = info.velocity.x;
+    if (offset < -SWIPE_TRIGGER || velocity < -650) {
+      onCall();
+      try {
+        if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+          (navigator as Navigator & { vibrate: (p: number) => void }).vibrate(15);
+        }
+      } catch { /* noop */ }
+    }
+    x.set(0);
+  };
+
+  return (
+    <div className="relative overflow-hidden rounded-lg">
+      {/* Green call surface revealed beneath */}
+      <motion.div
+        aria-hidden="true"
+        style={{ opacity: surfaceOpacity }}
+        className="absolute inset-0 rounded-lg bg-green-500/15"
+      />
+      {/* Revealed Call icon on the right edge */}
+      <motion.div
+        aria-hidden="true"
+        style={{ opacity: callBtnOpacity, x: callBtnTranslate }}
+        className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center h-8 w-8 rounded-full bg-green-500 shadow-md"
+      >
+        <svg viewBox="0 0 24 24" className="h-4 w-4 text-white" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.362 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0122 16.92z" />
+        </svg>
+      </motion.div>
+      {/* Draggable foreground */}
+      <motion.div
+        drag="x"
+        dragConstraints={{ left: -SWIPE_REVEAL * 1.4, right: 0 }}
+        dragElastic={0.12}
+        dragMomentum={false}
+        style={{ x }}
+        onDragEnd={handleDragEnd}
+        className="relative touch-pan-y"
+      >
+        {children}
+      </motion.div>
     </div>
   );
 }
