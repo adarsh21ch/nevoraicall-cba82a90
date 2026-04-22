@@ -362,6 +362,7 @@ export const ProspectRow = memo(function ProspectRow({
   const isSwipingRef = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
   const [tagSheetOpen, setTagSheetOpen] = useState(false);
+  const [stageSheetOpen, setStageSheetOpen] = useState(false);
 
   // Safety: reset card position whenever this row's prospect id changes
   // (prevents "stuck shifted" rows after data refetch / virtualization recycle)
@@ -382,8 +383,12 @@ export const ProspectRow = memo(function ProspectRow({
   }, [cardScale]);
 
   const openTagSheet = useCallback(() => {
-    setTagSheetOpen(true);
-  }, []);
+    // Right-swipe always opens the contextually-correct popup:
+    // - Leads tab → Response tag popup
+    // - Funnel tab → Stage tag popup
+    if (isCalling) setTagSheetOpen(true);
+    else setStageSheetOpen(true);
+  }, [isCalling]);
 
   const handleDragStart = useCallback(() => {
     isSwipingRef.current = true;
