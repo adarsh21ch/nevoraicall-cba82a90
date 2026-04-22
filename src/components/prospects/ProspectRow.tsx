@@ -449,7 +449,7 @@ export const ProspectRow = memo(function ProspectRow({
           style={{ padding: '6px 8px' }}
           onPointerDown={(e) => e.stopPropagation()}
         >
-          {/* Green rounded surface underneath the card */}
+          {/* Green rounded surface underneath the card (LEFT swipe → call) */}
           <motion.div
             aria-hidden="true"
             style={{
@@ -460,7 +460,18 @@ export const ProspectRow = memo(function ProspectRow({
             className="absolute inset-y-1.5 inset-x-2 pointer-events-none"
           />
 
-          {/* Revealed circular Call button */}
+          {/* Amber rounded surface underneath the card (RIGHT swipe → tag sheet) */}
+          <motion.div
+            aria-hidden="true"
+            style={{
+              opacity: tagSurfaceOpacity,
+              borderRadius: '16px',
+              background: 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)',
+            }}
+            className="absolute inset-y-1.5 inset-x-2 pointer-events-none"
+          />
+
+          {/* Revealed circular Call button (right side, on left-swipe) */}
           <motion.div
             style={{ opacity: callBtnOpacity, x: callBtnTranslate }}
             className="absolute inset-y-0 right-0 flex items-center justify-end pr-5 pointer-events-none"
@@ -491,11 +502,35 @@ export const ProspectRow = memo(function ProspectRow({
             </button>
           </motion.div>
 
-          {/* Draggable foreground card (left-only) */}
+          {/* Revealed Tag icon (left side, on right-swipe) */}
+          <motion.div
+            aria-hidden="true"
+            style={{ opacity: tagBtnOpacity, x: tagBtnTranslate }}
+            className="absolute inset-y-0 left-0 flex items-center justify-start pl-5 pointer-events-none"
+          >
+            <motion.span
+              animate={{ scale: [1, 1.12, 1] }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+              className="flex items-center justify-center text-white"
+              style={{
+                height: '48px',
+                width: '48px',
+                borderRadius: '9999px',
+                background: 'rgba(255,255,255,0.18)',
+                backdropFilter: 'blur(6px)',
+                border: '1.5px solid rgba(255,255,255,0.35)',
+                boxShadow: '0 6px 18px rgba(0,0,0,0.18)',
+              }}
+            >
+              <Tag className="h-7 w-7" strokeWidth={2.25} />
+            </motion.span>
+          </motion.div>
+
+          {/* Draggable foreground card (left + right) */}
           <motion.div
             drag="x"
-            dragConstraints={{ left: -SWIPE_REVEAL * 1.8, right: 0 }}
-            dragElastic={{ left: 0.08, right: 0 }}
+            dragConstraints={{ left: -SWIPE_REVEAL * 1.8, right: SWIPE_REVEAL * 1.8 }}
+            dragElastic={{ left: 0.08, right: 0.08 }}
             dragDirectionLock
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
@@ -504,7 +539,7 @@ export const ProspectRow = memo(function ProspectRow({
               scale: cardScale,
               borderRadius: '16px',
               boxShadow: isDragging
-                ? '0 12px 40px rgba(0,0,0,0.15), -4px 0 20px rgba(34,197,94,0.3)'
+                ? '0 12px 40px rgba(0,0,0,0.15)'
                 : 'none',
             }}
             className={cn("relative w-full overflow-hidden", bgColor)}
@@ -526,6 +561,21 @@ export const ProspectRow = memo(function ProspectRow({
           onDelete={onDelete}
           onClose={onToggleExpand}
           colSpan={columnOrder.length + (showSelection ? 1 : 0)}
+        />
+      )}
+
+      {/* Response Tag bottom sheet — opens on right-swipe (Leads/calling tab) */}
+      {isCalling && (
+        <ResponseTagSheet
+          open={tagSheetOpen}
+          onOpenChange={setTagSheetOpen}
+          currentValue={getActionDisplayValue()}
+          trackingOptions={leadsTrackingTagNames}
+          nonTrackingOptions={leadsNonTrackingTags}
+          finalTargetTag={leadsFinalTargetTag}
+          stageTag={leadsStageTag}
+          onSelect={handleActionChange}
+          prospectName={prospect.name}
         />
       )}
     </>
