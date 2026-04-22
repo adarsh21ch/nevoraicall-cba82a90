@@ -80,8 +80,8 @@ export const ResponseTagSheet = memo(function ResponseTagSheet({
         type="button"
         onClick={() => handlePick(option)}
         className={cn(
-          'w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg border transition-all duration-150',
-          'min-h-[40px] text-left active:scale-[0.97]',
+          'w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg border transition-all duration-150',
+          'min-h-[34px] text-left active:scale-[0.97]',
           isSelected
             ? 'border-primary bg-primary/10 shadow-sm'
             : 'border-border/60 bg-card/60 hover:bg-muted/60 hover:border-border'
