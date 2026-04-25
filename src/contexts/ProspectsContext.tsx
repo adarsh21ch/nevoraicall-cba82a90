@@ -420,55 +420,125 @@ export function ProspectsProvider({ children }: { children: ReactNode }) {
     return true;
   }, [user, prospects, triggerDailyLog]);
 
-  // Soft-delete: set deleted_at instead of hard delete
+  // Soft-delete: set deleted_at + create deletion batch row
   const deleteProspect = useCallback(async (id: string): Promise<Prospect | null> => {
-    // Store the prospect before deleting for undo functionality
+    if (!user) return null;
     const prospectToDelete = prospects.find(p => p.id === id);
     if (!prospectToDelete) return null;
 
-    // Soft delete: set deleted_at timestamp
-    const { error } = await supabase
-      .from('prospects')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', id);
+    // Look up sheet name (best-effort)
+    let sheetName: string | null = null;
+    if (prospectToDelete.sheet_id) {
+      const { data: sheet } = await supabase
+        .from('sheets')
+        .select('name')
+        .eq('id', prospectToDelete.sheet_id)
+        .maybeSingle();
+      sheetName = sheet?.name ?? null;
+    }
 
-    if (error) {
+    const { data: batch, error: batchErr } = await supabase
+      .from('deletion_batches')
+      .insert({
+        user_id: user.id,
+        deletion_type: 'single',
+        sheet_id: prospectToDelete.sheet_id ?? null,
+        sheet_name: sheetName,
+        lead_count: 1,
+        preview_name: prospectToDelete.name,
+        preview_phone: prospectToDelete.phone,
+      })
+      .select('id')
+      .single();
+
+    if (batchErr || !batch) {
       toast.error('Failed to delete prospect');
       return null;
     }
 
-    // Remove from local state
-    setProspects(prev => prev.filter(p => p.id !== id));
-    
-    // Trigger daily tracking log after delete
-    triggerDailyLog();
-    
-    // Return deleted prospect for undo functionality
-    return prospectToDelete;
-  }, [prospects, triggerDailyLog]);
+    const { error } = await supabase
+      .from('prospects')
+      .update({
+        deleted_at: new Date().toISOString(),
+        deletion_batch_id: batch.id,
+        deletion_type: 'single',
+      })
+      .eq('id', id);
 
-  // Soft bulk delete: set deleted_at for multiple prospects
+    if (error) {
+      // best-effort rollback of batch row
+      await supabase.from('deletion_batches').delete().eq('id', batch.id);
+      toast.error('Failed to delete prospect');
+      return null;
+    }
+
+    setProspects(prev => prev.filter(p => p.id !== id));
+    triggerDailyLog();
+    return prospectToDelete;
+  }, [user, prospects, triggerDailyLog]);
+
+  // Soft bulk delete: groups all leads under one batch
   const bulkDeleteProspects = useCallback(async (ids: string[]) => {
     if (!user || ids.length === 0) return { deleted: 0, prospects: [] };
 
     const toDelete = prospects.filter(p => ids.includes(p.id));
+    if (toDelete.length === 0) return { deleted: 0, prospects: [] };
 
-    // Soft delete: set deleted_at timestamp
+    // Pick the most common sheet for the batch label
+    const sheetCounts = new Map<string, number>();
+    toDelete.forEach(p => {
+      if (p.sheet_id) sheetCounts.set(p.sheet_id, (sheetCounts.get(p.sheet_id) || 0) + 1);
+    });
+    let dominantSheetId: string | null = null;
+    let max = 0;
+    sheetCounts.forEach((c, sid) => { if (c > max) { max = c; dominantSheetId = sid; } });
+
+    let sheetName: string | null = null;
+    if (dominantSheetId) {
+      const { data: sheet } = await supabase
+        .from('sheets')
+        .select('name')
+        .eq('id', dominantSheetId)
+        .maybeSingle();
+      sheetName = sheet?.name ?? null;
+    }
+
+    const { data: batch, error: batchErr } = await supabase
+      .from('deletion_batches')
+      .insert({
+        user_id: user.id,
+        deletion_type: 'bulk',
+        sheet_id: dominantSheetId,
+        sheet_name: sheetName,
+        lead_count: toDelete.length,
+        preview_name: toDelete[0]?.name ?? null,
+        preview_phone: toDelete[0]?.phone ?? null,
+      })
+      .select('id')
+      .single();
+
+    if (batchErr || !batch) {
+      toast.error('Failed to delete prospects');
+      return { deleted: 0, prospects: [] };
+    }
+
     const { error } = await supabase
       .from('prospects')
-      .update({ deleted_at: new Date().toISOString() })
+      .update({
+        deleted_at: new Date().toISOString(),
+        deletion_batch_id: batch.id,
+        deletion_type: 'bulk',
+      })
       .in('id', ids);
 
     if (error) {
+      await supabase.from('deletion_batches').delete().eq('id', batch.id);
       toast.error('Failed to delete prospects');
       return { deleted: 0, prospects: [] };
     }
 
     setProspects(prev => prev.filter(p => !ids.includes(p.id)));
-    
-    // Trigger daily tracking log after bulk delete
     triggerDailyLog();
-    
     return { deleted: toDelete.length, prospects: toDelete };
   }, [user, prospects, triggerDailyLog]);
 
