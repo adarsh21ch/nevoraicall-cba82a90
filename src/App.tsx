@@ -45,6 +45,7 @@ const SharedLeads = lazy(() => import("./pages/SharedLeads"));
 const Notes = lazy(() => import("./pages/Notes"));
 const NoteEditor = lazy(() => import("./pages/NoteEditor"));
 const TrackingFormat = lazy(() => import("./pages/TrackingFormat"));
+const RecentlyDeleted = lazy(() => import("./pages/RecentlyDeleted"));
 
 // Minimal loading fallback
 const PageLoader = () => (
@@ -142,6 +143,7 @@ function App() {
                         <Route path="/notes" element={<Notes />} />
                         <Route path="/notes/:id" element={<NoteEditor />} />
                         <Route path="/tracking-format" element={<TrackingFormat />} />
+                        <Route path="/recently-deleted" element={<RecentlyDeleted />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </Suspense>
