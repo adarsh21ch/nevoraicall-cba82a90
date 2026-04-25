@@ -2161,6 +2161,45 @@ export type Database = {
         }
         Relationships: []
       }
+      deletion_batches: {
+        Row: {
+          deleted_at: string
+          deletion_type: string
+          expires_at: string
+          id: string
+          lead_count: number
+          preview_name: string | null
+          preview_phone: string | null
+          sheet_id: string | null
+          sheet_name: string | null
+          user_id: string
+        }
+        Insert: {
+          deleted_at?: string
+          deletion_type: string
+          expires_at?: string
+          id?: string
+          lead_count?: number
+          preview_name?: string | null
+          preview_phone?: string | null
+          sheet_id?: string | null
+          sheet_name?: string | null
+          user_id: string
+        }
+        Update: {
+          deleted_at?: string
+          deletion_type?: string
+          expires_at?: string
+          id?: string
+          lead_count?: number
+          preview_name?: string | null
+          preview_phone?: string | null
+          sheet_id?: string | null
+          sheet_name?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_otps: {
         Row: {
           attempts: number | null
@@ -3907,6 +3946,8 @@ export type Database = {
           batch_date: string | null
           date_added: string
           deleted_at: string | null
+          deletion_batch_id: string | null
+          deletion_type: string | null
           email: string | null
           funnel_stage: string | null
           funnel_stage_at: string | null
@@ -3937,6 +3978,8 @@ export type Database = {
           batch_date?: string | null
           date_added?: string
           deleted_at?: string | null
+          deletion_batch_id?: string | null
+          deletion_type?: string | null
           email?: string | null
           funnel_stage?: string | null
           funnel_stage_at?: string | null
@@ -3967,6 +4010,8 @@ export type Database = {
           batch_date?: string | null
           date_added?: string
           deleted_at?: string | null
+          deletion_batch_id?: string | null
+          deletion_type?: string | null
           email?: string | null
           funnel_stage?: string | null
           funnel_stage_at?: string | null
@@ -4165,23 +4210,32 @@ export type Database = {
       sheets: {
         Row: {
           created_at: string
+          deleted_at: string | null
+          deletion_batch_id: string | null
           id: string
           is_demo: boolean | null
           name: string
+          original_name: string | null
           user_id: string
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
+          deletion_batch_id?: string | null
           id?: string
           is_demo?: boolean | null
           name: string
+          original_name?: string | null
           user_id: string
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
+          deletion_batch_id?: string | null
           id?: string
           is_demo?: boolean | null
           name?: string
+          original_name?: string | null
           user_id?: string
         }
         Relationships: []
@@ -6047,7 +6101,14 @@ export type Database = {
             Returns: Json
           }
       normalize_leader_id: { Args: { id: string }; Returns: string }
+      purge_deletion_batch: { Args: { p_batch_id: string }; Returns: Json }
+      purge_expired_deleted_items: { Args: never; Returns: undefined }
       record_app_access: { Args: { p_app: string }; Returns: undefined }
+      restore_deletion_batch: { Args: { p_batch_id: string }; Returns: Json }
+      restore_deletion_batch_lead: {
+        Args: { p_lead_id: string }
+        Returns: Json
+      }
       setup_new_user_onboarding: { Args: { p_user_id: string }; Returns: Json }
       update_leader_hierarchy: {
         Args: { p_leader_id: string; p_user_id: string }
