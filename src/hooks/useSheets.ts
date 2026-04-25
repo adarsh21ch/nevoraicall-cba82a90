@@ -50,6 +50,7 @@ export function useSheets() {
         .from('sheets')
         .select('*')
         .eq('user_id', user.id)
+        .is('deleted_at', null) // hide soft-deleted sheets
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -175,40 +176,82 @@ export function useSheets() {
     },
   });
 
-  // Delete sheet mutation — soft-deletes all prospects in that sheet, then deletes the sheet
+  // Delete sheet — soft-deletes the sheet and all its prospects under one batch
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      // Soft-delete all prospects belonging to this sheet (set deleted_at instead of hard delete)
-      const { error: prospectsError } = await supabase
+      if (!user) throw new Error('No user');
+
+      // Look up the sheet name + count of active prospects
+      const sheet = sheets.find(s => s.id === id);
+      const sheetName = sheet?.name ?? 'Untitled sheet';
+
+      const { count } = await supabase
         .from('prospects')
-        .update({ deleted_at: new Date().toISOString() })
+        .select('id', { count: 'exact', head: true })
         .eq('sheet_id', id)
-        .eq('user_id', user!.id)
+        .eq('user_id', user.id)
         .is('deleted_at', null);
 
-      if (prospectsError) throw prospectsError;
+      const leadCount = count ?? 0;
 
-      // Then delete the sheet itself
+      // Create the batch record
+      const { data: batch, error: batchErr } = await supabase
+        .from('deletion_batches')
+        .insert({
+          user_id: user.id,
+          deletion_type: 'sheet',
+          sheet_id: id,
+          sheet_name: sheetName,
+          lead_count: leadCount,
+        })
+        .select('id')
+        .single();
+
+      if (batchErr || !batch) throw batchErr ?? new Error('batch insert failed');
+
+      const nowIso = new Date().toISOString();
+
+      // Soft-delete all active prospects in the sheet under this batch
+      if (leadCount > 0) {
+        const { error: prospectsError } = await supabase
+          .from('prospects')
+          .update({
+            deleted_at: nowIso,
+            deletion_batch_id: batch.id,
+            deletion_type: 'sheet',
+          })
+          .eq('sheet_id', id)
+          .eq('user_id', user.id)
+          .is('deleted_at', null);
+
+        if (prospectsError) throw prospectsError;
+      }
+
+      // Soft-delete the sheet itself
       const { error } = await supabase
         .from('sheets')
-        .delete()
+        .update({
+          deleted_at: nowIso,
+          deletion_batch_id: batch.id,
+          original_name: sheetName,
+        })
         .eq('id', id);
 
       if (error) throw error;
       return id;
     },
     onSuccess: (id) => {
-      queryClient.setQueryData<Sheet[]>(queryKey, (prev) => 
+      queryClient.setQueryData<Sheet[]>(queryKey, (prev) =>
         prev?.filter(s => s.id !== id)
       );
       if (selectedSheetId === id) {
         setSelectedSheetId(null);
       }
-      // Also invalidate prospects cache so "All" view updates
       queryClient.invalidateQueries({ queryKey: ['prospects', user!.id] });
       queryClient.invalidateQueries({ queryKey: ['prospects-kpi', user!.id] });
+      queryClient.invalidateQueries({ queryKey: ['deletion-batches'] });
       queryClient.invalidateQueries({ queryKey: ['deleted-prospects'] });
-      toast.success('Sheet deleted — leads moved to Recently Deleted');
+      toast.success('Sheet moved to Recently Deleted');
     },
     onError: () => {
       toast.error('Failed to delete sheet');
