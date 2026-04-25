@@ -249,8 +249,8 @@ export function useSheets() {
       }
       queryClient.invalidateQueries({ queryKey: ['prospects', user!.id] });
       queryClient.invalidateQueries({ queryKey: ['prospects-kpi', user!.id] });
-      queryClient.invalidateQueries({ queryKey: ['deletion-batches'] });
-      queryClient.invalidateQueries({ queryKey: ['deleted-prospects'] });
+      queryClient.invalidateQueries({ queryKey: ['deletion-batches', user!.id] });
+      queryClient.invalidateQueries({ queryKey: ['deleted-prospects', user!.id] });
       toast.success('Sheet moved to Recently Deleted');
     },
     onError: () => {

@@ -36,16 +36,20 @@ export function useDeletionBatches() {
     queryKey,
     queryFn: async (): Promise<DeletionBatch[]> => {
       if (!user) return [];
+      const nowIso = new Date().toISOString();
       const { data, error } = await supabase
         .from('deletion_batches')
         .select('*')
         .eq('user_id', user.id)
+        .gt('expires_at', nowIso) // hide expired batches
         .order('deleted_at', { ascending: false });
       if (error) throw error;
       return (data ?? []) as DeletionBatch[];
     },
     enabled: !!user,
-    staleTime: 30 * 1000,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   const invalidateAll = useCallback(() => {

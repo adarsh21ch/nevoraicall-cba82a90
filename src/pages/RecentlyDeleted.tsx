@@ -182,6 +182,7 @@ export default function RecentlyDeleted() {
   const {
     batches,
     loading,
+    refetch,
     fetchBatchLeads,
     restoreBatch,
     restoreLead,
@@ -190,6 +191,11 @@ export default function RecentlyDeleted() {
     isRestoring,
     isPurging,
   } = useDeletionBatches();
+
+  // Always pull fresh data each time the screen is opened
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
 
   const [confirmPurge, setConfirmPurge] = useState<DeletionBatch | null>(null);
   const [confirmPurgeAll, setConfirmPurgeAll] = useState(false);
