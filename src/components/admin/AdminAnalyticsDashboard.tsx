@@ -1,5 +1,6 @@
 import { useAdminAnalytics } from '@/hooks/useAdminAnalytics';
 import { HealthScoreCard } from './HealthScoreCard';
+import { FounderKPIs } from './FounderKPIs';
 import { GrowthMetricCards } from './GrowthMetricCards';
 import { SignupTrendChart } from './SignupTrendChart';
 import { SubscriberHealthSection } from './SubscriberHealthSection';
@@ -36,6 +37,9 @@ export function AdminAnalyticsDashboard() {
 
   return (
     <div className="space-y-4">
+      {/* Founder KPIs - DAU/WAU/MAU + Lead Imports (top of overview) */}
+      <FounderKPIs analytics={analytics} />
+
       {/* Section A: Health Score */}
       <HealthScoreCard analytics={analytics} />
 
