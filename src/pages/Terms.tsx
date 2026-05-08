@@ -19,16 +19,16 @@ export default function Terms() {
         <div className="max-w-3xl mx-auto pb-8">
           <div className="prose prose-sm max-w-none space-y-6 text-foreground">
             <section>
-              <h2 className="text-xl font-semibold mb-3">1. About NevorAI</h2>
+              <h2 className="text-xl font-semibold mb-3">1. About Nevorai</h2>
               <p className="text-muted-foreground leading-relaxed">
-                NevorAI is a subscription-based software-as-a-service (SaaS) platform designed to help network marketers, sales professionals, and business owners manage their prospects and follow-ups effectively. Our tools help you track leads, manage your sales funnel, and never miss a follow-up opportunity.
+                Nevorai is a subscription-based software-as-a-service (SaaS) platform designed to help network marketers, sales professionals, and business owners manage their prospects and follow-ups effectively. Our tools help you track leads, manage your sales funnel, and never miss a follow-up opportunity.
               </p>
             </section>
 
             <section>
               <h2 className="text-xl font-semibold mb-3">2. Eligibility & Account</h2>
               <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
-                <li>You must be at least 18 years old to create an account and use NevorAI.</li>
+                <li>You must be at least 18 years old to create an account and use Nevorai.</li>
                 <li>You are responsible for providing accurate and complete information during registration.</li>
                 <li>You must keep your login credentials secure and confidential.</li>
                 <li>You are responsible for all activities that occur under your account.</li>
@@ -38,7 +38,7 @@ export default function Terms() {
 
             <section>
               <h2 className="text-xl font-semibold mb-3">3. Acceptable Use</h2>
-              <p className="text-muted-foreground mb-2">When using NevorAI, you agree NOT to:</p>
+              <p className="text-muted-foreground mb-2">When using Nevorai, you agree NOT to:</p>
               <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
                 <li>Use the service for any illegal or unauthorized purpose.</li>
                 <li>Send spam, unsolicited messages, or engage in harassment.</li>
@@ -53,11 +53,11 @@ export default function Terms() {
             <section>
               <h2 className="text-xl font-semibold mb-3">4. Subscriptions & Auto-Pay</h2>
               <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
-                <li>NevorAI is a subscription-based digital service that may use recurring billing or AutoPay.</li>
+                <li>Nevorai is a subscription-based digital service that may use recurring billing or AutoPay.</li>
                 <li>By subscribing, you authorize us to charge your payment method on a recurring basis until you cancel.</li>
                 <li>You can cancel your subscription or AutoPay at any time before the next billing date to stop future charges.</li>
                 <li><strong className="text-foreground">Important:</strong> Cancelling AutoPay only stops future renewals. Payments already collected for current or previous billing periods are non-refundable.</li>
-                <li>Your subscription provides access to NevorAI features for the duration of your billing period.</li>
+                <li>Your subscription provides access to Nevorai features for the duration of your billing period.</li>
               </ul>
             </section>
 
@@ -74,24 +74,24 @@ export default function Terms() {
             <section>
               <h2 className="text-xl font-semibold mb-3">6. Third-Party Payments</h2>
               <p className="text-muted-foreground leading-relaxed">
-                Payments are processed securely by trusted third-party payment gateways such as PhonePe, Razorpay, or similar services. NevorAI does not store your full card numbers, UPI details, or other sensitive payment information. All payment data is handled according to industry-standard security practices by our payment partners.
+                Payments are processed securely by trusted third-party payment gateways such as PhonePe, Razorpay, or similar services. Nevorai does not store your full card numbers, UPI details, or other sensitive payment information. All payment data is handled according to industry-standard security practices by our payment partners.
               </p>
             </section>
 
             <section>
               <h2 className="text-xl font-semibold mb-3">7. Intellectual Property</h2>
               <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
-                <li>NevorAI branding, logos, content, and software are owned by the company and protected by intellectual property laws.</li>
+                <li>Nevorai branding, logos, content, and software are owned by the company and protected by intellectual property laws.</li>
                 <li>Your subscription grants you a limited, non-exclusive, non-transferable license to use the service for its intended purpose.</li>
                 <li>You may not copy, modify, distribute, or create derivative works from our platform without written permission.</li>
-                <li>You retain ownership of the data you upload to NevorAI.</li>
+                <li>You retain ownership of the data you upload to Nevorai.</li>
               </ul>
             </section>
 
             <section>
               <h2 className="text-xl font-semibold mb-3">8. Limitation of Liability & No Guarantee</h2>
               <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
-                <li>NevorAI is a productivity tool and does not guarantee any specific business results, income, or outcomes.</li>
+                <li>Nevorai is a productivity tool and does not guarantee any specific business results, income, or outcomes.</li>
                 <li>Your success depends on your own efforts, skills, and business decisions.</li>
                 <li>To the maximum extent permitted by law, our liability is limited to the amount you paid for the service in the most recent billing period.</li>
                 <li>We are not liable for indirect, incidental, or consequential damages arising from your use of the service.</li>
@@ -115,7 +115,7 @@ export default function Terms() {
             <section>
               <h2 className="text-xl font-semibold mb-3">10. Governing Law & Disputes</h2>
               <p className="text-muted-foreground leading-relaxed">
-                These Terms & Conditions are governed by and construed in accordance with the laws of India. Any disputes arising from these terms or your use of NevorAI shall be subject to the exclusive jurisdiction of the courts in Chhatarpur, Madhya Pradesh, India.
+                These Terms & Conditions are governed by and construed in accordance with the laws of India. Any disputes arising from these terms or your use of Nevorai shall be subject to the exclusive jurisdiction of the courts in Chhatarpur, Madhya Pradesh, India.
               </p>
             </section>
 
@@ -138,7 +138,7 @@ export default function Terms() {
               <Link to="/privacy" className="hover:text-foreground">Privacy Policy</Link>
               <Link to="/refund" className="hover:text-foreground">Refund Policy</Link>
             </div>
-            <p className="text-xs text-muted-foreground mt-4">© 2024 NevorAI. All rights reserved.</p>
+            <p className="text-xs text-muted-foreground mt-4">© 2026 Nevorai. All rights reserved.</p>
           </div>
         </div>
       </ScrollArea>
