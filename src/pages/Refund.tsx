@@ -19,7 +19,7 @@ export default function Refund() {
             <section>
               <h2 className="text-xl font-semibold mb-3">1. Nature of Product</h2>
               <p className="text-muted-foreground leading-relaxed">
-                NevorAI is a digital, subscription-based software-as-a-service (SaaS) product delivered entirely online. No physical products are shipped. Once you subscribe, you get immediate access to the platform and its features for the duration of your billing period.
+                Nevorai is a digital, subscription-based software-as-a-service (SaaS) product delivered entirely online. No physical products are shipped. Once you subscribe, you get immediate access to the platform and its features for the duration of your billing period.
               </p>
             </section>
 
@@ -33,14 +33,14 @@ export default function Refund() {
                 <div className="p-3 rounded-lg bg-background border border-border">
                   <h3 className="font-semibold text-foreground mb-2">Monthly Plan (₹99/month or 299/6months)</h3>
                   <p className="text-muted-foreground text-sm">
-                    Payments for the NevorAI Pro Monthly plan are <strong className="text-destructive">NON-REFUNDABLE</strong>. Once you subscribe to the monthly plan, you will have access for the full month, but no refunds will be issued regardless of cancellation timing.
+                    Payments for the Nevorai Pro Monthly plan are <strong className="text-destructive">NON-REFUNDABLE</strong>. Once you subscribe to the monthly plan, you will have access for the full month, but no refunds will be issued regardless of cancellation timing.
                   </p>
                 </div>
                 
                 <div className="p-3 rounded-lg bg-background border border-border">
                   <h3 className="font-semibold text-foreground mb-2">Yearly Plan (₹499/year)</h3>
                   <p className="text-muted-foreground text-sm">
-                    Payments for NevorAI Pro Yearly plans (including discounted offers such as Achievers Club pricing) are eligible for a <strong className="text-emerald-600">full refund within 7 days</strong> of the purchase date. After 7 days from the purchase date, yearly payments become <strong className="text-destructive">NON-REFUNDABLE</strong>.
+                    Payments for Nevorai Pro Yearly plans (including discounted offers such as Achievers Club pricing) are eligible for a <strong className="text-emerald-600">full refund within 7 days</strong> of the purchase date. After 7 days from the purchase date, yearly payments become <strong className="text-destructive">NON-REFUNDABLE</strong>.
                   </p>
                 </div>
               </div>
@@ -104,7 +104,7 @@ export default function Refund() {
             <section>
               <h2 className="text-xl font-semibold mb-3">7. Changes to This Policy</h2>
               <p className="text-muted-foreground leading-relaxed">
-                We may update this Refund Policy from time to time. The latest version will always be available on our website. Your continued use of NevorAI after any changes constitutes acceptance of the updated policy.
+                We may update this Refund Policy from time to time. The latest version will always be available on our website. Your continued use of Nevorai after any changes constitutes acceptance of the updated policy.
               </p>
             </section>
 
@@ -127,7 +127,7 @@ export default function Refund() {
               <Link to="/privacy" className="hover:text-foreground">Privacy Policy</Link>
               <Link to="/refund" className="hover:text-foreground">Refund Policy</Link>
             </div>
-            <p className="text-xs text-muted-foreground mt-4">© 2024 NevorAI. All rights reserved.</p>
+            <p className="text-xs text-muted-foreground mt-4">© 2026 Nevorai. All rights reserved.</p>
           </div>
         </div>
       </ScrollArea>

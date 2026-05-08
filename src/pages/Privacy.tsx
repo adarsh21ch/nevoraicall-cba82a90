@@ -21,7 +21,7 @@ export default function Privacy() {
             <section>
               <h2 className="text-xl font-semibold mb-3">1. Introduction</h2>
               <p className="text-muted-foreground leading-relaxed">
-                This Privacy Policy explains how NevorAI ("we", "us", or "our") collects, uses, stores, and protects your personal information when you use our service. By using NevorAI, you agree to the practices described in this policy.
+                This Privacy Policy explains how Nevorai ("we", "us", or "our") collects, uses, stores, and protects your personal information when you use our service. By using Nevorai, you agree to the practices described in this policy.
               </p>
             </section>
 
@@ -40,7 +40,7 @@ export default function Privacy() {
             <section>
               <h2 className="text-xl font-semibold mb-3">3. Payment Information</h2>
               <p className="text-muted-foreground leading-relaxed">
-                All card numbers, UPI details, and other sensitive payment information are processed securely by trusted third-party payment gateways such as PhonePe, Razorpay, or similar providers. <strong className="text-foreground">NevorAI does not store your full payment details.</strong> We only receive limited information such as transaction confirmations and subscription status from our payment partners.
+                All card numbers, UPI details, and other sensitive payment information are processed securely by trusted third-party payment gateways such as PhonePe, Razorpay, or similar providers. <strong className="text-foreground">Nevorai does not store your full payment details.</strong> We only receive limited information such as transaction confirmations and subscription status from our payment partners.
               </p>
             </section>
 
@@ -49,7 +49,7 @@ export default function Privacy() {
               <p className="text-muted-foreground mb-2">We use your information to:</p>
               <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
                 <li>Create and manage your account.</li>
-                <li>Provide, maintain, and improve the NevorAI service.</li>
+                <li>Provide, maintain, and improve the Nevorai service.</li>
                 <li>Send important updates, notifications, and service-related communications via email, WhatsApp, or SMS.</li>
                 <li>Process payments and manage subscriptions.</li>
                 <li>Analyze usage patterns to improve features and user experience.</li>
@@ -61,14 +61,14 @@ export default function Privacy() {
             <section>
               <h2 className="text-xl font-semibold mb-3">5. Legal Basis & Consent</h2>
               <p className="text-muted-foreground leading-relaxed">
-                By creating an account and using NevorAI, you consent to the collection and processing of your data as described in this Privacy Policy. We process your data based on your consent, our legitimate business interests, and our legal obligations.
+                By creating an account and using Nevorai, you consent to the collection and processing of your data as described in this Privacy Policy. We process your data based on your consent, our legitimate business interests, and our legal obligations.
               </p>
             </section>
 
             <section>
               <h2 className="text-xl font-semibold mb-3">6. Cookies & Tracking</h2>
               <p className="text-muted-foreground leading-relaxed">
-                NevorAI may use cookies and similar tracking technologies to:
+                Nevorai may use cookies and similar tracking technologies to:
               </p>
               <ul className="list-disc pl-5 space-y-2 text-muted-foreground mt-2">
                 <li>Keep you logged in and maintain your session.</li>
@@ -151,7 +151,7 @@ export default function Privacy() {
               <Link to="/privacy" className="hover:text-foreground">Privacy Policy</Link>
               <Link to="/refund" className="hover:text-foreground">Refund Policy</Link>
             </div>
-            <p className="text-xs text-muted-foreground mt-4">© 2024 NevorAI. All rights reserved.</p>
+            <p className="text-xs text-muted-foreground mt-4">© 2026 Nevorai. All rights reserved.</p>
           </div>
         </div>
       </ScrollArea>
