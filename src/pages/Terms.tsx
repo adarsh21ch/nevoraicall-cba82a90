@@ -2,143 +2,148 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
+const SUPPORT_EMAIL = 'teamnevorai@gmail.com';
+
 export default function Terms() {
   return (
     <div className="h-screen flex flex-col bg-background">
-      <div className="max-w-3xl mx-auto px-4 py-4 flex-shrink-0">
+      <div className="max-w-3xl mx-auto px-4 py-4 flex-shrink-0 w-full">
         <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
           <ArrowLeft className="h-4 w-4 mr-1" />
           Back to Home
         </Link>
 
-        <h1 className="text-3xl font-bold text-foreground mb-2">Terms & Conditions</h1>
-        <p className="text-sm text-muted-foreground mb-4">Last updated: December 2025</p>
+        <div className="flex items-baseline gap-2 mb-2">
+          <span className="text-xl font-extrabold text-primary">nCall</span>
+          <span className="text-xs text-muted-foreground">by Nevorai</span>
+        </div>
+        <h1 className="text-3xl font-bold text-foreground mb-2">Terms of Service</h1>
+        <p className="text-sm text-muted-foreground mb-4">Last updated: May 2026</p>
       </div>
 
       <ScrollArea className="flex-1 px-4">
         <div className="max-w-3xl mx-auto pb-8">
           <div className="prose prose-sm max-w-none space-y-6 text-foreground">
-            <section>
-              <h2 className="text-xl font-semibold mb-3">1. About Nevorai</h2>
-              <p className="text-muted-foreground leading-relaxed">
-                Nevorai is a subscription-based software-as-a-service (SaaS) platform designed to help network marketers, sales professionals, and business owners manage their prospects and follow-ups effectively. Our tools help you track leads, manage your sales funnel, and never miss a follow-up opportunity.
+            <section className="bg-primary/5 border border-primary/15 rounded-xl p-4">
+              <p className="text-muted-foreground leading-relaxed m-0">
+                By creating an account or using nCall, you agree to these Terms of Service. Please read them carefully — if you do not agree, do not use nCall.
               </p>
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold mb-3">2. Eligibility & Account</h2>
-              <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
-                <li>You must be at least 18 years old to create an account and use Nevorai.</li>
-                <li>You are responsible for providing accurate and complete information during registration.</li>
-                <li>You must keep your login credentials secure and confidential.</li>
-                <li>You are responsible for all activities that occur under your account.</li>
-                <li>Notify us immediately if you suspect unauthorized access to your account.</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-xl font-semibold mb-3">3. Acceptable Use</h2>
-              <p className="text-muted-foreground mb-2">When using Nevorai, you agree NOT to:</p>
-              <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
-                <li>Use the service for any illegal or unauthorized purpose.</li>
-                <li>Send spam, unsolicited messages, or engage in harassment.</li>
-                <li>Attempt to access other users' accounts or data.</li>
-                <li>Scrape, copy, or extract data from the platform without permission.</li>
-                <li>Share your account credentials with others.</li>
-                <li>Interfere with or disrupt the service or its servers.</li>
-                <li>Use automated tools or bots without our written consent.</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-xl font-semibold mb-3">4. Subscriptions & Auto-Pay</h2>
-              <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
-                <li>Nevorai is a subscription-based digital service that may use recurring billing or AutoPay.</li>
-                <li>By subscribing, you authorize us to charge your payment method on a recurring basis until you cancel.</li>
-                <li>You can cancel your subscription or AutoPay at any time before the next billing date to stop future charges.</li>
-                <li><strong className="text-foreground">Important:</strong> Cancelling AutoPay only stops future renewals. Payments already collected for current or previous billing periods are non-refundable.</li>
-                <li>Your subscription provides access to Nevorai features for the duration of your billing period.</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-xl font-semibold mb-3">5. Fees & Changes</h2>
-              <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
-                <li>Subscription fees are displayed at the time of purchase and may vary by plan.</li>
-                <li>We reserve the right to update pricing or modify plans with reasonable advance notice.</li>
-                <li>Price changes will apply to future billing cycles and will not affect your current subscription period.</li>
-                <li>Continued use of the service after a price change constitutes acceptance of the new pricing.</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-xl font-semibold mb-3">6. Third-Party Payments</h2>
+              <h2 className="text-xl font-semibold mb-3">1. About nCall</h2>
               <p className="text-muted-foreground leading-relaxed">
-                Payments are processed securely by trusted third-party payment gateways such as PhonePe, Razorpay, or similar services. Nevorai does not store your full card numbers, UPI details, or other sensitive payment information. All payment data is handled according to industry-standard security practices by our payment partners.
+                nCall is a calling and lead management tool for network marketers and sales professionals, built by Nevorai. These terms govern your use of the nCall application and all related services.
               </p>
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold mb-3">7. Intellectual Property</h2>
+              <h2 className="text-xl font-semibold mb-3">2. Your Account</h2>
               <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
-                <li>Nevorai branding, logos, content, and software are owned by the company and protected by intellectual property laws.</li>
-                <li>Your subscription grants you a limited, non-exclusive, non-transferable license to use the service for its intended purpose.</li>
-                <li>You may not copy, modify, distribute, or create derivative works from our platform without written permission.</li>
-                <li>You retain ownership of the data you upload to Nevorai.</li>
+                <li>You must be at least 18 years old to create an account.</li>
+                <li>You are responsible for keeping your login credentials secure.</li>
+                <li>You may not share your account, or create accounts on behalf of others without permission.</li>
+                <li>One account per person — duplicate accounts for the same individual are not permitted.</li>
+                <li>You must provide accurate information when signing up.</li>
               </ul>
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold mb-3">8. Limitation of Liability & No Guarantee</h2>
+              <h2 className="text-xl font-semibold mb-3">3. Free Trial</h2>
+              <p className="text-muted-foreground leading-relaxed">
+                New users receive a free trial (duration shown at signup). During the trial you get full access. After the trial ends, you must subscribe to a paid plan to continue using nCall. Your data is retained for 30 days after trial expiry before being eligible for deletion.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold mb-3">4. Paid Plans & Billing</h2>
               <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
-                <li>Nevorai is a productivity tool and does not guarantee any specific business results, income, or outcomes.</li>
-                <li>Your success depends on your own efforts, skills, and business decisions.</li>
-                <li>To the maximum extent permitted by law, our liability is limited to the amount you paid for the service in the most recent billing period.</li>
-                <li>We are not liable for indirect, incidental, or consequential damages arising from your use of the service.</li>
+                <li>Plans are billed monthly or yearly, as selected at checkout.</li>
+                <li>All prices are in Indian Rupees (₹) and inclusive of applicable taxes.</li>
+                <li>Payments are processed securely by Razorpay.</li>
+                <li>Plans renew automatically on the renewal date unless cancelled.</li>
+                <li>We may change prices with 30 days' notice to existing subscribers.</li>
               </ul>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold mb-3">5. Acceptable Use</h2>
+              <p className="text-muted-foreground mb-2">You agree NOT to use nCall to:</p>
+              <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
+                <li>Spam, harass, or send unsolicited messages.</li>
+                <li>Import or store data of individuals without their consent.</li>
+                <li>Violate any applicable Indian or international law.</li>
+                <li>Reverse-engineer, hack, or disrupt the service.</li>
+                <li>Create fake accounts or misrepresent your identity.</li>
+                <li>Run any illegal multi-level marketing or pyramid scheme.</li>
+                <li>Resell or white-label nCall without written permission from Nevorai.</li>
+              </ul>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold mb-3">6. Your Data</h2>
+              <p className="text-muted-foreground leading-relaxed">
+                You own your data — leads, contacts, call notes and any content you create inside nCall. By using nCall, you grant Nevorai a limited licence to store and process this data solely to provide the service to you. We do not use your data for any other purpose.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold mb-3">7. Plan Limits</h2>
+              <p className="text-muted-foreground leading-relaxed">
+                Each plan has usage limits (leads, calls, storage, etc.) shown on our pricing page. If you exceed your limit, certain features may pause until the next cycle or until you upgrade. We will show clear warnings before limits are reached.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold mb-3">8. Service Availability</h2>
+              <p className="text-muted-foreground leading-relaxed">
+                We aim for 99% uptime but do not guarantee uninterrupted access. Planned maintenance will be announced where possible. We are not liable for losses caused by service downtime.
+              </p>
             </section>
 
             <section>
               <h2 className="text-xl font-semibold mb-3">9. Termination</h2>
-              <p className="text-muted-foreground mb-2">We may suspend or terminate your account if you:</p>
-              <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
-                <li>Violate these Terms & Conditions.</li>
-                <li>Engage in fraudulent or illegal activities.</li>
-                <li>Fail to pay subscription fees when due.</li>
-                <li>Abuse the service or other users.</li>
-              </ul>
-              <p className="text-muted-foreground mt-2">
-                Upon termination, your access to the service will be revoked, and we may delete your data after a reasonable retention period.
+              <p className="text-muted-foreground leading-relaxed">
+                You may cancel your account at any time from Profile settings. We may suspend or terminate accounts that violate these terms. Upon termination, your data is retained for 30 days and then permanently deleted, unless legal requirements mandate longer retention.
               </p>
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold mb-3">10. Governing Law & Disputes</h2>
+              <h2 className="text-xl font-semibold mb-3">10. Limitation of Liability</h2>
               <p className="text-muted-foreground leading-relaxed">
-                These Terms & Conditions are governed by and construed in accordance with the laws of India. Any disputes arising from these terms or your use of Nevorai shall be subject to the exclusive jurisdiction of the courts in Chhatarpur, Madhya Pradesh, India.
+                nCall is provided "as is". Nevorai is not liable for indirect, incidental or consequential damages — including lost profits, lost leads or missed business opportunities. Our total liability is limited to the amount you paid us in the 3 months preceding the claim.
               </p>
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold mb-3">11. Contact Us</h2>
+              <h2 className="text-xl font-semibold mb-3">11. Governing Law</h2>
               <p className="text-muted-foreground leading-relaxed">
-                If you have any questions about these Terms & Conditions, please contact us at:
+                These terms are governed by the laws of India, with exclusive jurisdiction of the courts of Chhatarpur, Madhya Pradesh, India. The service complies with the Information Technology Act, 2000 and its amendments.
               </p>
-              <ul className="list-none space-y-1 text-muted-foreground mt-2">
-                <li><strong className="text-foreground">Email:</strong> teamnevorai@gmail.com</li>
-                <li><strong className="text-foreground">Address:</strong> Chhatarpur, MP, India</li>
-                <li><strong className="text-foreground">Contact number:</strong> +91 9329040508</li>
-              </ul>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold mb-3">12. Changes to Terms</h2>
+              <p className="text-muted-foreground leading-relaxed">
+                We may update these terms. Significant changes will be communicated via email or in-app notice with at least 14 days' notice. Continued use after that date constitutes acceptance.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold mb-3">13. Contact</h2>
+              <p className="text-muted-foreground leading-relaxed">
+                Questions about these terms? Email <a href={`mailto:${SUPPORT_EMAIL}`} className="text-primary hover:underline">{SUPPORT_EMAIL}</a>.
+              </p>
             </section>
           </div>
 
           <div className="mt-12 pt-6 border-t border-border">
             <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-              <Link to="/terms" className="hover:text-foreground">Terms & Conditions</Link>
+              <Link to="/terms" className="hover:text-foreground">Terms of Service</Link>
               <Link to="/privacy" className="hover:text-foreground">Privacy Policy</Link>
               <Link to="/refund" className="hover:text-foreground">Refund Policy</Link>
             </div>
-            <p className="text-xs text-muted-foreground mt-4">© 2026 Nevorai. All rights reserved.</p>
+            <p className="text-xs text-muted-foreground mt-4">© 2026 Nevorai · nCall · All rights reserved</p>
           </div>
         </div>
       </ScrollArea>
