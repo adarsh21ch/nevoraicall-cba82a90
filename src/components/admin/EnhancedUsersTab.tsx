@@ -316,7 +316,7 @@ export function EnhancedUsersTab({ headerPlanFilter }: EnhancedUsersTabProps) {
     <div className="space-y-3">
       <TierChips counts={tierCounts} loading={tierLoading} />
 
-      {/* Search and Filters */}
+      {/* Search */}
       <div className="flex gap-2">
         <div className="relative flex-1 min-w-0">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -327,16 +327,26 @@ export function EnhancedUsersTab({ headerPlanFilter }: EnhancedUsersTabProps) {
             className="pl-8 h-9 text-sm"
           />
         </div>
-        <Select value={planFilter} onValueChange={setPlanFilter}>
-          <SelectTrigger className="w-[120px] h-9 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {PLAN_FILTER_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      </div>
+
+      {/* Filter pills — Active Pro vs Expired Pro split */}
+      <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+        {PLAN_FILTER_OPTIONS.map((opt) => {
+          const active = planFilter === opt.value;
+          return (
+            <button
+              key={opt.value}
+              onClick={() => setPlanFilter(opt.value)}
+              className={`shrink-0 px-3 py-1.5 rounded-full text-[11px] font-medium border transition-colors whitespace-nowrap ${
+                active
+                  ? 'bg-primary/15 text-primary border-primary/30'
+                  : 'bg-muted/40 text-muted-foreground border-border/50 hover:bg-muted/70'
+              }`}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
       </div>
 
       <p className="text-xs text-muted-foreground">
