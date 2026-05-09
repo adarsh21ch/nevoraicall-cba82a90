@@ -85,14 +85,17 @@ function TierChips({ counts, loading }: { counts: TierCounts; loading: boolean }
   );
 }
 
-function TierBadge({ tier, plan }: { tier: string; plan: string }) {
-  if (plan !== 'pro') return <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Free</Badge>;
+function TierBadge({ user }: { user: EnhancedUser }) {
+  if (user.plan !== 'pro') return <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Free</Badge>;
+  if (isExpiredPro(user)) {
+    return <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-0.5 bg-destructive/10 text-destructive border-destructive/40">⚠ Expired</Badge>;
+  }
   return <Badge className="bg-primary/20 text-primary border-0 text-[10px] px-1.5 py-0 gap-0.5"><Crown className="h-2.5 w-2.5" />Pro</Badge>;
 }
 
 function StatusBadge({ user }: { user: EnhancedUser }) {
   if (user.is_suspended) return <Badge variant="destructive" className="text-[10px] px-1.5 py-0">Suspended</Badge>;
-  if (user.plan === 'pro' && user.expires_at && new Date(user.expires_at) < new Date()) return <Badge variant="outline" className="text-[10px] text-destructive border-destructive/40 px-1.5 py-0">Expired</Badge>;
+  if (isExpiredPro(user)) return <Badge variant="outline" className="text-[10px] text-destructive border-destructive/40 px-1.5 py-0">Expired</Badge>;
   if (user.plan === 'pro') return <Badge variant="outline" className="text-[10px] text-green-600 border-green-500/40 px-1.5 py-0">Active</Badge>;
   const trialStart = user.trial_start_date || user.created_at;
   if (trialStart) {
