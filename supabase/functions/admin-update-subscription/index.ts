@@ -28,6 +28,8 @@ function checkRateLimit(userId: string): boolean {
 const VALID_TIERS = ['basic', 'pro', 'premium'];
 
 serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
