@@ -111,9 +111,29 @@ export function useForms() {
       if (error) throw error;
       if (!data || (Array.isArray(data) && data.length === 0)) return null;
       const result: AnyRecord = Array.isArray(data) ? data[0] : data;
-      const form = castForm(result);
+      // RPC returns form_id (not id) and no is_accepting column — the closed/expired
+      // state is fully encoded in is_expired. If is_expired is false, the form is open.
       const fields = (result.fields || []).map((f: AnyRecord) => castField(f));
-      return { ...form, fields, is_accepting: !result.is_expired ? form.is_accepting : false } as NevoraFormWithFields;
+      return {
+        id: result.form_id,
+        owner_user_id: result.owner_user_id,
+        title: result.title,
+        description: result.description || null,
+        access_mode: 'public',
+        is_public: true,
+        is_accepting: !result.is_expired,
+        close_date: null,
+        collect_utm: false,
+        allow_multiple_submissions: true,
+        max_submissions: null,
+        confirmation_message: null,
+        embed_enabled: false,
+        form_type: null,
+        lead_mapping: null,
+        created_at: '',
+        updated_at: '',
+        fields,
+      } as NevoraFormWithFields;
     } catch (err) {
       console.error('fetchFormByToken RPC error:', err);
       try {

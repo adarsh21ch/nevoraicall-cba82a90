@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Copy, MessageCircle, Check, Link, Users, Send, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Copy, MessageCircle, Check, Link, Users, Send, Loader2, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { useDirectTeam } from '@/hooks/useDirectTeam';
 import { useSharedLeads } from '@/hooks/useSharedLeads';
@@ -28,11 +28,43 @@ export function ShareFormDialog({ open, onOpenChange, shareUrl, formTitle, formL
   const { members, loading: teamLoading } = useDirectTeam();
   const { shareLeads } = useSharedLeads();
 
-  const copyLink = () => {
-    navigator.clipboard.writeText(shareUrl);
-    setCopied(true);
-    toast.success('Form link copied!');
-    setTimeout(() => setCopied(false), 2000);
+  const copyLink = async () => {
+    let ok = false;
+    try {
+      if (navigator.clipboard?.writeText && window.isSecureContext) {
+        await navigator.clipboard.writeText(shareUrl);
+        ok = true;
+      }
+    } catch {
+      ok = false;
+    }
+    if (!ok) {
+      // Fallback for non-secure contexts / older browsers
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = shareUrl;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+      } catch {
+        ok = false;
+      }
+    }
+    if (ok) {
+      setCopied(true);
+      toast.success('Form link copied!');
+      setTimeout(() => setCopied(false), 2000);
+    } else {
+      toast.error('Could not copy. Long-press the link to copy manually.');
+    }
+  };
+
+  const openInBrowser = () => {
+    window.open(shareUrl, '_blank', 'noopener,noreferrer');
   };
 
   const shareWhatsApp = () => {
@@ -118,6 +150,15 @@ export function ShareFormDialog({ open, onOpenChange, shareUrl, formTitle, formL
               <MessageCircle className="h-4 w-4 mr-2" /> WhatsApp
             </Button>
           </div>
+
+          {/* Open in browser */}
+          <Button
+            onClick={openInBrowser}
+            variant="outline"
+            className="w-full rounded-xl gap-2 border-blue-200/50 dark:border-blue-800/50 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+          >
+            <ExternalLink className="h-4 w-4" /> Open Form in Browser
+          </Button>
 
           {/* Separator */}
           <div className="relative">
