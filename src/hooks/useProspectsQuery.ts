@@ -739,30 +739,6 @@ export function useProspectsQuery(options: UseProspectsQueryOptions = {}) {
     [user, prospects, queryClient, queryKey]
   );
 
-  // Bulk delete by sheet - deletes ALL prospects in a sheet directly on server (bypasses pagination)
-  const bulkDeleteBySheet = useCallback(
-    async (sheetId: string | null): Promise<{ deleted: number }> => {
-      if (!user) return { deleted: 0 };
-      
-      // First, get the count of prospects to delete
-      let countQuery = supabase
-        .from('prospects')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id);
-      
-      if (sheetId !== null) {
-        countQuery = countQuery.eq('sheet_id', sheetId);
-      }
-      
-      const { count: totalToDelete } = await countQuery;
-      
-      if (!totalToDelete || totalToDelete === 0) {
-        return { deleted: 0 };
-      }
-      
-      // Cancel any in-flight queries
-      await queryClient.cancelQueries({ queryKey: ['prospects', user?.id] });
-      
   // Bulk delete by sheet - SOFT delete all prospects in a sheet (recoverable)
   const bulkDeleteBySheet = useCallback(
     async (sheetId: string | null): Promise<{ deleted: number }> => {
