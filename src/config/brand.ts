@@ -3,8 +3,8 @@
  * to ensure consistent branding everywhere.
  */
 
-export const BRAND_NAME = 'nCall';
-export const BRAND_NAME_UPPER = 'NCALL';
+export const BRAND_NAME = 'Direcall';
+export const BRAND_NAME_UPPER = 'DIRECALL';
 export const BRAND_NAME_LOWER = 'ncall';
 export const PARENT_COMPANY_NAME = 'Nevorai';
 
