@@ -5,7 +5,7 @@
 
 export const BRAND_NAME = 'Direcall';
 export const BRAND_NAME_UPPER = 'DIRECALL';
-export const BRAND_NAME_LOWER = 'ncall';
+export const BRAND_NAME_LOWER = 'direcall';
 export const PARENT_COMPANY_NAME = 'Nevorai';
 
 // Plan names – display-facing (Basic = internal "pro", Pro = internal "premium")
