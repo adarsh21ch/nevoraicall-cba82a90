@@ -33,7 +33,7 @@ export default function Terms() {
             <section>
               <h2 className="text-xl font-semibold mb-3">1. About Direcall</h2>
               <p className="text-muted-foreground leading-relaxed">
-                Direcall is a calling and lead management tool for network marketers and sales professionals, built by Nevorai. These terms govern your use of the Direcall application and all related services.
+                Direcall is a calling and lead management tool for network marketers and sales professionals, built by Nevorai Technologies. These terms govern your use of the Direcall application and all related services.
               </p>
             </section>
 
