@@ -76,7 +76,7 @@ export default function Terms() {
                 <li>Reverse-engineer, hack, or disrupt the service.</li>
                 <li>Create fake accounts or misrepresent your identity.</li>
                 <li>Run any illegal multi-level marketing or pyramid scheme.</li>
-                <li>Resell or white-label Direcall without written permission from Nevorai.</li>
+                <li>Resell or white-label Direcall without written permission from Nevorai Technologies.</li>
               </ul>
             </section>
 
