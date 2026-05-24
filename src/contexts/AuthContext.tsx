@@ -159,20 +159,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         expiresAt: nextSession?.expires_at ? new Date(nextSession.expires_at * 1000).toISOString() : null
       });
 
-      if (!nextSession?.access_token) {
-        // No session → logged out
-        // Only clear state if we're not in initial loading OR if this is an explicit sign out event
-        if (initialRestoreComplete.current || event === 'SIGNED_OUT') {
-          setSession(null);
-          setUser(null);
-        }
+      if (nextSession?.access_token) {
+        // Valid session — always apply it
+        setSession(nextSession);
+        setUser(nextSession.user);
         setLoading(false);
         return;
       }
 
-      // We have a valid session - apply it
-      setSession(nextSession);
-      setUser(nextSession.user);
+      // No session in payload. ONLY clear local auth state on an explicit sign-out
+      // or initial cold-start with no stored session. Transient TOKEN_REFRESHED /
+      // USER_UPDATED events without a session must NOT log the user out — this is
+      // what was causing users to be kicked back to /auth on every app open.
+      const isExplicitSignOut = event === 'SIGNED_OUT';
+      const isInitialColdStart = !initialRestoreComplete.current;
+
+      if (isExplicitSignOut || isInitialColdStart) {
+        setSession(null);
+        setUser(null);
+      } else {
+        logAuth('Ignoring null-session event to preserve login', { event });
+      }
       setLoading(false);
     };
 
