@@ -360,7 +360,20 @@ function PlanEditForm({
     badge_text: plan?.badge_text || '',
     features: (plan?.features || []).join('\n'),
     sort_order: plan?.sort_order || (existingPlansCount + 1),
+    // ---- new admin-controlled pricing fields ----
+    monthly_price_inr: (plan as any)?.monthly_price_inr ?? '',
+    yearly_price_inr: (plan as any)?.yearly_price_inr ?? '',
+    first_month_price_inr: (plan as any)?.first_month_price_inr ?? '',
+    renewal_price_inr: (plan as any)?.renewal_price_inr ?? '',
+    trial_days: (plan as any)?.trial_days ?? 0,
+    billing_cycle: ((plan as any)?.billing_cycle || 'monthly') as 'monthly' | 'yearly' | 'one_time',
+    offer_badge_text: (plan as any)?.offer_badge_text || '',
+    is_popular: !!(plan as any)?.is_popular,
+    is_free: !!(plan as any)?.is_free,
+    cancel_anytime: (plan as any)?.cancel_anytime !== false,
+    highlight_savings_text: (plan as any)?.highlight_savings_text || '',
   });
+
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
