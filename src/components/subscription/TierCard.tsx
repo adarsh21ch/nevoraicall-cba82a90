@@ -1,5 +1,7 @@
 import { Crown, Check } from 'lucide-react';
 import { PlanConfig } from '@/hooks/usePaymentLinks';
+import { getPlanPricingView } from '@/lib/planPricing';
+
 
 interface TierCardProps {
   tierName?: string;
