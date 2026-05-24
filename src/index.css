@@ -112,96 +112,89 @@ html {
   }
 
   .dark {
-    /* Premium layered black system — Apple/Notion/Linear inspired */
-    /* Level 0 app bg #0A0A0A · Level 1 screen bg #111111 */
-    --background: 0 0% 7%;
-    --foreground: 0 0% 94%;
+    /* Nevorai charcoal — soft premium dark, never pure black */
+    /* Level 0 #0E1311 · Level 1 screen #121815 */
+    --background: 165 13% 7%;
+    --foreground: 60 6% 92%;
 
-    /* Level 2 card #1C1C1C · Level 5 hover #333333 */
-    --card: 0 0% 11%;
-    --card-foreground: 0 0% 94%;
-    --card-hover: 0 0% 14%;
+    /* Level 2 card #181F1C · hover #1F2724 */
+    --card: 165 12% 11%;
+    --card-foreground: 60 6% 92%;
+    --card-hover: 165 11% 14%;
 
-    /* Level 3 elevated #242424 */
-    --popover: 0 0% 14%;
-    --popover-foreground: 0 0% 94%;
+    --popover: 165 12% 13%;
+    --popover-foreground: 60 6% 92%;
 
-    /* Brand blue #2BAE85 — only used for active/CTA */
-    --primary: 158 55% 50%;
-    --primary-foreground: 0 0% 100%;
+    /* Soft mint highlight teal — readable on charcoal */
+    --primary: 160 56% 55%;            /* lifted #5FD6B3 feel */
+    --primary-foreground: 165 30% 8%;
 
-    /* Level 4 input #2C2C2C */
-    --secondary: 0 0% 17%;
-    --secondary-foreground: 0 0% 94%;
+    --secondary: 165 10% 16%;
+    --secondary-foreground: 60 6% 92%;
 
-    --muted: 0 0% 17%;
-    --muted-foreground: 0 0% 56%;
+    --muted: 165 10% 16%;
+    --muted-foreground: 165 6% 60%;
 
-    --accent: 158 55% 50%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 160 56% 55%;
+    --accent-foreground: 165 30% 8%;
 
-    /* Muted dark red, not bright — premium feel */
-    --destructive: 0 63% 50%;
+    --destructive: 0 60% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Border #2A2A2A — separates layers without harshness */
-    --border: 0 0% 16%;
-    --border-strong: 0 0% 24%;
-    --input: 0 0% 17%;
-    --ring: 158 55% 50%;
+    --border: 165 10% 17%;
+    --border-strong: 165 10% 24%;
+    --input: 165 10% 16%;
+    --ring: 160 56% 55%;
 
-    /* Status pill backgrounds — colored tinted darks for visible POP */
-    --status-positive: 152 76% 67%;       /* #6EE7B7 */
-    --status-positive-bg: 153 75% 9%;     /* #052D1E */
-    --status-negative: 0 91% 71%;         /* #F87171 */
-    --status-negative-bg: 0 50% 12%;      /* #2D0F0F */
-    --status-neutral: 45 96% 64%;         /* #FCD34D */
-    --status-neutral-bg: 38 100% 9%;      /* #2D1F00 */
-    --status-uncertain: 220 14% 83%;      /* #D1D5DB */
-    --status-uncertain-bg: 0 0% 16%;
+    /* Status pills — teal-led, calm */
+    --status-positive: 160 56% 65%;
+    --status-positive-bg: 165 40% 11%;
+    --status-negative: 0 72% 68%;
+    --status-negative-bg: 0 40% 13%;
+    --status-neutral: 38 85% 60%;
+    --status-neutral-bg: 38 50% 11%;
+    --status-uncertain: 60 6% 80%;
+    --status-uncertain-bg: 165 10% 16%;
 
-    --priority-high: 0 91% 71%;
-    --priority-high-bg: 0 50% 12%;
-    --priority-medium: 45 96% 64%;
-    --priority-medium-bg: 38 100% 9%;
-    --priority-low: 152 76% 67%;
-    --priority-low-bg: 153 75% 9%;
+    --priority-high: 0 72% 68%;
+    --priority-high-bg: 0 40% 13%;
+    --priority-medium: 38 85% 60%;
+    --priority-medium-bg: 38 50% 11%;
+    --priority-low: 160 56% 65%;
+    --priority-low-bg: 165 40% 11%;
 
-    /* Soft accent backgrounds — colored tinted dark surfaces */
-    --accent-green: 152 76% 67%;
-    --accent-green-soft: 153 75% 9%;
-    --accent-orange: 38 92% 50%;
-    --accent-orange-soft: 38 100% 9%;
-    --accent-red: 0 91% 71%;
-    --accent-red-soft: 0 50% 12%;
-    --accent-purple: 252 95% 85%;
-    --accent-purple-soft: 258 75% 16%;
-    --accent-blue: 158 55% 60%;
-    --accent-blue-soft: 219 65% 14%;
+    --accent-green: 160 56% 65%;
+    --accent-green-soft: 165 40% 11%;
+    --accent-orange: 32 85% 55%;
+    --accent-orange-soft: 32 50% 11%;
+    --accent-red: 0 72% 68%;
+    --accent-red-soft: 0 40% 13%;
+    --accent-purple: 252 60% 75%;
+    --accent-purple-soft: 252 40% 16%;
+    --accent-blue: 160 56% 60%;
+    --accent-blue-soft: 165 40% 12%;
 
-    --personal-tag-header: 0 0% 11%;
-    --personal-tag-header-text: 0 0% 56%;
-    --personal-tag-border: 0 0% 16%;
+    --personal-tag-header: 165 12% 11%;
+    --personal-tag-header-text: 165 6% 60%;
+    --personal-tag-border: 165 10% 17%;
 
-    /* Layered shadows — deeper for premium depth */
     --shadow-sm: 0 1px 3px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3);
     --shadow-md: 0 2px 8px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.5);
     --shadow-lg: 0 12px 40px rgba(0,0,0,0.7);
 
-    /* Nav matches screen bg — seamless */
-    --nav-bg: 0 0% 7% / 0.92;
-    --nav-border: 0 0% 16% / 0.8;
+    --nav-bg: 165 13% 7% / 0.92;
+    --nav-border: 165 10% 17% / 0.8;
 
-    --upgrade-border: 30 80% 28%;
+    --upgrade-border: 38 60% 28%;
 
-    --sidebar-background: 0 0% 4%;
-    --sidebar-foreground: 0 0% 94%;
-    --sidebar-primary: 158 55% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 11%;
-    --sidebar-accent-foreground: 0 0% 94%;
-    --sidebar-border: 0 0% 16%;
-    --sidebar-ring: 158 55% 50%;
+    --sidebar-background: 165 14% 5%;
+    --sidebar-foreground: 60 6% 92%;
+    --sidebar-primary: 160 56% 55%;
+    --sidebar-primary-foreground: 165 30% 8%;
+    --sidebar-accent: 165 12% 11%;
+    --sidebar-accent-foreground: 60 6% 92%;
+    --sidebar-border: 165 10% 17%;
+    --sidebar-ring: 160 56% 55%;
   }
 }
 
