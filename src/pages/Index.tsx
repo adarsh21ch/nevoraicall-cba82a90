@@ -10,25 +10,44 @@ const Index = () => {
   const { user, loading } = useAuth();
 
   useEffect(() => {
-    if (!loading) {
-      // Get the leader parameter from share link
-      const leaderParam = searchParams.get('leader');
-      
-      if (user) {
-        // If there's a leader param, store it for processing after profile loads
-        if (leaderParam) {
-          sessionStorage.setItem('pending_leader_id', leaderParam);
-        }
-        // Default tab is now Calling (/dashboard)
-        navigate('/dashboard', { replace: true });
-      } else {
-        // Not logged in - redirect to auth with leader param preserved
-        if (leaderParam) {
-          navigate(`/auth?leader=${leaderParam}`, { replace: true });
-        } else {
-          navigate('/auth', { replace: true });
-        }
+    if (loading) return;
+
+    const leaderParam = searchParams.get('leader');
+
+    if (user) {
+      if (leaderParam) {
+        sessionStorage.setItem('pending_leader_id', leaderParam);
       }
+      navigate('/dashboard', { replace: true });
+      return;
+    }
+
+    // No user after loading finished. Before redirecting to /auth, double-check that
+    // there really is no persisted session in storage — the 10s safety timeout can
+    // release `loading` before a slow getSession() resolves. We don't want to bounce
+    // a logged-in user to the login screen just because of a slow cold start.
+    const hasStoredSession = (() => {
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
+            const raw = localStorage.getItem(key);
+            if (raw && raw.includes('access_token')) return true;
+          }
+        }
+      } catch {}
+      return false;
+    })();
+
+    if (hasStoredSession) {
+      // Session exists in storage but hasn't hydrated yet — stay on loader.
+      return;
+    }
+
+    if (leaderParam) {
+      navigate(`/auth?leader=${leaderParam}`, { replace: true });
+    } else {
+      navigate('/auth', { replace: true });
     }
   }, [user, loading, navigate, searchParams]);
 
