@@ -35,6 +35,7 @@ import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 import { useSharedLeads } from '@/hooks/useSharedLeads';
 import { AIAssistantChat } from '@/components/ai/AIAssistantChat';
+import { InstallInstructionsSheet } from '@/components/pwa/InstallPromptBanner';
 import { AIInsightsSettings } from '@/components/ai/AIInsightsSettings';
 import { ThemeSettings } from '@/components/profile/ThemeSettings';
 import { useFeatureAccess } from '@/hooks/useFeatureAccess';
