@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Loader2, Shield, Users, Crown, ArrowLeft, BarChart3, IndianRupee, Wrench, Megaphone } from 'lucide-react';
-import nevoraLogo from '@/assets/direcall-logo.png';
+import nevoraLogo from '@/assets/nevorai-call-logo.png';
 import { AdminAnalyticsDashboard } from '@/components/admin/AdminAnalyticsDashboard';
 import { EnhancedUsersTab } from '@/components/admin/EnhancedUsersTab';
 import { NewSignupsView } from '@/components/admin/NewSignupsView';
@@ -66,7 +66,7 @@ export default function Admin() {
           <div className="flex items-center gap-3">
             <img 
               src={nevoraLogo} 
-              alt="Direcall Logo" 
+              alt="Nevorai Call Logo" 
               className="h-9 w-9 object-contain"
             />
             <div>

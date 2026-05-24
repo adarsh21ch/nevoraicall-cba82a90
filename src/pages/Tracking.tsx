@@ -39,7 +39,7 @@ import { useApplicationTotalSnapshots } from '@/hooks/useApplicationTotalSnapsho
 import { useApplicationSnapshots } from '@/hooks/useApplicationSnapshots';
 import { useFunnelConfig } from '@/hooks/useFunnelConfig';
 import { NEVORAI_WEBSITE_URL } from '@/config/siteUrl';
-import nevoraLogo from '@/assets/direcall-logo.png';
+import nevoraLogo from '@/assets/nevorai-call-logo.png';
 
 export default function Tracking() {
   const navigate = useNavigate();
@@ -141,7 +141,7 @@ export default function Tracking() {
       <header className="fixed-header z-40 bg-card/80 backdrop-blur-xl border-b border-border/40">
         <div className="flex items-center justify-between px-4 py-2.5">
           <div className="flex items-center gap-2.5">
-            <img src={nevoraLogo} alt="Direcall Logo" className="h-9 w-9 rounded-xl object-cover shadow-sm" />
+            <img src={nevoraLogo} alt="Nevorai Call Logo" className="h-9 w-9 rounded-xl object-cover shadow-sm" />
             <div>
               <h1 className="text-lg font-bold tracking-tight">Track Up</h1>
               <p className="text-[11px] text-muted-foreground font-medium">Track Your Numbers</p>

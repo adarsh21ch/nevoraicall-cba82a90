@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { LogOut, Menu, X, List, BarChart3 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import nevoraLogo from '@/assets/direcall-logo.png';
+import nevoraLogo from '@/assets/nevorai-call-logo.png';
 
 export function Header() {
   const { user, signOut } = useAuth();
@@ -25,10 +25,10 @@ export function Header() {
           <Link to="/dashboard" className="flex items-center gap-2">
             <img 
               src={nevoraLogo} 
-              alt="Direcall Logo" 
+              alt="Nevorai Call Logo" 
               className="h-8 w-8 object-contain"
             />
-            <span className="font-semibold text-lg hidden sm:inline">Direcall</span>
+            <span className="font-semibold text-lg hidden sm:inline">Nevorai Call</span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">

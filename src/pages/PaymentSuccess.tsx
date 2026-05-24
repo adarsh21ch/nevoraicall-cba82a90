@@ -7,7 +7,7 @@ import { Loader2, CheckCircle, XCircle, Crown, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
-import nevoraLogo from '@/assets/direcall-logo.png';
+import nevoraLogo from '@/assets/nevorai-call-logo.png';
 
 // Format duration dynamically based on days
 const formatDuration = (days: number): string => {
@@ -142,7 +142,7 @@ export default function PaymentSuccess() {
         <div className="flex justify-center mb-8">
           <img 
             src={nevoraLogo} 
-            alt="Direcall Logo" 
+            alt="Nevorai Call Logo" 
             className="h-16 w-16 object-contain"
           />
         </div>

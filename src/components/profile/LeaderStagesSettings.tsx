@@ -33,7 +33,7 @@ export function LeaderStagesSettings({
   const [tagMode, setTagMode] = useState<'leader' | 'own'>('leader');
   
   // Own tags state
-  const [owDirecallingTags, setOwDirecallingTags] = useState<string[]>(['']);
+  const [owNevorai CallingTags, setOwNevorai CallingTags] = useState<string[]>(['']);
   const [ownStageTags, setOwnStageTags] = useState<string[]>(['']);
   
   // Leader tags display
@@ -47,7 +47,7 @@ export function LeaderStagesSettings({
   useEffect(() => {
     if (profile) {
       setTagMode(profile.use_leader_stages ? 'leader' : 'own');
-      setOwDirecallingTags(profile.response_labels.length > 0 ? profile.response_labels : ['']);
+      setOwNevorai CallingTags(profile.response_labels.length > 0 ? profile.response_labels : ['']);
       setOwnStageTags(profile.stage_labels.length > 0 ? profile.stage_labels : ['']);
       
       // Fetch leader's tag config if using leader tags
@@ -105,7 +105,7 @@ export function LeaderStagesSettings({
 
   const handleTagModeChange = (mode: 'leader' | 'own') => {
     // If switching from own to leader and user has own tags, show confirmation
-    const hasOwnTags = owDirecallingTags.some(s => s.trim()) || ownStageTags.some(s => s.trim());
+    const hasOwnTags = owNevorai CallingTags.some(s => s.trim()) || ownStageTags.some(s => s.trim());
     if (mode === 'leader' && tagMode === 'own' && hasOwnTags) {
       setShowSwitchConfirm(true);
       return;
@@ -124,21 +124,21 @@ export function LeaderStagesSettings({
 
   // Calling tags handlers
   const handleAddCallingTag = () => {
-    if (owDirecallingTags.length < 10) {
-      setOwDirecallingTags([...owDirecallingTags, '']);
+    if (owNevorai CallingTags.length < 10) {
+      setOwNevorai CallingTags([...owNevorai CallingTags, '']);
     }
   };
 
   const handleRemoveCallingTag = (index: number) => {
-    if (owDirecallingTags.length > 1) {
-      setOwDirecallingTags(owDirecallingTags.filter((_, i) => i !== index));
+    if (owNevorai CallingTags.length > 1) {
+      setOwNevorai CallingTags(owNevorai CallingTags.filter((_, i) => i !== index));
     }
   };
 
   const handleCallingTagChange = (index: number, value: string) => {
-    const updated = [...owDirecallingTags];
+    const updated = [...owNevorai CallingTags];
     updated[index] = value;
-    setOwDirecallingTags(updated);
+    setOwNevorai CallingTags(updated);
   };
 
   // Stage tags handlers
@@ -161,7 +161,7 @@ export function LeaderStagesSettings({
   };
 
   const handleSaveOwnTags = async () => {
-    const validCallingTags = owDirecallingTags.filter(s => s.trim());
+    const validCallingTags = owNevorai CallingTags.filter(s => s.trim());
     const validStageTags = ownStageTags.filter(s => s.trim());
     
     if (validCallingTags.length < 3) {
@@ -378,7 +378,7 @@ export function LeaderStagesSettings({
                 Define response options for lead calls (3-10 tags recommended):
               </p>
               <div className="space-y-2">
-                {owDirecallingTags.map((tag, index) => (
+                {owNevorai CallingTags.map((tag, index) => (
                   <div key={index} className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground w-12">Tag {index + 1}</span>
                     <Input
@@ -387,7 +387,7 @@ export function LeaderStagesSettings({
                       placeholder={`e.g., ${index === 0 ? 'Called' : index === 1 ? 'No answer' : index === 2 ? 'Interested' : `Tag ${index + 1}`}`}
                       className="flex-1"
                     />
-                    {owDirecallingTags.length > 1 && (
+                    {owNevorai CallingTags.length > 1 && (
                       <Button
                         variant="ghost"
                         size="icon"
@@ -400,7 +400,7 @@ export function LeaderStagesSettings({
                   </div>
                 ))}
               </div>
-              {owDirecallingTags.length < 10 && (
+              {owNevorai CallingTags.length < 10 && (
                 <Button variant="outline" size="sm" onClick={handleAddCallingTag}>
                   <Plus className="h-4 w-4 mr-1" />
                   Add Tag

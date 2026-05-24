@@ -3,9 +3,9 @@
  * to ensure consistent branding everywhere.
  */
 
-export const BRAND_NAME = 'Direcall';
-export const BRAND_NAME_UPPER = 'DIRECALL';
-export const BRAND_NAME_LOWER = 'direcall';
+export const BRAND_NAME = 'Nevorai Call';
+export const BRAND_NAME_UPPER = 'NEVORAI CALL';
+export const BRAND_NAME_LOWER = 'nevorai-call';
 export const PARENT_COMPANY_NAME = 'Nevorai';
 
 // Plan names – display-facing (Basic = internal "pro", Pro = internal "premium")

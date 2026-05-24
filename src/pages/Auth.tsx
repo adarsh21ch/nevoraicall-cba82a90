@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { toast } from 'sonner';
 import { Loader2, Mail, Lock, Eye, EyeOff, ArrowLeft, User, Phone } from 'lucide-react';
-import nevoraLogo from '@/assets/direcall-logo.png';
+import nevoraLogo from '@/assets/nevorai-call-logo.png';
 import { getPasswordRecoveryRedirectUrl, PUBLISHED_APP_URL } from '@/config/siteUrl';
 
 export default function Auth() {
@@ -293,7 +293,7 @@ export default function Auth() {
     return (
       <div className="auth-page-layout bg-background">
         <div className="auth-page-content flex flex-col items-center gap-4">
-          <img src={nevoraLogo} alt="Direcall Logo" className="w-16 h-16 rounded-2xl shadow-lg" />
+          <img src={nevoraLogo} alt="Nevorai Call Logo" className="w-16 h-16 rounded-2xl shadow-lg" />
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-sm text-muted-foreground font-body">Loading...</p>
         </div>
@@ -307,12 +307,12 @@ export default function Auth() {
       <div className="relative inline-block mb-4">
         <img
           src={nevoraLogo}
-          alt="Direcall Logo"
+          alt="Nevorai Call Logo"
           className="w-[72px] h-[72px] object-contain"
         />
       </div>
       <h1 className="text-[28px] font-extrabold text-foreground font-heading tracking-tight">
-        Direcall
+        Nevorai Call
       </h1>
       <p className="text-muted-foreground text-[13px] mt-0.5 font-body">
         by Nevorai
@@ -547,7 +547,7 @@ export default function Auth() {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground font-body">
-                  We'll use this only to help you get started with Direcall.
+                  We'll use this only to help you get started with Nevorai Call.
                 </p>
               </div>
             )}

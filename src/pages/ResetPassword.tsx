@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { CheckCircle, Loader2 } from 'lucide-react';
-import nevoraLogo from '@/assets/direcall-logo.png';
+import nevoraLogo from '@/assets/nevorai-call-logo.png';
 import { passwordSchema } from '@/lib/validations';
 
 export default function ResetPassword() {
@@ -146,7 +146,7 @@ export default function ResetPassword() {
         <header className="text-center mb-8">
           <img
             src={nevoraLogo}
-            alt="Direcall logo"
+            alt="Nevorai Call logo"
             className="h-16 w-16 mx-auto mb-4 object-contain"
           />
           <h1 className="text-2xl font-bold">Reset password</h1>
