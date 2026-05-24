@@ -61,7 +61,7 @@ Deno.serve(async (req: Request) => {
     const slug = url.searchParams.get("slug");
     const token = url.searchParams.get("token");
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     let title = DEFAULT_TITLE;
     let description = DEFAULT_DESC;
