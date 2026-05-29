@@ -1714,6 +1714,13 @@ export type Database = {
             referencedRelation: "courses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "course_coupons_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       course_enrollments: {
@@ -1756,6 +1763,13 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_enrollments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses_public"
             referencedColumns: ["id"]
           },
         ]
@@ -1802,6 +1816,13 @@ export type Database = {
             referencedRelation: "courses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "course_leads_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       course_modules: {
@@ -1841,6 +1862,13 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_modules_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses_public"
             referencedColumns: ["id"]
           },
         ]
@@ -1927,6 +1955,13 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_videos_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses_public"
             referencedColumns: ["id"]
           },
         ]
@@ -5605,6 +5640,42 @@ export type Database = {
           },
         ]
       }
+      courses_public: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string | null
+          is_published: boolean | null
+          owner_user_id: string | null
+          price: number | null
+          thumbnail_url: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          is_published?: boolean | null
+          owner_user_id?: string | null
+          price?: number | null
+          thumbnail_url?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          is_published?: boolean | null
+          owner_user_id?: string | null
+          price?: number | null
+          thumbnail_url?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       funnel_price_options_public: {
         Row: {
           amount: number | null
@@ -6255,6 +6326,7 @@ export type Database = {
         Returns: Json
       }
       clear_upline_relationship: { Args: { p_user_id: string }; Returns: Json }
+      community_slug_exists: { Args: { p_slug: string }; Returns: boolean }
       ensure_ac_profile_exists: { Args: never; Returns: Json }
       gen_random_bytes: { Args: { n: number }; Returns: string }
       gen_random_uuid: { Args: never; Returns: string }
