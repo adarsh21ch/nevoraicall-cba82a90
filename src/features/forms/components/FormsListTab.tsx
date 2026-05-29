@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, Copy, Trash2, Share2, MoreHorizontal, Edit, Eye, FileText, MessageCircle } from 'lucide-react';
+import { Loader2, Copy, Trash2, Share2, MoreHorizontal, Edit, Eye, FileText, MessageCircle, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -22,6 +22,7 @@ export function FormsListTab({ onEdit }: Props) {
   const [shareUrl, setShareUrl] = useState('');
   const [shareTitle, setShareTitle] = useState('');
   const [counts, setCounts] = useState<Record<string, number>>({});
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchForms();
@@ -41,12 +42,43 @@ export function FormsListTab({ onEdit }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [forms.length]);
 
+  const copyToClipboard = async (url: string): Promise<boolean> => {
+    try {
+      if (navigator.clipboard?.writeText && window.isSecureContext) {
+        await navigator.clipboard.writeText(url);
+        return true;
+      }
+    } catch { /* fall through */ }
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = url;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
+  };
+
   const handleShareCopy = async (form: NevoraFormWithFields) => {
     const token = await getShareToken(form.id);
-    if (token) {
-      const url = getShareUrl(token);
-      navigator.clipboard.writeText(url);
+    if (!token) {
+      toast.error('Could not generate share link');
+      return;
+    }
+    const url = getShareUrl(token);
+    const ok = await copyToClipboard(url);
+    if (ok) {
+      setCopiedId(form.id);
       toast.success('Form link copied!');
+      setTimeout(() => setCopiedId(prev => (prev === form.id ? null : prev)), 2000);
+    } else {
+      toast.error('Could not copy. Try the Share menu.');
     }
   };
 
@@ -108,7 +140,23 @@ export function FormsListTab({ onEdit }: Props) {
               </div>
 
               <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30" onClick={() => handleShareCopy(form)}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`h-8 px-2 gap-1 rounded-lg ${copiedId === form.id ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30' : 'text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30'}`}
+                  onClick={() => handleShareCopy(form)}
+                  aria-label="Copy form link"
+                >
+                  {copiedId === form.id ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  <span className="text-xs font-medium">{copiedId === form.id ? 'Copied' : 'Copy'}</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-blue-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                  onClick={() => handleShareModal(form)}
+                  aria-label="Share form"
+                >
                   <Share2 className="h-4 w-4" />
                 </Button>
                 <DropdownMenu>
