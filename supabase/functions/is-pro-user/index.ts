@@ -44,8 +44,17 @@ serve(async (req) => {
       return json({ error: "Invalid JSON body" }, 400);
     }
 
-    const email = (body.email || "").toString().toLowerCase().trim();
-    const phone = (body.phone || "").toString().trim();
+    const rawEmail = (body.email || "").toString().toLowerCase().trim();
+    const rawPhone = (body.phone || "").toString().trim();
+
+    // Strict validation: reject any value containing PostgREST filter
+    // metacharacters (commas, parentheses, operators, whitespace, etc.) to
+    // prevent filter-string injection in the `.or()` below.
+    const SAFE_EMAIL = /^[A-Za-z0-9._+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+    const SAFE_PHONE = /^\+?[0-9]{6,20}$/;
+
+    const email = rawEmail && SAFE_EMAIL.test(rawEmail) ? rawEmail : "";
+    const phone = rawPhone && SAFE_PHONE.test(rawPhone) ? rawPhone : "";
 
     if (!email && !phone) {
       return json({ error: "email or phone required" }, 400);
@@ -60,9 +69,7 @@ serve(async (req) => {
 
     const orParts: string[] = [];
     if (email) orParts.push(`email.eq.${email}`);
-    if (phone) {
-      orParts.push(`phone.eq.${phone}`);
-    }
+    if (phone) orParts.push(`phone.eq.${phone}`);
 
     const { data: profile, error: profileError } = await supabase
       .from("profiles")

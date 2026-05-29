@@ -13,12 +13,13 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { 
-      lead_id, 
-      funnel_id, 
-      price_option_id, 
-      amount, 
+    const {
+      lead_id,
+      funnel_id,
+      price_option_id,
+      amount,
       screenshot_url,
+      access_token,
       // Optional contact fields for creating new leads
       contact_name,
       contact_phone,
@@ -42,18 +43,25 @@ serve(async (req) => {
     let effectiveLeadId = lead_id;
     let ownerUserId: string | null = null;
 
-    // If lead_id provided, verify it exists
+    // If lead_id provided, verify it exists AND the caller holds the access_token
     if (lead_id) {
+      if (!access_token) {
+        return new Response(
+          JSON.stringify({ error: 'access_token is required when submitting against an existing lead' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       const { data: lead, error: leadError } = await supabase
         .from('funnel_leads')
-        .select('id, funnel_id, owner_user_id')
+        .select('id, funnel_id, owner_user_id, access_token')
         .eq('id', lead_id)
         .single();
 
-      if (leadError || !lead) {
+      if (leadError || !lead || lead.access_token !== access_token) {
         return new Response(
-          JSON.stringify({ error: 'Lead not found' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'Invalid lead or access token' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       ownerUserId = lead.owner_user_id;
