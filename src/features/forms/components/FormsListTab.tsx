@@ -22,6 +22,7 @@ export function FormsListTab({ onEdit }: Props) {
   const [shareUrl, setShareUrl] = useState('');
   const [shareTitle, setShareTitle] = useState('');
   const [counts, setCounts] = useState<Record<string, number>>({});
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchForms();
