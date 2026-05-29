@@ -140,7 +140,23 @@ export function FormsListTab({ onEdit }: Props) {
               </div>
 
               <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30" onClick={() => handleShareCopy(form)}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`h-8 px-2 gap-1 rounded-lg ${copiedId === form.id ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30' : 'text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30'}`}
+                  onClick={() => handleShareCopy(form)}
+                  aria-label="Copy form link"
+                >
+                  {copiedId === form.id ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  <span className="text-xs font-medium">{copiedId === form.id ? 'Copied' : 'Copy'}</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-blue-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                  onClick={() => handleShareModal(form)}
+                  aria-label="Share form"
+                >
                   <Share2 className="h-4 w-4" />
                 </Button>
                 <DropdownMenu>
