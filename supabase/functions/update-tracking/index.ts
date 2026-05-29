@@ -199,8 +199,21 @@ async function saveTotalAutomated(adminClient: any, userId: string, body: any) {
     });
   }
 
-  // Aggregate personal snapshots from all team members for the given date
-  const allMemberIds = [userId, ...member_user_ids];
+  // SECURITY: validate that every requested member is actually in the
+  // authenticated user's downline. Reject silently for IDs that aren't —
+  // never aggregate data for users the caller can't see.
+  let validatedMemberIds: string[] = [];
+  if (Array.isArray(member_user_ids) && member_user_ids.length > 0) {
+    const { data: downline } = await adminClient
+      .from('personal_snapshot_v2')
+      .select('user_id')
+      .in('user_id', member_user_ids)
+      .eq('upline_leader_id', userId);
+    validatedMemberIds = Array.from(new Set((downline || []).map((r: any) => r.user_id)));
+  }
+
+  // Aggregate the caller's own snapshot plus validated downline members only
+  const allMemberIds = [userId, ...validatedMemberIds];
 
   const { data: memberSnapshots, error: fetchError } = await adminClient
     .from('personal_snapshot_v2')
