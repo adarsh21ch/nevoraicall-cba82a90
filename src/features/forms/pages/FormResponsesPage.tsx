@@ -4,14 +4,21 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ArrowLeft, Loader2, FileSpreadsheet, Download, LayoutGrid, Table2, Search, X, MoreVertical } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { ArrowLeft, Loader2, FileSpreadsheet, Download, LayoutGrid, Table2, Search, X, MoreVertical, PhoneCall } from 'lucide-react';
 import { toast } from 'sonner';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { SubmissionsSpreadsheetView } from '../components/SubmissionsSpreadsheetView';
 import { SubmissionCardView } from '../components/SubmissionCardView';
 import { SubmissionDetailDrawer } from '../components/SubmissionDetailDrawer';
 import { useForms } from '../hooks/useForms';
+import { useProspects } from '@/contexts/ProspectsContext';
+import { useSheets } from '@/hooks/useSheets';
 import { format, isToday, isThisWeek } from 'date-fns';
 import * as XLSX from 'xlsx';
 import type { NevoraFormWithFields, SubmissionWithAnswers } from '../types';
