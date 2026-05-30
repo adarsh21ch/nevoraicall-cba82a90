@@ -336,6 +336,33 @@ export default function FormResponsesPage() {
       </main>
 
       <BottomNav />
+
+      <Dialog open={sendOpen} onOpenChange={setSendOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Send leads to Calling</DialogTitle>
+            <DialogDescription>
+              Creates a new calling sheet and adds {filtered.length} lead{filtered.length === 1 ? '' : 's'} from this form. Name & phone are detected automatically.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="sheet-name" className="text-xs">Sheet name</Label>
+            <Input
+              id="sheet-name"
+              value={sendName}
+              onChange={(e) => setSendName(e.target.value)}
+              placeholder="e.g. Webinar leads - May 30"
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSendOpen(false)} disabled={sending}>Cancel</Button>
+            <Button onClick={handleSendToCalling} disabled={sending || !sendName.trim()}>
+              {sending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending…</> : 'Send to Calling'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>);
 
 }
