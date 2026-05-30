@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback, startTransition, useRef } from 'react';
+import { useState, useEffect, useCallback, startTransition, useRef, type ComponentType } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useProfile } from '@/hooks/useProfile';
+import { useMode } from '@/hooks/useMode';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Crown } from 'lucide-react';
+import { Crown, Lightbulb, PenLine, Calendar, BarChart3, LayoutDashboard } from 'lucide-react';
 import { useUpgradeUrgency } from '@/lib/planUtils';
 import { UpgradeDrawer } from '@/components/subscription/UpgradeDrawer';
 
@@ -38,18 +39,30 @@ const TrackUpIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-const navItems = [
-  { path: '/dashboard', icon: CallingIcon, label: 'Calling', onboardingId: 'nav-calling' },
-  { path: '/listup', icon: FollowUpIcon, label: 'Follow-Up', onboardingId: 'nav-followup' },
-  { path: '/action', icon: TodoListIcon, label: 'To-Do', onboardingId: 'nav-todo' },
-  { path: '/tracking', icon: TrackUpIcon, label: 'TrackUp', onboardingId: 'nav-trackup' },
-  { path: '/profile', icon: null, label: 'Profile', isProfile: true, onboardingId: 'nav-profile' },
-];
+/**
+ * Maps a mode nav item's `iconKey` to its icon component. Network-marketing
+ * keys use the original custom SVGs; other modes reuse those or lucide icons.
+ * Items with `isProfile` render the avatar instead (no icon lookup needed).
+ */
+const ICONS: Record<string, ComponentType<{ className?: string }>> = {
+  calling: CallingIcon,
+  followup: FollowUpIcon,
+  todo: TodoListIcon,
+  trackup: TrackUpIcon,
+  growth: TrackUpIcon,
+  overview: LayoutDashboard,
+  ideas: Lightbulb,
+  studio: PenLine,
+  calendar: Calendar,
+  insights: BarChart3,
+};
 
 export function BottomNav({ className }: { className?: string }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { profile } = useProfile();
+  const { mode } = useMode();
+  const navItems = mode.nav;
   const { isUrgent, isExpired, isAtLeadLimit } = useUpgradeUrgency();
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [bouncingTab, setBouncingTab] = useState<string | null>(null);
@@ -103,7 +116,7 @@ export function BottomNav({ className }: { className?: string }) {
       )}
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
         {navItems.map(item => {
-          const Icon = item.icon;
+          const Icon = ICONS[item.iconKey];
           const isActive = location.pathname === item.path;
           const isBouncing = bouncingTab === item.path;
 
