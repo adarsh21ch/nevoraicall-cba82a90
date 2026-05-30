@@ -16,14 +16,16 @@ import { AppAccessTracker } from "@/components/AppAccessTracker";
 import { AutoDemoTour } from "@/components/onboarding/AutoDemoTour";
 import { Loader2 } from "lucide-react";
 
-// Eagerly load the most used pages (bottom nav tabs)
-import Dashboard from "./pages/Dashboard";
-import ListUp from "./pages/ListUp";
-import TodoUp from "./pages/TodoUp";
-import Tracking from "./pages/Tracking";
+// Entry-path pages stay eager
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import Index from "./pages/Index";
+
+// Tab pages are lazy-loaded to shrink the initial bundle
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const ListUp = lazy(() => import("./pages/ListUp"));
+const TodoUp = lazy(() => import("./pages/TodoUp"));
+const Tracking = lazy(() => import("./pages/Tracking"));
 
 // Lazy load less frequently accessed pages
 const Home = lazy(() => import("./pages/Home"));
