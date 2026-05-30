@@ -1335,6 +1335,36 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_training_signals: {
+        Row: {
+          confidence: number | null
+          created_at: string
+          evidence_json: Json
+          id: string
+          pattern: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string
+          evidence_json?: Json
+          id?: string
+          pattern: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string
+          evidence_json?: Json
+          id?: string
+          pattern?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           body: string | null
@@ -1534,6 +1564,228 @@ export type Database = {
             columns: ["community_id"]
             isOneToOne: false
             referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      competitor_posts: {
+        Row: {
+          captured_at: string
+          competitor_id: string
+          hook: string | null
+          id: string
+          metrics_json: Json
+          topic: string | null
+          url: string | null
+          user_id: string
+        }
+        Insert: {
+          captured_at?: string
+          competitor_id: string
+          hook?: string | null
+          id?: string
+          metrics_json?: Json
+          topic?: string | null
+          url?: string | null
+          user_id: string
+        }
+        Update: {
+          captured_at?: string
+          competitor_id?: string
+          hook?: string | null
+          id?: string
+          metrics_json?: Json
+          topic?: string | null
+          url?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competitor_posts_competitor_id_fkey"
+            columns: ["competitor_id"]
+            isOneToOne: false
+            referencedRelation: "competitors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      competitors: {
+        Row: {
+          created_at: string
+          handle: string
+          id: string
+          niche: string | null
+          platform: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          handle: string
+          id?: string
+          niche?: string | null
+          platform?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          handle?: string
+          id?: string
+          niche?: string | null
+          platform?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      content_ideas: {
+        Row: {
+          created_at: string
+          hook: string | null
+          hook_type: string | null
+          id: string
+          niche_tag: string | null
+          source: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          hook?: string | null
+          hook_type?: string | null
+          id?: string
+          niche_tag?: string | null
+          source?: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          hook?: string | null
+          hook_type?: string | null
+          id?: string
+          niche_tag?: string | null
+          source?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      content_metrics: {
+        Row: {
+          avg_watch_s: number | null
+          captured_at: string
+          comments: number
+          created_at: string
+          hook_rate: number | null
+          id: string
+          nev_score: number | null
+          piece_id: string
+          reach: number
+          saves: number
+          sends: number
+          shares: number
+          source: string
+          user_id: string
+          watch_pct: number | null
+        }
+        Insert: {
+          avg_watch_s?: number | null
+          captured_at?: string
+          comments?: number
+          created_at?: string
+          hook_rate?: number | null
+          id?: string
+          nev_score?: number | null
+          piece_id: string
+          reach?: number
+          saves?: number
+          sends?: number
+          shares?: number
+          source?: string
+          user_id: string
+          watch_pct?: number | null
+        }
+        Update: {
+          avg_watch_s?: number | null
+          captured_at?: string
+          comments?: number
+          created_at?: string
+          hook_rate?: number | null
+          id?: string
+          nev_score?: number | null
+          piece_id?: string
+          reach?: number
+          saves?: number
+          sends?: number
+          shares?: number
+          source?: string
+          user_id?: string
+          watch_pct?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_metrics_piece_id_fkey"
+            columns: ["piece_id"]
+            isOneToOne: false
+            referencedRelation: "content_pieces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_pieces: {
+        Row: {
+          caption: string | null
+          created_at: string
+          hashtags: string[]
+          id: string
+          idea_id: string | null
+          platform: string
+          posted_at: string | null
+          scheduled_at: string | null
+          script: string | null
+          stage: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          hashtags?: string[]
+          id?: string
+          idea_id?: string | null
+          platform?: string
+          posted_at?: string | null
+          scheduled_at?: string | null
+          script?: string | null
+          stage?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          hashtags?: string[]
+          id?: string
+          idea_id?: string | null
+          platform?: string
+          posted_at?: string | null
+          scheduled_at?: string | null
+          script?: string | null
+          stage?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_pieces_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "content_ideas"
             referencedColumns: ["id"]
           },
         ]
@@ -3941,6 +4193,7 @@ export type Database = {
           demo_data_created: boolean | null
           display_name: string | null
           email: string | null
+          enabled_modes: string[]
           id: string
           instagram_username: string | null
           is_suspended: boolean | null
@@ -3948,6 +4201,7 @@ export type Database = {
           leader_prompt_completed: boolean
           leaders_id_of_my_leader: string | null
           level_id: string | null
+          mode: string
           neverai_id: string | null
           onboarding_completed: boolean
           onboarding_skipped: boolean | null
@@ -3982,6 +4236,7 @@ export type Database = {
           demo_data_created?: boolean | null
           display_name?: string | null
           email?: string | null
+          enabled_modes?: string[]
           id?: string
           instagram_username?: string | null
           is_suspended?: boolean | null
@@ -3989,6 +4244,7 @@ export type Database = {
           leader_prompt_completed?: boolean
           leaders_id_of_my_leader?: string | null
           level_id?: string | null
+          mode?: string
           neverai_id?: string | null
           onboarding_completed?: boolean
           onboarding_skipped?: boolean | null
@@ -4023,6 +4279,7 @@ export type Database = {
           demo_data_created?: boolean | null
           display_name?: string | null
           email?: string | null
+          enabled_modes?: string[]
           id?: string
           instagram_username?: string | null
           is_suspended?: boolean | null
@@ -4030,6 +4287,7 @@ export type Database = {
           leader_prompt_completed?: boolean
           leaders_id_of_my_leader?: string | null
           level_id?: string | null
+          mode?: string
           neverai_id?: string | null
           onboarding_completed?: boolean
           onboarding_skipped?: boolean | null
