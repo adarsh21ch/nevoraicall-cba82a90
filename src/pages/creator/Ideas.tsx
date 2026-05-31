@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Lightbulb, Plus, Loader2, Trash2, ChevronRight, Link2, Mic, X, Pencil } from 'lucide-react';
+import { Lightbulb, Plus, Loader2, Trash2, ChevronRight, Link2, Mic, Pencil } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { CreatorTabLayout, CreatorEmptyState } from '@/components/creator/CreatorTabLayout';
