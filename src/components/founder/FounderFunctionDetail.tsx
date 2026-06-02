@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { resolveFounderIcon } from '@/components/founder/founderIcons';
+import { FounderFunctionMetrics } from '@/components/founder/FounderFunctionMetrics';
 import { CADENCES, type FounderFunctionKey, type FounderCadence } from '@/config/founderFunctions';
 import { useFounderFunction, type FounderFunctionStatus } from '@/hooks/useFounderFunctions';
 
@@ -80,6 +81,9 @@ export function FounderFunctionDetail({ functionKey }: { functionKey: FounderFun
           <p className="text-sm text-muted-foreground mt-0.5">{config.description}</p>
         </div>
       </div>
+
+      {/* Live CRM snapshot (self-hides for non-sales/marketing functions) */}
+      <FounderFunctionMetrics functionKey={functionKey} />
 
       {/* Status selector */}
       <section className="rounded-2xl border border-border/50 bg-card p-4 space-y-2.5">
