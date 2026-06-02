@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { useProfile } from '@/hooks/useProfile';
 import { useMode } from '@/hooks/useMode';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Crown, Lightbulb, PenLine, Calendar, BarChart3, LayoutDashboard } from 'lucide-react';
+import { Crown, Lightbulb, PenLine, Calendar, BarChart3, LayoutDashboard, LayoutGrid, Megaphone, TrendingUp } from 'lucide-react';
 import { useUpgradeUrgency } from '@/lib/planUtils';
 import { UpgradeDrawer } from '@/components/subscription/UpgradeDrawer';
 
@@ -55,6 +55,10 @@ const ICONS: Record<string, ComponentType<{ className?: string }>> = {
   studio: PenLine,
   calendar: Calendar,
   insights: BarChart3,
+  // Founder mode
+  manage: LayoutGrid,
+  fnMarketing: Megaphone,
+  fnSales: TrendingUp,
 };
 
 export function BottomNav({ className }: { className?: string }) {

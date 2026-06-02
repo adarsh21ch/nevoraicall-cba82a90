@@ -55,6 +55,11 @@ const CreatorIdeas = lazy(() => import("./pages/creator/Ideas"));
 const CreatorStudio = lazy(() => import("./pages/creator/Studio"));
 const CreatorCalendar = lazy(() => import("./pages/creator/Calendar"));
 const CreatorInsights = lazy(() => import("./pages/creator/Insights"));
+// Founder mode tabs
+const FounderManage = lazy(() => import("./pages/founder/Manage"));
+const FounderFunctionDetail = lazy(() => import("./pages/founder/FunctionDetailPage"));
+const FounderMarketing = lazy(() => import("./pages/founder/Marketing"));
+const FounderSales = lazy(() => import("./pages/founder/Sales"));
 
 // Minimal loading fallback
 const PageLoader = () => (
@@ -159,6 +164,10 @@ function App() {
                         <Route path="/studio" element={<CreatorStudio />} />
                         <Route path="/calendar" element={<CreatorCalendar />} />
                         <Route path="/insights" element={<CreatorInsights />} />
+                        <Route path="/manage" element={<FounderManage />} />
+                        <Route path="/manage/:functionKey" element={<FounderFunctionDetail />} />
+                        <Route path="/marketing" element={<FounderMarketing />} />
+                        <Route path="/sales" element={<FounderSales />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </Suspense>
