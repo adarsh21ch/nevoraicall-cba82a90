@@ -35,7 +35,7 @@ export function FounderTabLayout({
                 <ChevronLeft className="h-5 w-5" />
               </button>
             ) : (
-              <img src={nevoraLogo} alt="Nevorai CRM Logo" className="h-10 w-10 rounded-xl object-cover shadow-md shrink-0" />
+              <img src={nevoraLogo} alt="Enarsia Logo" className="h-10 w-10 rounded-xl object-cover shadow-md shrink-0" />
             )}
             <div className="min-w-0">
               <h1 className="text-xl font-bold tracking-tight truncate">{title}</h1>

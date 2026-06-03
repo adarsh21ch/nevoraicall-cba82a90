@@ -22,7 +22,7 @@ export function CreatorTabLayout({
       <header className="fixed-header z-40 bg-card/80 backdrop-blur-xl border-b border-border/50">
         <div className="flex items-center justify-between px-4 py-3 gap-2">
           <div className="flex items-center gap-3 min-w-0">
-            <img src={nevoraLogo} alt="Nevorai CRM Logo" className="h-10 w-10 rounded-xl object-cover shadow-md shrink-0" />
+            <img src={nevoraLogo} alt="Enarsia Logo" className="h-10 w-10 rounded-xl object-cover shadow-md shrink-0" />
             <div className="min-w-0">
               <h1 className="text-xl font-bold tracking-tight truncate">{title}</h1>
               <p className="text-xs text-muted-foreground font-medium truncate">{subtitle}</p>

@@ -18,12 +18,12 @@ function AuthHeader() {
       <div className="relative inline-block mb-4">
         <img
           src={nevoraLogo}
-          alt="Nevorai CRM Logo"
+          alt="Enarsia Logo"
           className="w-[72px] h-[72px] object-contain"
         />
       </div>
       <h1 className="text-[28px] font-extrabold text-foreground font-heading tracking-tight">
-        Nevorai CRM
+        Enarsia
       </h1>
       <p className="text-muted-foreground text-[13px] mt-0.5 font-body">
         by Nevorai
@@ -316,7 +316,7 @@ export default function Auth() {
     return (
       <div className="auth-page-layout bg-background">
         <div className="auth-page-content flex flex-col items-center gap-4">
-          <img src={nevoraLogo} alt="Nevorai CRM Logo" className="w-16 h-16 rounded-2xl shadow-lg" />
+          <img src={nevoraLogo} alt="Enarsia Logo" className="w-16 h-16 rounded-2xl shadow-lg" />
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-sm text-muted-foreground font-body">Loading...</p>
         </div>
@@ -548,7 +548,7 @@ export default function Auth() {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground font-body">
-                  We'll use this only to help you get started with Nevorai CRM.
+                  We'll use this only to help you get started with Enarsia.
                 </p>
               </div>
             )}

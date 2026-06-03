@@ -25,10 +25,10 @@ export function Header() {
           <Link to="/dashboard" className="flex items-center gap-2">
             <img 
               src={nevoraLogo} 
-              alt="Nevorai CRM Logo" 
+              alt="Enarsia Logo" 
               className="h-8 w-8 object-contain"
             />
-            <span className="font-semibold text-lg hidden sm:inline">Nevorai CRM</span>
+            <span className="font-semibold text-lg hidden sm:inline">Enarsia</span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
